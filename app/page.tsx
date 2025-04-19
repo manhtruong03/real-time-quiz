@@ -53,7 +53,7 @@ export default function Home() {
               </p>
               <div className="flex gap-4 pt-4">
                 <Link href="/quiz/new" passHref>
-                  <Button size="lg" className="gap-2" onClick={() => console.log("Start Quiz button clicked")}>
+                  <Button size="lg" className="gap-2">
                     <Zap className="h-5 w-5" />
                     Start Coding Quiz
                   </Button>
