@@ -4,125 +4,302 @@
 import React, { useState } from 'react';
 import { Button } from '@/src/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/src/components/ui/card';
-// --- Imports for new mock data ---
-import mockContent from '@/src/__mocks__/websockets/question_0_content';
-import mockQuizTF from '@/src/__mocks__/websockets/question_1_quiz_2choice';
-import mockQuiz4Choice from '@/src/__mocks__/websockets/question_2_quiz_4choice';
-import mockQuizImage from '@/src/__mocks__/websockets/question_3_quiz_image';
-import mockJumble from '@/src/__mocks__/websockets/question_4_jumble';
-import mockSurvey from '@/src/__mocks__/websockets/question_5_survey';
-import mockOpenEnded from '@/src/__mocks__/websockets/question_6_open_ended';
-import mockResultCorrect from '@/src/__mocks__/websockets/result_1_quiz_correct';
-import mockResultIncorrect from '@/src/__mocks__/websockets/result_2_quiz_incorrect';
-// --- END ADD ---
-// --- UPDATED Type Imports ---
-import { GameBlock, QuestionResultPayload } from '@/src/lib/types';
-// --- END UPDATE ---
-import { Settings, EyeOff } from 'lucide-react';
+// --- Mock detail imports ---
+import mockContentDetail from '@/src/__mocks__/websockets/question_0_content';
+import mockQuizTFDetail from '@/src/__mocks__/websockets/question_1_quiz_2choice';
+import mockQuiz4ChoiceDetail from '@/src/__mocks__/websockets/question_2_quiz_4choice';
+import mockQuizImageDetail from '@/src/__mocks__/websockets/question_3_quiz_image';
+import mockJumbleDetail from '@/src/__mocks__/websockets/question_4_jumble';
+import mockSurveyDetail from '@/src/__mocks__/websockets/question_5_survey';
+import mockOpenEndedDetail from '@/src/__mocks__/websockets/question_6_open_ended';
+import mockResultCorrectDetail from '@/src/__mocks__/websockets/result_1_quiz_correct';
+import mockResultIncorrectDetail from '@/src/__mocks__/websockets/result_2_quiz_incorrect';
+// --- ADD Mock Answer Detail Imports ---
+import mockAnswerQuizCorrect from '@/src/__mocks__/websockets/answer_1_quiz';
+import mockAnswerQuizIncorrect from '@/src/__mocks__/websockets/answer_2_quiz';
+import mockAnswerQuizImage from '@/src/__mocks__/websockets/answer_3_quiz_image';
+import mockAnswerJumble from '@/src/__mocks__/websockets/answer_4_jumble';
+import mockAnswerSurvey from '@/src/__mocks__/websockets/answer_5_survey';
+import mockAnswerOpenEnded from '@/src/__mocks__/websockets/answer_6_open_ended';
+// --- END ---
+import { GameBlock, PlayerAnswerPayload, QuestionResultPayload, ResultPayloadQuiz } from '@/src/lib/types';
+import { Settings, EyeOff, Send } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
+
+// MockWebSocketMessage interface (keep or move to types.ts)
+export interface MockWebSocketMessage { // Ensure this is exported
+  id?: string;
+  channel: string;
+  clientId?: string;
+  data: {
+    gameid: string;
+    type: "message";
+    id: number;
+    content: string;
+    host?: string;
+    cid?: string;
+  };
+  ext?: {
+    timetrack?: number;
+  };
+  successful?: boolean;
+}
 
 // --- UPDATED Props Interface ---
 interface DevMockControlsProps {
-  loadMockBlock: (block: GameBlock | null) => void; // Renamed from loadMockQuestion
-  setMockResult: (result: QuestionResultPayload | null) => void; // Added
-  // Remove old/redundant props if they are no longer needed by the parent
-  // setFeedback?: (feedback: 'correct' | 'incorrect' | 'timeup' | null) => void;
-  // setIsWaiting?: (waiting: boolean) => void;
-  // setIsSubmitting?: (submitting: boolean) => void;
+  simulateReceiveMessage?: (message: MockWebSocketMessage) => void; // For Player view (optional)
+  // NEW PROP: Simulate sending an answer TO the host (optional)
+  simulatePlayerAnswer?: (message: MockWebSocketMessage) => void;
+  // --- END NEW PROP ---
+  loadMockBlock: (block: GameBlock | null) => void; // For Host override/start
+  setMockResult: (result: QuestionResultPayload | null) => void; // For Host override (less common)
 }
 // --- END UPDATE ---
 
+// createMockMessage helper (for simulating messages TO player)
+const createMockMessage = (
+  detailPayload: GameBlock | QuestionResultPayload | { type: string }, // Allow simple type object for signals
+  dataTypeId: number
+): MockWebSocketMessage => {
+  const contentString = JSON.stringify(detailPayload);
+  return {
+    channel: "/service/player",
+    data: {
+      gameid: "DEV123",
+      type: "message",
+      id: dataTypeId,
+      content: contentString,
+      host: "dev.mock.it",
+      cid: "DEV_PLAYER_CID",
+    },
+    ext: {
+      timetrack: Date.now(),
+    },
+  };
+};
+
 const DevMockControls: React.FC<DevMockControlsProps> = ({
+  simulateReceiveMessage,
+  simulatePlayerAnswer, // Destructure the new optional prop
   loadMockBlock,
   setMockResult,
 }) => {
   const [isOpen, setIsOpen] = useState(true);
+  const [mockPlayerId, setMockPlayerId] = useState<string>('player_1');
 
   if (process.env.NODE_ENV !== 'development') {
     return null;
   }
 
-  // load function remains the same as previous step
-  const load = (block: GameBlock | null) => {
-    setMockResult(null); // Clear any previous result/feedback
-    loadMockBlock(block);
-  };
+  // --- *** CHANGE 2: Modify sendAnswer function *** ---
+  const sendAnswer = (answerDetailPayload: PlayerAnswerPayload) => {
+    const uniquePlayerId = `${mockPlayerId}_${Math.random().toString(36).substring(7)}`;
+    console.log(`DEV: Simulating answer from ${uniquePlayerId}:`, answerDetailPayload);
 
-  // showResult function remains the same as previous step
-  const showResult = (resultType: 'correct' | 'incorrect' | 'timeup') => {
-    loadMockBlock(null); // Clear the question block
-    let resultPayload: QuestionResultPayload | null = null;
+    // 1. Stringify the answer detail payload
+    const contentString = JSON.stringify(answerDetailPayload);
+
+    // 2. Construct the full WebSocket message envelope for an answer
+    const messageToSend: MockWebSocketMessage = {
+      channel: `/controller/DEV123`, // Example channel Player -> Host
+      data: {
+        gameid: "DEV123", // Use a consistent mock gameId
+        id: 6, // Use ID 6 for answer submission (based on docs/phase3_ws_answer_message.txt [cite: 7, 8])
+        type: "message",
+        content: contentString, // Stringified detail payload
+        cid: uniquePlayerId // Player's unique identifier
+      },
+      ext: { timetrack: Date.now() }
+    };
+
+    // 3. Call the simulatePlayerAnswer prop with the FULL message object
+    if (simulatePlayerAnswer) {
+      console.log("DEV: Sending simulated answer message to Host:", messageToSend);
+      simulatePlayerAnswer(messageToSend); // <<< PASS THE FULL MESSAGE
+    } else {
+      console.warn("DEV: simulatePlayerAnswer prop not provided.");
+    }
+  };
+  // --- *** END CHANGE 2 *** ---
+  // --- END NEW Function ---
+
+  // Existing helper functions (load, showResult, etc.) - include checks for simulateReceiveMessage
+  const load = (blockDetail: any, dataTypeId: number = 2) => {
+    const message = createMockMessage(blockDetail as GameBlock, dataTypeId);
+    if (simulateReceiveMessage) simulateReceiveMessage(message);
+    else console.warn("DEV: simulateReceiveMessage prop not provided for load.");
+  };
+  const showResult = (resultType: 'correct' | 'incorrect' | 'timeup' | 'survey') => {
+    let resultDetailPayload: QuestionResultPayload | null = null;
+    // ... (switch statement remains the same as previous correction)
     switch (resultType) {
       case 'correct':
-        resultPayload = mockResultCorrect as QuestionResultPayload;
+        resultDetailPayload = mockResultCorrectDetail as QuestionResultPayload;
         break;
       case 'incorrect':
-        resultPayload = mockResultIncorrect as QuestionResultPayload;
+        resultDetailPayload = mockResultIncorrectDetail as QuestionResultPayload;
         break;
       case 'timeup':
-        resultPayload = { ...mockResultIncorrect, text: "Time's Up!", isCorrect: false, points: 0 } as QuestionResultPayload; // Ensure correct type and state
+        resultDetailPayload = {
+          ...(mockResultIncorrectDetail as QuestionResultPayload),
+          hasAnswer: false, text: "Time's Up!", choice: -1, points: 0, isCorrect: false,
+          pointsData: {
+            ...mockResultIncorrectDetail.pointsData, questionPoints: 0,
+            answerStreakPoints: { streakLevel: 0, previousStreakLevel: mockResultIncorrectDetail.pointsData.answerStreakPoints.previousStreakLevel },
+          }
+        } as ResultPayloadQuiz;
+        break;
+      case 'survey':
+        const surveyResultMock = {
+          ...(mockResultIncorrectDetail as QuestionResultPayload), type: 'survey', choice: 1, text: "Bootstrap",
+          points: undefined, isCorrect: undefined, correctChoices: undefined,
+          pointsData: { ...mockResultIncorrectDetail.pointsData, questionPoints: 0 }
+        };
+        resultDetailPayload = surveyResultMock as QuestionResultPayload;
         break;
     }
-    setMockResult(resultPayload);
+
+    if (resultDetailPayload) {
+      const message = createMockMessage(resultDetailPayload, 8); // Use data.id 8 for results
+      console.log("DEV: Simulating receive Result Message (type 8):", message);
+      // --- ADD CHECK ---
+      if (simulateReceiveMessage) {
+        simulateReceiveMessage(message);
+      } else {
+        console.warn("DEV: simulateReceiveMessage prop not provided.");
+      }
+      // --- END CHECK ---
+    }
+  };
+  // Simulate Host loading
+  const simulateHostLoad = () => {
+    console.log("DEV: Simulating Host loading initial quiz data...");
+    // Use the override prop for Host view as before
+    loadMockBlock(mockContentDetail as GameBlock);
   };
 
-  // showState function remains the same as previous step
-  const showState = (state: 'waiting' | 'submitting') => {
-    loadMockBlock(null);
-    setMockResult(null);
-    console.log(`DEV: Triggering state change to ${state} in parent`);
-    // Parent component needs to handle this, maybe via the load/set functions setting nulls
-    // Or keep setIsWaiting/setIsSubmitting props if needed for direct control
+  // Simulate Player waiting state
+  const showWaitingState = () => {
+    console.log("DEV: Simulating Player waiting state...");
+    const message = createMockMessage({ type: 'waiting_signal' }, 99); // Custom ID 99
+    // --- ADD CHECK ---
+    if (simulateReceiveMessage) {
+      simulateReceiveMessage(message);
+    } else {
+      console.warn("DEV: simulateReceiveMessage prop not provided.");
+    }
+    // --- END CHECK ---
+  }
+
+  // Simulate Player submitting state (visual only)
+  const showSubmittingState = () => {
+    console.log("DEV: Simulating Player submitting state (visual)...");
+    const message = createMockMessage({ type: 'submitting_signal' }, 98); // Custom ID 98
+    // --- ADD CHECK ---
+    if (simulateReceiveMessage) {
+      simulateReceiveMessage(message);
+    } else {
+      console.warn("DEV: simulateReceiveMessage prop not provided.");
+    }
+    // --- END CHECK ---
+  }
+
+  // Function to clear player view
+  const clearPlayerView = () => {
+    console.log("DEV: Clearing Player view...");
+    const message = createMockMessage({ type: 'clear' }, 0); // Custom ID 0
+    // --- ADD CHECK ---
+    if (simulateReceiveMessage) {
+      simulateReceiveMessage(message);
+    } else {
+      console.warn("DEV: simulateReceiveMessage prop not provided.");
+    }
+    // --- END CHECK ---
   };
 
 
   return (
     <div className="fixed bottom-4 right-4 z-[100]">
-      <Button
-        variant="secondary"
-        size="icon"
-        onClick={() => setIsOpen(true)}
-        className={cn(
-          "shadow-lg",
-          isOpen ? 'hidden' : 'absolute -top-12 right-0'
-        )}
-        aria-label="Show Dev Controls"
-      >
-        <Settings className="h-5 w-5" />
-      </Button>
+      {/* Toggle Button */}
+      {!isOpen && ( // Show Settings button only when panel is closed
+        <Button
+          variant="secondary"
+          size="icon"
+          onClick={() => setIsOpen(true)}
+          className={cn(
+            "shadow-lg absolute -top-12 right-0" // Adjust positioning as needed
+          )}
+          aria-label="Show Dev Controls"
+        >
+          <Settings className="h-5 w-5" />
+        </Button>
+      )}
 
+      {/* Panel Content */}
       {isOpen && (
         <Card className={cn("w-64 shadow-lg animate-in fade-in slide-in-from-bottom-5 duration-300")}>
           <CardHeader className="pb-2 relative">
             <CardTitle className="text-sm font-medium">Dev Controls</CardTitle>
+            {/* --- Hide Button --- */}
             <Button
               variant="ghost"
               size="icon"
               onClick={() => setIsOpen(false)}
-              className="absolute top-1 right-1 h-6 w-6"
+              className="absolute top-1 right-1 h-6 w-6" // Position inside header
               aria-label="Hide Dev Controls"
             >
               <EyeOff className="h-4 w-4" />
             </Button>
+            {/* --- End Hide Button --- */}
           </CardHeader>
-          <CardContent className="flex flex-col gap-2 pt-2">
-            <h4 className="text-xs font-semibold mb-1">Load Block Type:</h4>
-            <Button size="sm" variant="outline" onClick={() => load(mockContent as GameBlock)}>Load Content</Button>
-            <Button size="sm" variant="outline" onClick={() => load(mockQuizTF as GameBlock)}>Load Quiz T/F</Button>
-            <Button size="sm" variant="outline" onClick={() => load(mockQuiz4Choice as GameBlock)}>Load Quiz 4Choice</Button>
-            <Button size="sm" variant="outline" onClick={() => load(mockQuizImage as GameBlock)}>Load Quiz Image</Button>
-            <Button size="sm" variant="outline" onClick={() => load(mockJumble as GameBlock)}>Load Jumble</Button>
-            <Button size="sm" variant="outline" onClick={() => load(mockSurvey as GameBlock)}>Load Survey</Button>
-            <Button size="sm" variant="outline" onClick={() => load(mockOpenEnded as GameBlock)}>Load Open Ended</Button>
+          <CardContent className="flex flex-col gap-2 pt-2 max-h-[70vh] overflow-y-auto">
+            {/* Host Simulation Button */}
+            <Button size="sm" variant="outline" onClick={simulateHostLoad} className="bg-blue-100 dark:bg-blue-900">
+              Simulate Host Load
+            </Button>
+            <hr className="my-1" />
 
-            <h4 className="text-xs font-semibold mt-2 mb-1">Show Result/State:</h4>
+            <h4 className="text-xs font-semibold mt-1 mb-1">Load Player Block (Msg):</h4>
+            <Button size="sm" variant="outline" onClick={() => load(mockContentDetail, 2)}>Load Content</Button>
+            <Button size="sm" variant="outline" onClick={() => load(mockQuizTFDetail, 2)}>Load Quiz T/F</Button>
+            <Button size="sm" variant="outline" onClick={() => load(mockQuiz4ChoiceDetail, 2)}>Load Quiz 4Choice</Button>
+            <Button size="sm" variant="outline" onClick={() => load(mockQuizImageDetail, 2)}>Load Quiz Image</Button>
+            <Button size="sm" variant="outline" onClick={() => load(mockJumbleDetail, 2)}>Load Jumble</Button>
+            <Button size="sm" variant="outline" onClick={() => load(mockSurveyDetail, 2)}>Load Survey</Button>
+            <Button size="sm" variant="outline" onClick={() => load(mockOpenEndedDetail, 2)}>Load Open Ended</Button>
+
+            <h4 className="text-xs font-semibold mt-2 mb-1">Show Player Result (Msg):</h4>
             <Button size="sm" variant="outline" onClick={() => showResult('correct')}>Show Correct</Button>
             <Button size="sm" variant="outline" onClick={() => showResult('incorrect')}>Show Incorrect</Button>
             <Button size="sm" variant="outline" onClick={() => showResult('timeup')}>Show Time Up</Button>
-            <Button size="sm" variant="outline" onClick={() => showState('waiting')}>Show Waiting</Button>
-            <Button size="sm" variant="outline" onClick={() => showState('submitting')}>Show Submitting</Button>
-            <Button size="sm" variant="destructive" onClick={() => load(null)}>Clear All</Button>
+            <Button size="sm" variant="outline" onClick={() => showResult('survey')}>Show Survey Result</Button>
+
+            <h4 className="text-xs font-semibold mt-2 mb-1">Show Player State:</h4>
+            <Button size="sm" variant="outline" onClick={showWaitingState}>Show Waiting</Button>
+            <Button size="sm" variant="outline" onClick={showSubmittingState}>Show Submitting</Button>
+            <Button size="sm" variant="destructive" className="mt-1" onClick={clearPlayerView}>Clear Player View</Button>
+            <hr className="my-2" />
+
+            {/* --- Simulate Player Answers Section --- */}
+            <h4 className="text-xs font-semibold mt-1 mb-1">Simulate Player Answer (Msg):</h4>
+            <div className="flex items-center gap-2">
+              <label htmlFor="mockPlayerId" className="text-xs flex-shrink-0">Player ID:</label>
+              <input
+                id="mockPlayerId" type="text" value={mockPlayerId} onChange={(e) => setMockPlayerId(e.target.value)}
+                className="flex-grow h-8 px-2 py-1 text-xs border rounded bg-input text-foreground"
+              />
+            </div>
+            {/* Use the sendAnswer helper */}
+            <Button size="sm" variant="outline" onClick={() => sendAnswer(mockAnswerQuizCorrect as PlayerAnswerPayload)} className="gap-1"> <Send className="h-3 w-3" />Quiz (Correct)</Button>
+            <Button size="sm" variant="outline" onClick={() => sendAnswer(mockAnswerQuizIncorrect as PlayerAnswerPayload)} className="gap-1"> <Send className="h-3 w-3" />Quiz (Incorrect)</Button>
+            <Button size="sm" variant="outline" onClick={() => sendAnswer(mockAnswerQuizImage as PlayerAnswerPayload)} className="gap-1"> <Send className="h-3 w-3" />Quiz (Image)</Button>
+            <Button size="sm" variant="outline" onClick={() => sendAnswer(mockAnswerJumble as PlayerAnswerPayload)} className="gap-1"> <Send className="h-3 w-3" />Jumble</Button>
+            <Button size="sm" variant="outline" onClick={() => sendAnswer(mockAnswerSurvey as PlayerAnswerPayload)} className="gap-1"> <Send className="h-3 w-3" />Survey</Button>
+            <Button size="sm" variant="outline" onClick={() => sendAnswer(mockAnswerOpenEnded as PlayerAnswerPayload)} className="gap-1"> <Send className="h-3 w-3" />Open Ended</Button>
+            {/* --- END Simulate Player Answers --- */}
+
           </CardContent>
+          {/* --- End Scrollable Content --- */}
         </Card>
       )}
     </div>

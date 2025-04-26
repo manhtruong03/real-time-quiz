@@ -4,47 +4,46 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import PlayerView from '@/src/components/game/views/PlayerView';
 import { GameBlock, PlayerAnswerPayload, QuestionResultPayload } from '@/src/lib/types';
-import DevMockControls from '@/src/components/game/DevMockControls';
-// Mock data imports (ensure these paths are correct)
-import mockContent from '@/src/__mocks__/websockets/question_0_content';
-import mockQuizTF from '@/src/__mocks__/websockets/question_1_quiz_2choice';
-import mockJumble from '@/src/__mocks__/websockets/question_4_jumble';
-import mockResultCorrect from '@/src/__mocks__/websockets/result_1_quiz_correct';
-import mockResultIncorrect from '@/src/__mocks__/websockets/result_2_quiz_incorrect';
+import DevMockControls, { MockWebSocketMessage } from '@/src/components/game/DevMockControls';
 
 interface PlayerInfoState {
   name: string;
   avatarUrl?: string;
   score: number;
   rank?: number;
+  cid?: string;
 }
 
 export default function PlayerPage() {
   const [currentBlock, setCurrentBlock] = useState<GameBlock | null>(null);
   const [currentResult, setCurrentResult] = useState<QuestionResultPayload | null>(null);
-  const [isWaiting, setIsWaiting] = useState(true); // Start waiting
+  const [isWaiting, setIsWaiting] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [playerInfo, setPlayerInfo] = useState<PlayerInfoState>({
     name: 'Player One',
     score: 0,
     rank: undefined,
-    avatarUrl: undefined
+    avatarUrl: undefined,
+    cid: 'DEV_PLAYER_CID_' + Math.random().toString(36).substring(2, 9),
   });
-  // Ref to track if a submission process has started, to coordinate effects
-  const submissionTriggered = useRef(false);
+  // Store gameId separately, obtained from the message envelope
+  const [currentGameId, setCurrentGameId] = useState<string>("DEV123");
 
-  const loadBlock = useCallback((block: GameBlock | null) => {
-    submissionTriggered.current = false; // Reset on new block load
+  // Internal state update functions
+  const _setCurrentBlock = (block: GameBlock | null) => {
     setCurrentResult(null);
     setIsWaiting(false);
     setIsSubmitting(false);
     setCurrentBlock(block);
-    console.log("DEV: Loaded block:", block?.type);
-  }, []);
+    // --- REMOVE gameid access from block ---
+    // if (block?.gameid) setCurrentGameId(block.gameid); // REMOVE THIS LINE
+    // --- END REMOVAL ---
+    console.log("Player State: Displaying block:", block?.type);
+  };
 
-  const setMockResult = useCallback((result: QuestionResultPayload | null) => {
-    setCurrentBlock(null); // Clear block when showing result
-    setIsSubmitting(false); // Ensure submitting state is off
+  const _setCurrentResult = (result: QuestionResultPayload | null) => {
+    setCurrentBlock(null);
+    setIsSubmitting(false);
     setCurrentResult(result);
     if (result) {
       setPlayerInfo(prev => ({
@@ -52,123 +51,98 @@ export default function PlayerPage() {
         score: result.totalScore,
         rank: result.rank,
       }));
+      console.log("Player State: Displaying result:", result?.type);
+    } else {
+      console.log("Player State: Clearing result.");
     }
-    console.log("DEV: Showing result:", result?.type);
-  }, [setPlayerInfo]); // Include setter in dependency array
-
-  // Effect to start the initial game flow simulation ONCE
-  useEffect(() => {
-    console.log("DEV: Starting initial mock game flow simulation...");
-    setIsWaiting(true); // Explicitly set waiting at the start
-
-    let timer1: NodeJS.Timeout | number | undefined = undefined;
-    let timer2: NodeJS.Timeout | number | undefined = undefined;
-
-    // Sequence: Wait -> Content -> Wait -> QuizTF
-    timer1 = setTimeout(() => {
-      console.log("DEV: Simulating content block...");
-      // Ensure mockContent matches GameBlock (or use 'as unknown as GameBlock' if certain)
-      loadBlock(mockContent as GameBlock);
-
-      timer2 = setTimeout(() => {
-        console.log("DEV: Simulating quiz T/F block...");
-        // Ensure mockQuizTF matches GameBlock
-        loadBlock(mockQuizTF as GameBlock);
-        // Now waiting for player interaction (handleAnswerSubmit)
-      }, 5000); // Duration to show content block
-
-    }, 1000); // Initial delay before showing content
-
-    // --- Correct Cleanup Function ---
-    return () => {
-      console.log("DEV: Cleaning up initial simulation timers...");
-      if (timer1) clearTimeout(timer1);
-      if (timer2) clearTimeout(timer2);
-    };
-    // --- End Cleanup ---
-
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Empty array: Run only once on mount
-
-
-  // --- Effect to handle the sequence AFTER a submission is triggered ---
-  useEffect(() => {
-    // Declare timer variables for this effect's scope
-    let resultTimer: NodeJS.Timeout | number | undefined = undefined;
-    let waitTimer: NodeJS.Timeout | number | undefined = undefined;
-    let nextBlockTimer: NodeJS.Timeout | number | undefined = undefined;
-
-    // Only run if isSubmitting is true AND the trigger ref is set
-    if (isSubmitting && submissionTriggered.current) {
-      console.log("DEV: Submission detected, simulating result display sequence...");
-      submissionTriggered.current = false; // Consume the trigger
-
-      // 1. Simulate backend processing delay
-      resultTimer = setTimeout(() => {
-        console.log("DEV: Simulating result display...");
-        // Use a mock result (can randomize correct/incorrect for testing)
-        const randomResult = Math.random() > 0.3 ? mockResultCorrect : mockResultIncorrect;
-        setMockResult(randomResult as QuestionResultPayload); // Show the result
-
-        // 2. Simulate duration result is shown
-        waitTimer = setTimeout(() => {
-          console.log("DEV: Simulating waiting state after result...");
-          setCurrentResult(null); // Clear result
-          setIsSubmitting(false); // IMPORTANT: Turn off submitting state
-          setIsWaiting(true);     // Enter waiting state
-
-          // 3. Simulate delay before next question
-          nextBlockTimer = setTimeout(() => {
-            console.log("DEV: Simulating next block (Jumble)...");
-            // Ensure mockJumble matches GameBlock
-            loadBlock(mockJumble as GameBlock); // Load next question
-          }, 4000); // Wait duration
-
-        }, 3000); // Result display duration
-
-      }, 1500); // Result processing delay
-    }
-
-    // --- Correct Cleanup for THIS effect ---
-    return () => {
-      // Clear any timers set within this effect instance if the component
-      // unmounts or dependencies change while timers are active.
-      if (resultTimer) clearTimeout(resultTimer);
-      if (waitTimer) clearTimeout(waitTimer);
-      if (nextBlockTimer) clearTimeout(nextBlockTimer);
-    };
-    // --- End Cleanup ---
-
-  }, [isSubmitting, loadBlock, setMockResult]); // Re-run ONLY when isSubmitting changes
-
-
-  // This function is called by AnswerInputArea when the player submits
-  const handleAnswerSubmit = (payload: PlayerAnswerPayload) => {
-    console.log('Player submitted answer:', payload);
-    // Avoid triggering submission logic if already submitting
-    if (isSubmitting) return;
-
-    setIsSubmitting(true);      // Show submitting UI state
-    setCurrentBlock(null);      // Hide question UI
-    submissionTriggered.current = true; // Set the flag to trigger the result simulation effect
-    // NOTE: In a real app, you'd send the 'payload' via WebSocket here.
   };
 
-  // --- Component Render ---
-  // This part remains outside the useEffect hooks
+
+  const handleSimulatedMessage = useCallback((message: MockWebSocketMessage) => {
+    console.log("PlayerPage: Received simulated message:", message);
+
+    if (!message || !message.data) {
+      console.warn("PlayerPage: Received invalid simulated message structure.");
+      _setCurrentBlock(null); _setCurrentResult(null); setIsWaiting(true); return;
+    }
+
+    // --- Set currentGameId from the message envelope DATA ---
+    if (message.data.gameid) {
+      setCurrentGameId(message.data.gameid); // Get gameId from envelope
+    }
+    // --- END Setting currentGameId ---
+
+    const { id: dataTypeId, content } = message.data;
+
+    try {
+      // --- Handle special state signals ---
+      if (dataTypeId === 99) { _setCurrentBlock(null); _setCurrentResult(null); setIsWaiting(true); setIsSubmitting(false); return; }
+      if (dataTypeId === 98) { _setCurrentBlock(null); _setCurrentResult(null); setIsWaiting(false); setIsSubmitting(true); return; }
+      if (dataTypeId === 0) { _setCurrentBlock(null); _setCurrentResult(null); setIsWaiting(true); setIsSubmitting(false); console.log("Player State: View Cleared."); return; }
+
+      // --- Parse game content ---
+      const parsedContent = JSON.parse(content);
+
+      if (dataTypeId === 2) { // Question Start
+        _setCurrentBlock(parsedContent as GameBlock);
+      } else if (dataTypeId === 8) { // Result
+        _setCurrentResult(parsedContent as QuestionResultPayload);
+      } else {
+        console.warn(`PlayerPage: Received message with unknown data.id: ${dataTypeId}`);
+        _setCurrentBlock(null); _setCurrentResult(null); setIsWaiting(true);
+      }
+    } catch (error) {
+      console.error("PlayerPage: Error parsing message content:", error, content);
+      _setCurrentBlock(null); _setCurrentResult(null); setIsWaiting(true);
+    }
+    // Depend on the state setters
+  }, [_setCurrentBlock, _setCurrentResult]);
+
+
+  const handleAnswerSubmit = (answerDetailPayload: PlayerAnswerPayload) => {
+    console.log('Player submitting answer detail:', answerDetailPayload);
+    // Use the currentGameId from state
+    if (isSubmitting || !playerInfo.cid || !currentGameId) {
+      console.warn("Submission blocked: Already submitting or missing CID/GameID.");
+      return;
+    }
+    // ... (rest of the function remains the same: set isSubmitting, stringify, create messageToSend, log) ...
+    setIsSubmitting(true);
+    setCurrentBlock(null);
+
+    const contentString = JSON.stringify(answerDetailPayload);
+    const messageToSend: MockWebSocketMessage = {
+      channel: `/controller/${currentGameId}`, // Use state variable
+      data: {
+        gameid: currentGameId,             // Use state variable
+        id: 6,
+        type: "message",
+        content: contentString,
+        cid: playerInfo.cid
+      },
+      ext: { timetrack: Date.now() }
+    };
+    console.log('Player Message Sent (Simulated):', messageToSend);
+    console.log("Player State: Answer submitted. Waiting for result message...");
+  };
+
+
   return (
     <>
       <PlayerView
+        // ... props ...
         questionData={currentBlock}
         onSubmitAnswer={handleAnswerSubmit}
         isWaiting={isWaiting}
         isSubmitting={isSubmitting}
-        feedbackPayload={currentResult} // Pass the result object
+        feedbackPayload={currentResult}
         playerInfo={playerInfo}
       />
       <DevMockControls
-        loadMockBlock={loadBlock}
-        setMockResult={setMockResult}
+        simulateReceiveMessage={handleSimulatedMessage}
+        // Pass host overrides if still needed, otherwise remove them
+        loadMockBlock={(block) => { console.log("DEV: Host override block ignored in PlayerPage"); }}
+        setMockResult={(result) => { console.log("DEV: Host override result ignored in PlayerPage"); }}
       />
     </>
   );

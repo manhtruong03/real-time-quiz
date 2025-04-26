@@ -1,7 +1,7 @@
 // src/components/game/views/HostView.tsx
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, memo } from "react";
 import { GameBlock, isContentBlock } from "@/src/lib/types"; // Use GameBlock type and type guard
 import QuestionDisplay from "../display/QuestionDisplay";
 import MediaDisplay from "../display/MediaDisplay";
@@ -15,6 +15,7 @@ import { useGameBackground } from "@/src/lib/hooks/useGameBackground"; // Correc
 
 interface HostViewProps {
   questionData: GameBlock | null; // Use GameBlock type
+  timerKey: string | number; // To ensure timer resets correctly
   currentAnswerCount: number;
   totalPlayers: number;
   gamePin?: string;
@@ -26,8 +27,9 @@ interface HostViewProps {
   className?: string;
 }
 
-const HostView: React.FC<HostViewProps> = ({
+const HostViewComponent: React.FC<HostViewProps> = ({
   questionData: currentBlock, // Rename prop internally for clarity
+  timerKey, // Destructure the new prop
   currentAnswerCount,
   totalPlayers,
   gamePin,
@@ -47,13 +49,13 @@ const HostView: React.FC<HostViewProps> = ({
     className
   );
 
-  const [timerKey, setTimerKey] = useState(0); // To reset timer
+  // const [timerKey, setTimerKey] = useState(0); // To reset timer
 
-  useEffect(() => {
-    if (currentBlock) {
-      setTimerKey(currentBlock.gameBlockIndex); // Change key when block changes
-    }
-  }, [currentBlock]);
+  // useEffect(() => {
+  //   if (currentBlock) {
+  //     setTimerKey(currentBlock.gameBlockIndex); // Change key when block changes
+  //   }
+  // }, [currentBlock]);
 
   const mainContent = () => {
     if (isLoading || !currentBlock) {
@@ -184,5 +186,8 @@ const HostView: React.FC<HostViewProps> = ({
     </div>
   );
 };
+
+// Wrap the component export with React.memo
+const HostView = memo(HostViewComponent);
 
 export default HostView;
