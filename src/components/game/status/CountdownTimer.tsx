@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, memo } from 'react';
 import { cn } from '@/src/lib/utils'; // [cite: 575]
 
 interface CountdownTimerProps {
@@ -10,7 +10,7 @@ interface CountdownTimerProps {
   className?: string;
 }
 
-const CountdownTimer: React.FC<CountdownTimerProps> = ({
+const CountdownTimerComponent: React.FC<CountdownTimerProps> = ({
   initialTime,
   timeKey,
   onTimeUp,
@@ -85,5 +85,7 @@ const CountdownTimer: React.FC<CountdownTimerProps> = ({
     </div>
   );
 };
+// Wrap the component export with React.memo
+const CountdownTimer = memo(CountdownTimerComponent);
 
 export default CountdownTimer;
