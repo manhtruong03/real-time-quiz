@@ -11,20 +11,20 @@ Application-level WebSocket messages exchanged between the Host and Players gene
 [
   {
     "id": "<message_id>", // Optional: Bayeux protocol message ID for request/response linking.
-    "channel": "<target_channel>", // e.g., "/service/player", "/service/controller", "/controller/{gameid}" [cite: 142, 166, 176]
-    "clientId": "<websocket_client_id>", // Optional: Bayeux client ID, often recipient's ID. [cite: 142]
+    "channel": "<target_channel>", // e.g., "/service/player", "/service/controller", "/controller/{gameid}"
+    "clientId": "<websocket_client_id>", // Optional: Bayeux client ID, often recipient's ID.
     "data": {
       // ---- Application-Specific Data Payload ----
-      "gameid": "<session_game_id>",        // Unique ID for the current game session. [cite: 142, 165, 175]
-      "type": "message",                   // Standard indicator for application data messages. [cite: 142, 165, 175]
-      "id": <payload_type_id>,             // Numeric ID indicating the *type* of content within the 'content' field (e.g., 2=QuestionStart, 6/45=Answer, 8=Result, 13=FinalResult). [cite: 142, 165, 175]
-      "content": "<json_string_payload>",  // STRINGIFIED JSON containing the specific event data (question, answer, result). **Details vary - see below.** [cite: 142, 165, 175]
-      "cid": "<player_cid>",               // Player Client ID (Present when Player -> Host, or Host -> Specific Player). [cite: 165, 176]
-      "host": "<host_origin>"              // Optional: Originating host identifier (e.g., "play.kahoot.it"). [cite: 142, 175]
+      "gameid": "<session_game_id>",        // Unique ID for the current game session.
+      "type": "message",                   // Standard indicator for application data messages.
+      "id": <payload_type_id>,             // Numeric ID indicating the *type* of content within the 'content' field (e.g., 2=QuestionStart, 6/45=Answer, 8=Result, 13=FinalResult).
+      "content": "<json_string_payload>",  // STRINGIFIED JSON containing the specific event data (question, answer, result). **Details vary - see below.**
+      "cid": "<player_cid>",               // Player Client ID (Present when Player -> Host, or Host -> Specific Player).
+      "host": "<host_origin>"              // Optional: Originating host identifier (e.g., "play.kahoot.it").
       // ---- End Application-Specific Data ----
     },
     "ext": { // Optional: Bayeux extensions
-      "timetrack": <timestamp_ms>,          // Timestamp (e.g., from player submission or host broadcast). [cite: 165, 175]
+      "timetrack": <timestamp_ms>,          // Timestamp (e.g., from player submission or host broadcast).
       "ack": <ack_id>                      // Used for Bayeux acknowledgements.
       // Potentially other Bayeux fields like 'timesync'.
     },
@@ -54,7 +54,7 @@ Application-level WebSocket messages exchanged between the Host and Players gene
 This shows the envelope structure when the Host sends a question (Phase 2). Note that `data.content` is a string.
 
 ```json
-// Based on: docs/data_structures/phase2_ws_question_message.txt [cite: 10, 11]
+// Based on: docs/data_structures/phase2_ws_question_message.txt
 [
   {
     "id": "19", // Bayeux message ID
