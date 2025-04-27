@@ -56,9 +56,9 @@ export interface QuestionBase {
   extensiveMode?: boolean; // Seen in one example
 }
 
-// --- Specific Question Types (Extending Base) ---
-
-// Interface for Quiz Choices (Player receives this)
+// --- Specific Question Types for Player (Phase 2) ---
+// Keep QuizChoicePlayer, QuestionQuiz, JumbleChoicePlayer, QuestionJumble,
+// SurveyChoicePlayer, QuestionSurvey, QuestionOpenEnded, ContentBlock as is
 export interface QuizChoicePlayer {
   answer?: string; // Text choice
   image?: {
@@ -129,9 +129,9 @@ export type GameBlock =
   | QuestionSurvey
   | ContentBlock; // Added ContentBlock
 
-// --- Outgoing Answer Payloads (Phase 3 - Player WS Answer Detail) ---
-// Based on docs/data_structures/phase3_ws_answer_detail.md
-
+// --- Outgoing Answer Payloads (Phase 3) ---
+// Keep AnswerPayloadBase, AnswerPayloadQuiz, AnswerPayloadJumble,
+// AnswerPayloadOpenEnded, PlayerAnswerPayload as is
 export interface AnswerPayloadBase {
   questionIndex: number;
 }
@@ -158,9 +158,9 @@ export type PlayerAnswerPayload =
   | AnswerPayloadJumble
   | AnswerPayloadOpenEnded;
 
-// --- Incoming Result Payload (Phase 4 - WS Result Detail) ---
-// Based on docs/data_structures/phase4_ws_result_detail.md
-
+// --- Incoming Result Payload (Phase 4) ---
+// Keep PointsData, ResultPayloadBase, ResultPayloadQuiz, ResultPayloadJumble,
+// ResultPayloadSurvey, ResultPayloadOpenEnded, QuestionResultPayload as is
 export interface PointsData {
   totalPointsWithBonuses: number;
   questionPoints: number;
@@ -224,19 +224,90 @@ export type QuestionResultPayload =
   | ResultPayloadSurvey
   | ResultPayloadOpenEnded;
 
-// --- Existing types from original file (if any) ---
-// Keep these if they are still used elsewhere, otherwise remove or refactor.
-export interface ExistingQuestion {
-  question: string;
-  options: string[];
-  correctAnswer: string;
+// ========================================================================
+// --- NEW/UPDATED: Host-Side Live Game State Structures ---
+// ========================================================================
+
+/**
+ * Represents the detailed record of a single answer submitted by a player,
+ * processed and stored temporarily by the host during the game session.
+ * Contains fields needed for both live logic and final DTO conversion.
+ */
+export interface PlayerAnswerRecord {
+  questionIndex: number; // Index of the question answered
+  blockType: GameBlock["type"]; // Type of the question ('quiz', 'jumble', etc.)
+  choice: number | number[] | string | null; // Player's raw answer (index, order, text, or null for timeout)
+  text?: string | null; // Explicit text for open_ended, matches DTO structure.
+  reactionTimeMs: number; // Time taken in milliseconds
+  answerTimestamp: number; // Timestamp (ms) when answer was received/processed by host
+  isCorrect: boolean; // Host determined correctness
+  status: "CORRECT" | "WRONG" | "TIMEOUT" | "SUBMITTED"; // Status after host processing
+  basePoints: number; // Points before multipliers/bonuses (maps directly to DTO)
+  finalPointsEarned: number; // Actual points awarded (maps directly to DTO 'finalPoints')
+  pointsData: PointsData | null; // Optional: Raw points data from result message for context/debugging
+  // Optional power-up info can be added here if needed
+  // usedPowerUpId?: string | null;
+  // usedPowerUpContext?: any | null;
 }
 
-// This seems redundant if `ExistingQuestion` is used, or vice-versa. Consolidate if possible.
-export interface Question {
-  question: string;
-  options: string[];
-  correctAnswer: string;
+/**
+ * Represents the complete state for a single player managed by the host
+ * during an active game session. Used for live updates, scoring, ranking,
+ * and generating the final SessionPlayerDto.
+ */
+export interface LivePlayerState {
+  // --- Core Identification & Live Status ---
+  cid: string; // Player's unique session identifier (maps to DTO clientId)
+  nickname: string; // Player's display name (maps to DTO nickname)
+  avatar: { type: number; item: number } | null; // Current avatar (maps to DTO finalAvatar)
+  isConnected: boolean; // Host tracks connection status (used to determine finalStatus for DTO)
+  joinedAt: number; // Timestamp (ms) (maps to DTO joinedAt)
+  userId?: string | null; // Optional: UUID if registered (maps to DTO userId)
+  lastActivityAt: number; // Timestamp (ms) of last message/event (maps to DTO lastActivityAt)
+  playerStatus: "JOINING" | "PLAYING" | "FINISHED" | "DISCONNECTED" | "KICKED"; // Live status (maps to DTO finalStatus)
+  joinSlideIndex?: number | null; // Optional: Slide index when joined (maps to DTO joinSlideIndex)
+  waitingSince?: number | null; // Optional: Timestamp if waiting (maps to DTO waitingSince)
+  deviceInfoJson?: any | null; // Optional: If host collects this (maps to DTO deviceInfoJson)
+
+  // --- Performance & Scoring State ---
+  totalScore: number; // Accumulated score (maps to DTO finalScore)
+  rank: number; // Current rank (maps to DTO finalRank)
+  currentStreak: number; // Current consecutive correct answers streak (used for live logic)
+  maxStreak: number; // Maximum streak achieved during the game (maps to DTO maxStreak)
+  lastAnswerTimestamp: number | null; // Timestamp of the last valid answer submission
+
+  // --- Answer History & Aggregated Stats ---
+  answers: PlayerAnswerRecord[]; // Log of answers submitted, used to generate DTO answers
+  correctCount: number; // Aggregated count (maps to DTO correctAnswersCount)
+  incorrectCount: number; // Aggregated count (used with correctCount to derive DTO answersCount)
+  unansweredCount: number; // Aggregated count (maps to DTO unansweredCount)
+  answersCount: number; // Total submitted answers (correct + incorrect), maps to DTO answersCount
+  totalReactionTimeMs: number; // Sum of reaction times (maps to DTO totalTimeMs)
+}
+
+/**
+ * Represents the overall state of the game session managed by the host.
+ * Contains data needed for live game flow and generating the SessionFinalizationDto.
+ */
+export interface LiveGameState {
+  gamePin: string; // (maps to DTO gamePin)
+  quizId: string; // (maps to DTO quizId)
+  hostUserId: string; // (maps to DTO hostUserId)
+  status:
+    | "LOBBY"
+    | "QUESTION_GET_READY"
+    | "QUESTION_SHOW"
+    | "QUESTION_RESULT"
+    | "PODIUM"
+    | "ENDED"; // Live game status
+  currentQuestionIndex: number;
+  players: Record<string, LivePlayerState>; // Map CID -> Player State
+  currentQuestionStartTime: number | null;
+  currentQuestionEndTime: number | null;
+  sessionStartTime: number; // Timestamp when session started (maps to DTO sessionStartTime)
+  allowLateJoin: boolean; // Session setting (maps to DTO allowLateJoin)
+  powerUpsEnabled: boolean; // Session setting (maps to DTO powerUpsEnabled)
+  // gameSlides state might be built dynamically for the DTO or tracked live if needed
 }
 
 // --- Potentially new types needed ---
@@ -245,6 +316,8 @@ export interface Question {
 // Example: Type for the overall quiz structure fetched in Phase 1
 // Based on docs/data_structures/phase1_rest_quiz_structure.json
 // Note: This is the *host-side* structure, containing correct answers.
+// --- Host-specific Quiz Structure (Phase 1 REST) ---
+// Keep QuizStructureHost, QuestionHost, ChoiceHost as is
 export interface ChoiceHost {
   answer?: string;
   image?: {
@@ -294,7 +367,8 @@ export interface QuizStructureHost {
   modified: number;
 }
 
-// --- UI Specific Types (Keep if still used) ---
+// --- UI Specific Types ---
+// Keep AnswerOptionIndicatorProps as is
 export interface AnswerOptionIndicatorProps {
   index: number; // 0, 1, 2, 3
   color: string;
@@ -302,6 +376,7 @@ export interface AnswerOptionIndicatorProps {
 }
 
 // Keep User and QuizResult if they are used for profile/leaderboard etc.
+
 export interface User {
   id: string;
   name: string;
@@ -343,4 +418,37 @@ export function isSurveyQuestion(block: GameBlock): block is QuestionSurvey {
 
 export function isContentBlock(block: GameBlock): block is ContentBlock {
   return block.type === "content";
+}
+
+// --- Conversion Function Signature ---
+// (Implementation would go in a separate utility file, e.g., src/lib/dto-mapper.ts)
+import { SessionFinalizationDto } from "./dto/session-finalization.dto";
+
+/**
+ * Converts the final live game state into the DTO format required for the
+ * session finalization API call.
+ *
+ * @param finalGameState - The host's complete LiveGameState at the end of the game.
+ * @param sessionEndTime - Timestamp (ms) when the session officially ended.
+ * @returns The SessionFinalizationDto payload.
+ */
+export declare function convertLiveStateToFinalizationDto(
+  finalGameState: LiveGameState,
+  sessionEndTime: number
+  // Add other necessary parameters like terminationReason if applicable
+): SessionFinalizationDto;
+
+// --- Existing types from original file (if any) ---
+// Keep these if they are still used elsewhere, otherwise remove or refactor.
+export interface ExistingQuestion {
+  question: string;
+  options: string[];
+  correctAnswer: string;
+}
+
+// This seems redundant if `ExistingQuestion` is used, or vice-versa. Consolidate if possible.
+export interface Question {
+  question: string;
+  options: string[];
+  correctAnswer: string;
 }
