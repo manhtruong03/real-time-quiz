@@ -184,7 +184,7 @@ export interface ResultPayloadQuiz extends ResultPayloadBase {
   choice: number; // Player's choice index
   points: number;
   isCorrect: boolean;
-  text: string; // Text of the player's choice
+  text: string | null; // Text of the player's choice
   correctChoices: number[]; // Array of correct choice index(es)
 }
 
@@ -193,7 +193,7 @@ export interface ResultPayloadJumble extends ResultPayloadBase {
   choice: number[]; // Player's submitted order (indices relative to *received* order)
   points: number;
   isCorrect: boolean;
-  text: string; // Pipe-separated text of player's order
+  text: string | null; // Pipe-separated text of player's order
   // Correct order (indices relative to *original* definition in Phase 1)
   correctChoices: number[];
 }
@@ -201,7 +201,7 @@ export interface ResultPayloadJumble extends ResultPayloadBase {
 export interface ResultPayloadSurvey extends ResultPayloadBase {
   type: "survey";
   choice: number; // Player's choice index
-  text: string; // Text of the chosen option
+  text: string | null; // Text of the chosen option
   // Surveys don't have points, correctness, or correctChoices
   points?: never;
   isCorrect?: never;
@@ -212,7 +212,7 @@ export interface ResultPayloadOpenEnded extends ResultPayloadBase {
   type: "open_ended";
   points: number;
   isCorrect: boolean;
-  text: string; // Player's submitted text
+  text: string | null; // Player's submitted text
   // 'choice' field seems inconsistent (-4?), rely on isCorrect/correctTexts
   choice?: number | string | null; // Or omit if not reliably used
   correctTexts: string[]; // Array of acceptable correct answers

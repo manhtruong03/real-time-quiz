@@ -7,6 +7,10 @@ npm i -g pnpm
 
 npm install @dnd-kit/core @dnd-kit/sortable dompurify @types/dompurify
 
+pnpm add @stomp/stompjs
+# or npm install @stomp/stompjs
+# or yarn add @stomp/stompjs
+
 pnpm install
 
 pnpm run dev
