@@ -331,19 +331,35 @@ export function useHostGame(initialQuizData: QuizStructureHost | null) {
       submittedPayload: PlayerAnswerPayload,
       answerTimestamp: number | undefined
     ) => {
-      if (!quizData || !liveGameState) return; // Check liveGameState
+      console.log(
+        `[DEBUG] Answer attempt - Player: ${playerId}, Question: ${submittedPayload.questionIndex}, Type: ${submittedPayload.type}`
+      );
+
+      if (!quizData || !liveGameState) {
+        console.log(`[DEBUG] Answer rejected - No quizData or liveGameState`);
+        return;
+      }
+
       const hostQuestion = getCurrentHostQuestion();
       const timestamp = answerTimestamp || Date.now();
+
       if (
         liveGameState.status !== "QUESTION_SHOW" ||
         !hostQuestion ||
         hostQuestion.type === "content" ||
         submittedPayload.questionIndex !== liveGameState.currentQuestionIndex
       ) {
-        /* ... */ return;
+        console.log(`[DEBUG] Answer rejected - Status: ${liveGameState.status}, HostQ: ${hostQuestion?.type}, 
+          Expected index: ${liveGameState.currentQuestionIndex}, Got: ${submittedPayload.questionIndex}`);
+        return;
       }
+
       setLiveGameState((prev) => {
-        if (!prev) return null; // Handle null state
+        if (!prev) {
+          console.log(`[DEBUG] Answer processing - State is null`);
+          return null;
+        }
+
         const currentPlayerState = prev.players[playerId];
         if (
           !currentPlayerState ||
@@ -351,8 +367,18 @@ export function useHostGame(initialQuizData: QuizStructureHost | null) {
             (a) => a.questionIndex === prev.currentQuestionIndex
           )
         ) {
-          /* ... */ return prev;
+          console.log(`[DEBUG] Answer duplicate or invalid player - 
+            Player exists: ${!!currentPlayerState}, 
+            Already answered: ${currentPlayerState?.answers.some(
+              (a) => a.questionIndex === prev.currentQuestionIndex
+            )}`);
+          return prev;
         }
+
+        console.log(
+          `[DEBUG] Processing valid answer - Player: ${currentPlayerState.nickname}`
+        );
+
         // ... scoring logic ...
         let isCorrect = false;
         let basePoints = 0;
@@ -364,6 +390,11 @@ export function useHostGame(initialQuizData: QuizStructureHost | null) {
         const reactionTimeMs = prev.currentQuestionStartTime
           ? timestamp - prev.currentQuestionStartTime
           : hostQuestion.time ?? 0;
+
+        console.log(
+          `[DEBUG] Answer timing - Reaction time: ${reactionTimeMs}ms`
+        );
+
         switch (submittedPayload.type) {
           case "quiz":
           case "survey":
@@ -373,6 +404,16 @@ export function useHostGame(initialQuizData: QuizStructureHost | null) {
               hostQuestion.choices[playerChoice]?.correct
             ) {
               isCorrect = true;
+              console.log(
+                `[DEBUG] Quiz answer correct - Choice: ${playerChoice}`
+              );
+            } else if (hostQuestion.type === "quiz") {
+              console.log(
+                `[DEBUG] Quiz answer incorrect - Choice: ${playerChoice}, Correct choice(s): ${hostQuestion.choices
+                  .map((c, i) => (c.correct ? i : null))
+                  .filter((i) => i !== null)
+                  .join(", ")}`
+              );
             }
             break;
           case "jumble":
@@ -391,6 +432,12 @@ export function useHostGame(initialQuizData: QuizStructureHost | null) {
             isCorrect = correctTexts.includes(playerText?.toLowerCase());
             break;
         }
+
+        // Log final scoring result
+        console.log(
+          `[DEBUG] Score calculation - IsCorrect: ${isCorrect}, Points: ${finalPointsEarned}, Status: ${currentStatus}`
+        );
+
         if (hostQuestion.type !== "survey" && isCorrect) {
           currentStatus = "CORRECT";
           const timeFactor = Math.max(
@@ -528,10 +575,10 @@ export function useHostGame(initialQuizData: QuizStructureHost | null) {
           return;
         }
         if (!Array.isArray(messageList) || messageList.length === 0) {
-          console.warn("(Hook) Received empty or non-array message list.");
-          return;
+          parsedMessage = messageList;
+        } else {
+          parsedMessage = messageList[0];
         }
-        parsedMessage = messageList[0];
       } catch (e) {
         console.error("(Hook) Error parsing message body:", e, message);
         return;
@@ -567,7 +614,7 @@ export function useHostGame(initialQuizData: QuizStructureHost | null) {
         });
         return;
       }
-      if (type === "login" || type === "IDENTIFY") {
+      if (type === "login" || type === "joined" || type === "IDENTIFY") {
         const nickname = data.name;
         if (cid && nickname) {
           addOrUpdatePlayer(
