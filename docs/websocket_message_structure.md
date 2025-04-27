@@ -47,7 +47,15 @@ Application-level WebSocket messages exchanged between the Host and Players gene
       - `./data_structures/phase4_ws_result_detail.md` (Host -> Player Result Feedback)
   - **`cid`**: Identifies the specific player involved, essential for routing answers to the correct host and results to the correct player.
 - **`ext.timetrack`**: Provides a timestamp for when the message was sent or processed.
-- **`id` (Top Level), `clientId`, `successful`, other `ext` fields**: Primarily relate to the underlying Bayeux protocol for message handling, acknowledgements, and connection management. While important for the WebSocket layer, the core application structure lies within the `data` object.
+- **`id` (Top Level), `clientId`, `successful`, other `ext` fields**: These fields are primarily related to the underlying **Bayeux protocol** managing the WebSocket communication session, message handling, and acknowledgements.
+  - **`id` (Top Level):** A Bayeux message identifier, often used to correlate requests and responses (e.g., acknowledgements).
+  - **`clientId`:** This is the unique **Bayeux session identifier** assigned by the server to a specific client connection during the initial `/meta/handshake`.
+    - **Server Assignment:** It's crucial to understand that the client _receives_ this ID from the server; it doesn't generate it initially.
+    - **Session Identification:** The client must include this `clientId` in subsequent messages (like `/meta/connect`, publish requests, etc.) sent _to_ the server over its established WebSocket connection.
+    - **Server-Side Validation (Security):** A correctly implemented Bayeux server **validates** incoming messages. It ensures that the `clientId` present in the message payload matches the `clientId` it previously associated with the specific WebSocket connection from which the message arrived. **This binding prevents one client (e.g., Player 1 on Connection A) from successfully sending messages while impersonating another client (e.g., using Player 2's `clientId` on Connection A). Such attempts should be rejected by the server.**
+    - **Reconnection:** The `clientId` is also used in `/meta/connect` messages when a client attempts to reconnect after a transport interruption (e.g., a new WebSocket connection is established). The server will only allow this resumption if the session associated with the provided `clientId` exists _and_ is not currently bound to another _active_ WebSocket connection. This prevents hijacking an _active_ session belonging to another user.
+  - **`successful`:** Typically present in server responses (e.g., acknowledgements) to indicate the success or failure of the corresponding client request.
+  - **`ext`:** Container for Bayeux extensions, such as acknowledgements (`ack`), timestamps (`timetrack`), or time synchronization (`timesync`).
 
 ### 3. Example Message Payloads and Variations
 
@@ -58,21 +66,21 @@ This section provides examples of specific message types, highlighting how they 
 This shows the typical envelope structure (fitting the general model) when the Host sends a question (Phase 2). `data.content` is a stringified JSON object.
 
 ```json
-// Based on: docs/data_structures/phase2_ws_question_message.txt [cite: 10, 11]
+// Based on: docs/data_structures/phase2_ws_question_message.txt
 [
   {
-    "id": "19", // Bayeux message ID [cite: 84]
-    "channel": "/service/player", // Target channel [cite: 85]
+    "id": "19", // Bayeux message ID
+    "channel": "/service/player", // Target channel
     "data": {
-      // Standard data structure [cite: 86]
+      // Standard data structure
       "gameid": "1480287",
-      "type": "message", // Standard type [cite: 87]
+      "type": "message", // Standard type
       "host": "play.kahoot.it",
-      "id": 2, // ID indicating Question Start [cite: 88]
-      "content": "{...}" // STRINGIFIED JSON payload [cite: 89]
+      "id": 2, // ID indicating Question Start
+      "content": "{...}" // STRINGIFIED JSON payload
     },
-    "clientId": "...", // Bayeux client ID [cite: 85]
-    "ext": {} // Optional extensions [cite: 92]
+    "clientId": "...", // Bayeux client ID
+    "ext": {} // Optional extensions
   }
 ]
 ```
@@ -132,4 +140,4 @@ This message follows the general envelope structure. The key identifier is the `
 ]
 ```
 
-_(Rest of the document, potentially including other standard messages like Answer Submission [cite: 7, 8] and Result Broadcast[cite: 1, 2], follows)_...
+_(Rest of the document, potentially including other standard messages like Answer Submission_...
