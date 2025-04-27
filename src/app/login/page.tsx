@@ -54,7 +54,7 @@ export default function LoginPage() {
             <Link href="/">
               <div className="flex items-center gap-2">
                 <Brain className="h-8 w-8 text-primary" />
-                <h1 className="text-2xl font-bold">BYTEBATTLE</h1>
+                <h1 className="text-2xl font-bold">VUI QUIZ</h1>
               </div>
             </Link>
           </div>
@@ -134,10 +134,10 @@ export default function LoginPage() {
         <div className="container mx-auto px-4 text-center">
           <div className="flex items-center justify-center gap-2 mb-4">
             <Brain className="h-6 w-6 text-primary" />
-            <span className="text-xl font-bold">BYTEBATTLE</span>
+            <span className="text-xl font-bold">VUI QUIZ</span>
           </div>
           <p className="text-muted-foreground text-sm">
-            &copy; {new Date().getFullYear()} BYTEBATTLE. All rights reserved.
+            &copy; {new Date().getFullYear()} VUI QUIZ. All rights reserved.
           </p>
         </div>
       </footer>

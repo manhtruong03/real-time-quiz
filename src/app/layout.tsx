@@ -7,7 +7,7 @@ import { ThemeProvider } from "@/src/components/theme-provider"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "BYTEBATTLE - AI-Powered Quiz App",
+  title: "VUI QUIZ - AI-Powered Quiz App",
   description: "Challenge yourself with AI-generated quizzes across various categories",
   generator: 'v0.dev'
 }

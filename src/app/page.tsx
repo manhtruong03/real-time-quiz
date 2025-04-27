@@ -9,7 +9,7 @@ export default function Home() {
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center gap-2">
             <Brain className="h-8 w-8 text-primary" />
-            <h1 className="text-2xl font-bold">BYTEBATTLE</h1>
+            <h1 className="text-2xl font-bold">VUI QUIZ</h1>
           </div>
           <nav className="hidden md:flex gap-6">
             <Link href="/" className="font-medium hover:text-primary">
@@ -48,7 +48,7 @@ export default function Home() {
                 Master Programming with <span className="text-primary">AI-Powered</span> Quizzes
               </h1>
               <p className="text-lg text-muted-foreground">
-                BYTEBATTLE generates fresh, challenging questions across various programming languages, adapting to your
+                VUI QUIZ generates fresh, challenging questions across various programming languages, adapting to your
                 skill level for a personalized learning experience.
               </p>
               <div className="flex gap-4 pt-4">
@@ -100,7 +100,7 @@ export default function Home() {
             <div className="text-center mb-16">
               <h2 className="text-3xl md:text-4xl font-bold mb-4">Powerful Features</h2>
               <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                BYTEBATTLE combines cutting-edge AI with engaging gameplay to create a unique coding quiz experience
+                VUI QUIZ combines cutting-edge AI with engaging gameplay to create a unique coding quiz experience
               </p>
             </div>
 
@@ -160,7 +160,7 @@ export default function Home() {
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div className="flex items-center gap-2 mb-4 md:mb-0">
               <Brain className="h-6 w-6 text-primary" />
-              <span className="text-xl font-bold">BYTEBATTLE</span>
+              <span className="text-xl font-bold">VUI QUIZ</span>
             </div>
             <div className="flex gap-8">
               <Link href="/about" className="text-muted-foreground hover:text-primary">
@@ -178,7 +178,7 @@ export default function Home() {
             </div>
           </div>
           <div className="mt-8 text-center text-muted-foreground text-sm">
-            &copy; {new Date().getFullYear()} BYTEBATTLE. All rights reserved.
+            &copy; {new Date().getFullYear()} VUI QUIZ. All rights reserved.
           </div>
         </div>
       </footer>

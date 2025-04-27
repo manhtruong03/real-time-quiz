@@ -34,7 +34,7 @@ export default function LeaderboardPage() {
             <Link href="/">
               <div className="flex items-center gap-2">
                 <Brain className="h-8 w-8 text-primary" />
-                <h1 className="text-2xl font-bold">BYTEBATTLE</h1>
+                <h1 className="text-2xl font-bold">VUI QUIZ</h1>
               </div>
             </Link>
           </div>
@@ -68,7 +68,7 @@ export default function LeaderboardPage() {
           <div className="text-center mb-12">
             <h1 className="text-4xl font-bold mb-4">Leaderboard</h1>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              See how you stack up against other BYTEBATTLE players from around the world
+              See how you stack up against other VUI QUIZ players from around the world
             </p>
           </div>
 
@@ -86,10 +86,10 @@ export default function LeaderboardPage() {
                   <CardHeader className="flex flex-row items-center gap-4">
                     <div
                       className={`w-12 h-12 rounded-full flex items-center justify-center ${index === 0
-                          ? "bg-yellow-100 text-yellow-600"
-                          : index === 1
-                            ? "bg-gray-100 text-gray-600"
-                            : "bg-amber-100 text-amber-600"
+                        ? "bg-yellow-100 text-yellow-600"
+                        : index === 1
+                          ? "bg-gray-100 text-gray-600"
+                          : "bg-amber-100 text-amber-600"
                         }`}
                     >
                       {index === 0 ? (
@@ -200,10 +200,10 @@ export default function LeaderboardPage() {
         <div className="container mx-auto px-4 text-center">
           <div className="flex items-center justify-center gap-2 mb-4">
             <Brain className="h-6 w-6 text-primary" />
-            <span className="text-xl font-bold">BYTEBATTLE</span>
+            <span className="text-xl font-bold">VUI QUIZ</span>
           </div>
           <p className="text-muted-foreground text-sm">
-            &copy; {new Date().getFullYear()} BYTEBATTLE. All rights reserved.
+            &copy; {new Date().getFullYear()} VUI QUIZ. All rights reserved.
           </p>
         </div>
       </footer>

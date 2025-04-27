@@ -113,7 +113,7 @@ export default function PlayQuizPage() {
               <Link href="/">
                 <div className="flex items-center gap-2">
                   <Brain className="h-8 w-8 text-primary" />
-                  <h1 className="text-2xl font-bold">BYTEBATTLE</h1>
+                  <h1 className="text-2xl font-bold">VUI QUIZ</h1>
                 </div>
               </Link>
             </div>
@@ -142,7 +142,7 @@ export default function PlayQuizPage() {
               <Link href="/">
                 <div className="flex items-center gap-2">
                   <Brain className="h-8 w-8 text-primary" />
-                  <h1 className="text-2xl font-bold">BYTEBATTLE</h1>
+                  <h1 className="text-2xl font-bold">VUI QUIZ</h1>
                 </div>
               </Link>
             </div>
@@ -225,7 +225,7 @@ export default function PlayQuizPage() {
             <Link href="/">
               <div className="flex items-center gap-2">
                 <Brain className="h-8 w-8 text-primary" />
-                <h1 className="text-2xl font-bold">BYTEBATTLE</h1>
+                <h1 className="text-2xl font-bold">VUI QUIZ</h1>
               </div>
             </Link>
           </div>
