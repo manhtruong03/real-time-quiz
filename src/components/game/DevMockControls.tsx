@@ -32,12 +32,14 @@ export interface MockWebSocketMessage { // Ensure this is exported
   channel: string;
   clientId?: string;
   data: {
-    gameid: string;
-    type: "message";
-    id: number;
+    gameid?: string;
+    type: string;
+    id?: number;
     content: string;
     host?: string;
     cid?: string;
+    name?: string;
+    status?: string;
   };
   ext?: {
     timetrack?: number;
@@ -48,8 +50,9 @@ export interface MockWebSocketMessage { // Ensure this is exported
 // --- UPDATED Props Interface ---
 interface DevMockControlsProps {
   simulateReceiveMessage?: (message: MockWebSocketMessage) => void; // For Player view (optional)
-  // NEW PROP: Simulate sending an answer TO the host (optional)
-  simulatePlayerAnswer?: (message: MockWebSocketMessage) => void;
+  simulatePlayerAnswer?: (message: MockWebSocketMessage) => void; // For Host to receive player answer (optional)
+  // NEW PROP: Simulate the host receiving a join message (optional)
+  simulateHostReceiveJoin?: (message: MockWebSocketMessage) => void;
   // --- END NEW PROP ---
   loadMockBlock: (block: GameBlock | null) => void; // For Host override/start
   setMockResult: (result: QuestionResultPayload | null) => void; // For Host override (less common)
@@ -81,15 +84,61 @@ const createMockMessage = (
 const DevMockControls: React.FC<DevMockControlsProps> = ({
   simulateReceiveMessage,
   simulatePlayerAnswer, // Destructure the new optional prop
+  simulateHostReceiveJoin, // Destructure the simulateHostReceiveJoin prop
   loadMockBlock,
   setMockResult,
 }) => {
   const [isOpen, setIsOpen] = useState(true);
   const [mockPlayerId, setMockPlayerId] = useState<string>('player_1');
+  const [mockPlayerName, setMockPlayerName] = useState<string>('MockPlayer');
+  // --- ADDED: Check if the necessary prop is available ---
+  const canSimulateJoin = !!simulateHostReceiveJoin;
+  // --- END ADDED ---
 
   if (process.env.NODE_ENV !== 'development') {
     return null;
   }
+
+  // --- NEW Function: Simulate Player Join ---
+  const sendPlayerJoin = () => {
+    const uniquePlayerId = `${mockPlayerId}_${Math.random().toString(36).substring(7)}`;
+    console.log(`DEV: Simulating join from ${uniquePlayerId} (${mockPlayerName})`);
+
+    // Construct a plausible join message payload (adjust based on actual needs)
+    // Assuming data.id 9 is for player updates/joins based on Kahoot structure
+    const joinPayload = {
+      type: "player_update", // Use player_update for join/update events
+      player: {
+        cid: uniquePlayerId,
+        name: mockPlayerName,
+        totalScore: 0,
+        streak: 0,
+        rank: 0, // Initial rank might be 0 or unset
+      }
+    };
+    const contentString = JSON.stringify(joinPayload);
+
+    const messageToSend: MockWebSocketMessage = {
+      channel: `/controller/DEV123`, // Channel host listens on for player actions
+      data: {
+        name: mockPlayerName,
+        type: "joined",
+        content: "{}",
+        cid: uniquePlayerId // The joining player's ID
+      },
+      ext: { timetrack: Date.now() }
+    };
+
+    if (simulateHostReceiveJoin) {
+      console.log("DEV: Sending simulated join message to Host:", messageToSend);
+      simulateHostReceiveJoin(messageToSend);
+    } else {
+      // This warning will still appear if the button wasn't disabled (e.g., due to logic error),
+      // but the primary feedback is now the disabled button itself.
+      console.warn("DEV: simulateHostReceiveJoin prop not provided.");
+    }
+  };
+  // --- END NEW Function ---
 
   // --- *** CHANGE 2: Modify sendAnswer function *** ---
   const sendAnswer = (answerDetailPayload: PlayerAnswerPayload) => {
@@ -104,7 +153,7 @@ const DevMockControls: React.FC<DevMockControlsProps> = ({
       channel: `/controller/DEV123`, // Example channel Player -> Host
       data: {
         gameid: "DEV123", // Use a consistent mock gameId
-        id: 6, // Use ID 6 for answer submission (based on docs/phase3_ws_answer_message.txt [cite: 7, 8])
+        id: 6, // Use ID 6 for answer submission (based on docs/phase3_ws_answer_message.txt 
         type: "message",
         content: contentString, // Stringified detail payload
         cid: uniquePlayerId // Player's unique identifier
@@ -115,7 +164,7 @@ const DevMockControls: React.FC<DevMockControlsProps> = ({
     // 3. Call the simulatePlayerAnswer prop with the FULL message object
     if (simulatePlayerAnswer) {
       console.log("DEV: Sending simulated answer message to Host:", messageToSend);
-      simulatePlayerAnswer(messageToSend); // <<< PASS THE FULL MESSAGE
+      simulatePlayerAnswer(messageToSend);
     } else {
       console.warn("DEV: simulatePlayerAnswer prop not provided.");
     }
@@ -268,6 +317,30 @@ const DevMockControls: React.FC<DevMockControlsProps> = ({
             <Button size="sm" variant="outline" onClick={() => load(mockSurveyDetail, 2)}>Load Survey</Button>
             <Button size="sm" variant="outline" onClick={() => load(mockOpenEndedDetail, 2)}>Load Open Ended</Button>
 
+            {/* --- NEW: Simulate Player Join Section --- */}
+            <h4 className="text-xs font-semibold mt-1 mb-1">Simulate Player Join (Msg):</h4>
+            <div className="flex items-center gap-2">
+              <label htmlFor="mockPlayerName" className="text-xs flex-shrink-0">Name:</label>
+              <input
+                id="mockPlayerName" type="text" value={mockPlayerName} onChange={(e) => setMockPlayerName(e.target.value)}
+                className="flex-grow h-8 px-2 py-1 text-xs border rounded bg-input text-foreground"
+              />
+            </div>
+            {/* --- MODIFIED: Disable button and add title if prop is missing --- */}
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={sendPlayerJoin}
+              className="gap-1 bg-green-100 dark:bg-green-900 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={!canSimulateJoin}
+              title={!canSimulateJoin ? "Host component did not provide simulateHostReceiveJoin prop" : "Simulate a player joining"}
+            >
+              <Send className="h-3 w-3" /> Player Join
+            </Button>
+            {/* --- END MODIFIED --- */}
+            <hr className="my-2" />
+            {/* --- END NEW Section --- */}
+
             <h4 className="text-xs font-semibold mt-2 mb-1">Show Player Result (Msg):</h4>
             <Button size="sm" variant="outline" onClick={() => showResult('correct')}>Show Correct</Button>
             <Button size="sm" variant="outline" onClick={() => showResult('incorrect')}>Show Incorrect</Button>
@@ -281,11 +354,16 @@ const DevMockControls: React.FC<DevMockControlsProps> = ({
             <hr className="my-2" />
 
             {/* --- Simulate Player Answers Section --- */}
+            {/* This section already simulates sending an answer *from* the player */}
+            {/* The host component needs to use the simulatePlayerAnswer prop to handle receiving it */}
             <h4 className="text-xs font-semibold mt-1 mb-1">Simulate Player Answer (Msg):</h4>
             <div className="flex items-center gap-2">
-              <label htmlFor="mockPlayerId" className="text-xs flex-shrink-0">Player ID:</label>
+              <label htmlFor="mockPlayerIdInput" className="text-xs flex-shrink-0">Player ID:</label>
               <input
-                id="mockPlayerId" type="text" value={mockPlayerId} onChange={(e) => setMockPlayerId(e.target.value)}
+                id="mockPlayerIdInput" // Changed ID to avoid conflict
+                type="text"
+                value={mockPlayerId}
+                onChange={(e) => setMockPlayerId(e.target.value)}
                 className="flex-grow h-8 px-2 py-1 text-xs border rounded bg-input text-foreground"
               />
             </div>

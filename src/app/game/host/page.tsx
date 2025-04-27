@@ -1,133 +1,195 @@
 // src/app/game/host/page.tsx
-'use client';
+"use client";
 
-import React, { useState, useCallback, useEffect } from 'react';
-import HostView from '@/src/components/game/views/HostView';
-// Import PlayerAnswerPayload
-import { GameBlock, QuestionResultPayload, QuizStructureHost, QuestionHost, PlayerAnswerPayload } from '@/src/lib/types';
-import DevMockControls, { MockWebSocketMessage } from '@/src/components/game/DevMockControls';
-import mockQuizStructureHost from '@/src/__mocks__/api/quiz_sample_all_types';
+import React, { useState, useCallback, useEffect } from "react";
+import HostView from "@/src/components/game/views/HostView";
+import {
+  GameBlock,
+  QuestionResultPayload,
+  QuizStructureHost,
+  QuestionHost,
+  PlayerAnswerPayload,
+  LivePlayerState,
+  PlayerAnswerRecord,
+  LiveGameState,
+  PointsData,
+  // Import specific answer payload types for type checking
+  AnswerPayloadQuiz,
+  AnswerPayloadJumble,
+  AnswerPayloadOpenEnded,
+  isQuizQuestion,
+  isJumbleQuestion,
+  isOpenEndedQuestion,
+  isSurveyQuestion,
+  isContentBlock, // Keep type guards
 
-// Type for storing received answers (Player ID -> Answer Payload)
-type ReceivedAnswersMap = Record<string, PlayerAnswerPayload>;
+  ContentBlock,
+  QuestionOpenEnded,
+} from "@/src/lib/types";
+import DevMockControls, {
+  MockWebSocketMessage,
+} from "@/src/components/game/DevMockControls";
+import mockQuizStructureHost from "@/src/__mocks__/api/quiz_sample_all_types";
+import { SessionFinalizationDto } from "@/src/lib/dto/session-finalization.dto";
+import { Loader2 } from "lucide-react"; // *** FIX: Import Loader2 ***
 
 export default function HostPage() {
   const [quizData, setQuizData] = useState<QuizStructureHost | null>(null);
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(0);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(-1); // Start at -1 (Lobby)
   const [currentBlock, setCurrentBlock] = useState<GameBlock | null>(null);
-  const [currentResult, setCurrentResult] = useState<QuestionResultPayload | null>(null);
+  // const [currentResult, setCurrentResult] = useState<QuestionResultPayload | null>(null); // Host doesn't receive results, it sends them
   const [isLoading, setIsLoading] = useState(true);
-  const [answerCount, setAnswerCount] = useState(0); // Manual count
-  const [totalPlayers, setTotalPlayers] = useState(50);
-  const [gamePin] = useState('123456');
-  const [accessUrl] = useState('bytebattle.quiz');
-  // --- State for Received Answers ---
-  const [receivedAnswers, setReceivedAnswers] = useState<ReceivedAnswersMap>({});
-  const [timerKey, setTimerKey] = useState(0); // Keep timerKey state
-  // --- END State ---
+  // const [answerCount, setAnswerCount] = useState(0); // Replaced by derived count
+  const [totalPlayers, setTotalPlayers] = useState(0); // Will be derived from playersState
+  const [gamePin] = useState("123456");
+  const [accessUrl] = useState("VuiQuiz.com");
+  const [timerKey, setTimerKey] = useState<string | number>("lobby"); // Use string for non-question states
 
-  // formatQuestionForPlayer and sendBlockToPlayers remain the same
-  // ... (keep formatQuestionForPlayer and sendBlockToPlayers functions here) ...
-  const formatQuestionForPlayer = (hostQuestion: QuestionHost | null): GameBlock | null => {
-    if (!hostQuestion) return null;
+  // --- *** NEW State Management using LiveGameState/LivePlayerState *** ---
+  const [liveGameState, setLiveGameState] = useState<LiveGameState>({
+    gamePin: gamePin,
+    quizId: "", // Will be set when quizData loads
+    hostUserId: "mock-host-user-id", // Example host ID
+    status: "LOBBY",
+    currentQuestionIndex: -1,
+    players: {}, // Key: cid, Value: LivePlayerState
+    currentQuestionStartTime: null,
+    currentQuestionEndTime: null,
+    sessionStartTime: Date.now(), // Set when session starts
+    // Defaults, assuming they are set when game starts
+    allowLateJoin: true,
+    powerUpsEnabled: false,
+  });
+  // --- *** END NEW State Management *** ---
 
-    // Base structure common to most types sent to players
-    const baseBlock: Pick<GameBlock, // Pick from the union type
-      'type' | 'gameBlockIndex' | 'questionIndex' | 'totalGameBlockCount' |
-      'title' | 'image' | 'video' | 'media' | 'timeAvailable' | 'timeRemaining' |
-      'pointsMultiplier' | 'numberOfAnswersAllowed' |
-      'getReadyTimeAvailable' | 'getReadyTimeRemaining' | 'gameBlockType'
-    > = {
-      type: hostQuestion.type,
-      gameBlockIndex: currentQuestionIndex,
-      questionIndex: currentQuestionIndex,
-      totalGameBlockCount: quizData?.questions.length ?? 0,
-      title: hostQuestion.title || hostQuestion.question || '', // Use title for content, question otherwise
-      image: hostQuestion.image || undefined,
-      video: hostQuestion.video as GameBlock['video'] || undefined, // Type assertion might be needed
-      media: hostQuestion.media as GameBlock['media'] || undefined, // Type assertion might be needed
-      timeAvailable: hostQuestion.time || 0,
-      timeRemaining: hostQuestion.time || 0, // Initial remaining time is full time
-      pointsMultiplier: hostQuestion.pointsMultiplier || 0, // Default to 0 if not present (like survey)
-      numberOfAnswersAllowed: 1, // Default, adjust if multi-select is added
-      // currentQuestionAnswerCount: answerCount, // Add current answer count
-      getReadyTimeAvailable: 5000, // Example Get Ready time
-      getReadyTimeRemaining: 5000,
-      gameBlockType: hostQuestion.type, // Add gameBlockType explicitly
-    };
-
-    // Type-specific adjustments
-    switch (hostQuestion.type) {
-      case 'content':
-        return {
-          ...baseBlock,
-          type: 'content',
-          description: hostQuestion.description || '',
-          pointsMultiplier: undefined, // Content has no points
-          timeAvailable: 0, timeRemaining: 0, // Content usually not timed
-          numberOfAnswersAllowed: undefined,
-        } as GameBlock;
-      case 'quiz':
-      case 'jumble':
-      case 'survey':
-        // Player choices exclude the 'correct' field
-        const playerChoices = hostQuestion.choices.map(({ correct, ...choiceData }) => choiceData);
-        // For Jumble, the HOST should shuffle before sending, but the mock structure might already be shuffled
-        // If not shuffled in mock, add shuffle logic here for Jumble
-        const choicesToSend = (hostQuestion.type === 'jumble')
-          ? [...playerChoices].sort(() => Math.random() - 0.5) // Example shuffle
-          : playerChoices;
-
-        return {
-          ...baseBlock,
-          type: hostQuestion.type, // quiz, jumble, survey
-          choices: choicesToSend,
-          numberOfChoices: choicesToSend.length,
-          pointsMultiplier: hostQuestion.type === 'survey' ? undefined : baseBlock.pointsMultiplier, // No points for survey
-        } as GameBlock;
-      case 'open_ended':
-        return {
-          ...baseBlock,
-          type: 'open_ended',
-          choices: undefined, // No choices sent to player
-          numberOfChoices: 0,
-        } as GameBlock;
-      default:
-        console.warn("Unknown host question type:", hostQuestion.type);
-        return null;
+  // --- Helper to get current question from QuizStructureHost ---
+  const getCurrentHostQuestion = useCallback((): QuestionHost | null => {
+    if (
+      !quizData ||
+      currentQuestionIndex < 0 ||
+      currentQuestionIndex >= quizData.questions.length
+    ) {
+      return null;
     }
-  };
+    return quizData.questions[currentQuestionIndex];
+  }, [quizData, currentQuestionIndex]);
 
-  // --- Function to Simulate Sending WebSocket Message ---
-  const sendBlockToPlayers = (blockToSend: GameBlock | null) => {
-    if (!blockToSend) return;
+  // --- formatQuestionForPlayer and sendBlockToPlayers remain mostly the same ---
+  // (Ensure they use currentQuestionIndex correctly)
+  const formatQuestionForPlayer = useCallback(
+    (
+      hostQuestion: QuestionHost | null,
+      questionIdx: number
+    ): GameBlock | null => {
+      if (!hostQuestion || !quizData) return null;
+      // Base structure common to most types sent to players
+      const baseBlock: Pick<
+        GameBlock,
+        | "type"
+        | "gameBlockIndex"
+        | "questionIndex"
+        | "totalGameBlockCount"
+        | "title"
+        | "image"
+        | "video"
+        | "media"
+        | "timeAvailable"
+        | "timeRemaining"
+        | "pointsMultiplier"
+        | "numberOfAnswersAllowed"
+        | "getReadyTimeAvailable"
+        | "getReadyTimeRemaining"
+        | "gameBlockType"
+      > = {
+        type: hostQuestion.type,
+        gameBlockIndex: questionIdx,
+        questionIndex: questionIdx,
+        totalGameBlockCount: quizData.questions.length,
+        title: hostQuestion.title || hostQuestion.question || "",
+        image: hostQuestion.image || undefined,
+        video: (hostQuestion.video as GameBlock["video"]) || undefined,
+        media: (hostQuestion.media as GameBlock["media"]) || undefined,
+        timeAvailable: hostQuestion.time || 0,
+        timeRemaining: hostQuestion.time || 0,
+        pointsMultiplier:
+          hostQuestion.pointsMultiplier === 0
+            ? 0
+            : hostQuestion.pointsMultiplier || 1, // Handle multiplier 0 explicitly
+        numberOfAnswersAllowed: 1,
+        getReadyTimeAvailable: 5000, // Example Get Ready time
+        getReadyTimeRemaining: 5000,
+        gameBlockType: hostQuestion.type,
+      };
 
-    // 1. Prepare the detailed payload (already done by formatQuestionForPlayer)
-    const detailPayload = blockToSend;
+      switch (hostQuestion.type) {
+        case "content":
+          return {
+            ...baseBlock,
+            type: "content",
+            description: hostQuestion.description || "",
+            pointsMultiplier: undefined,
+            timeAvailable: 0,
+            timeRemaining: 0,
+            numberOfAnswersAllowed: undefined,
+          } as ContentBlock;
+        case "quiz":
+        case "jumble":
+        case "survey":
+          const playerChoices = hostQuestion.choices.map(
+            ({ correct, ...choiceData }) => choiceData
+          );
+          // Example: Shuffle jumble choices before sending
+          const choicesToSend =
+            hostQuestion.type === "jumble"
+              ? [...playerChoices].sort(() => Math.random() - 0.5)
+              : playerChoices;
+          return {
+            ...baseBlock,
+            type: hostQuestion.type, // quiz, jumble, survey
+            choices: choicesToSend,
+            numberOfChoices: choicesToSend.length,
+            pointsMultiplier:
+              hostQuestion.type === "survey"
+                ? undefined
+                : baseBlock.pointsMultiplier,
+          } as GameBlock; // Adjust type assertion as needed
+        case "open_ended":
+          return {
+            ...baseBlock,
+            type: "open_ended",
+            choices: undefined,
+            numberOfChoices: 0,
+          } as QuestionOpenEnded;
+        default:
+          console.warn("Unknown host question type:", hostQuestion.type);
+          return null;
+      }
+    },
+    [quizData]
+  ); // Add quizData dependency
 
-    // 2. Stringify the detailed payload
-    const contentString = JSON.stringify(detailPayload);
-
-    // 3. Construct the WebSocket envelope
-    const wsMessage = {
-      // id: generateWsMessageId(), // Optional Bayeux ID
-      channel: "/service/player",
-      data: {
-        gameid: gamePin,
-        type: "message",
-        id: 2, // Example ID for question start [cite: 1631, 1555] (Use appropriate ID based on event)
-        content: contentString,
-        host: "bytebattle.quiz", // Optional [cite: 1634]
-      },
-      // clientId: targetPlayerClientId, // Needed if sending to specific player
-      // ext: { timetrack: Date.now() } // Optional extensions [cite: 1635]
-    };
-
-    console.log("DEV: Simulating WebSocket Send to Players:", JSON.stringify([wsMessage], null, 2));
-    // --- In a REAL app, send via WebSocket connection ---
-    // ws.send(JSON.stringify([wsMessage]));
-  };
-
+  const sendBlockToPlayers = useCallback(
+    (blockToSend: GameBlock | null) => {
+      if (!blockToSend) return;
+      const contentString = JSON.stringify(blockToSend);
+      const wsMessage = {
+        channel: "/service/player",
+        data: {
+          gameid: gamePin,
+          type: "message",
+          id: isContentBlock(blockToSend) ? 1 : 2, // Example: Use ID 1 for content, 2 for question start
+          content: contentString,
+          host: "VuiQuiz.com",
+        },
+      };
+      console.log(
+        "DEV: Simulating WebSocket Send Block to Players:",
+        JSON.stringify([wsMessage], null, 2)
+      );
+      // ws.send(JSON.stringify([wsMessage]));
+    },
+    [gamePin]
+  );
 
   // --- Simulate Fetching Initial Quiz Data ---
   useEffect(() => {
@@ -135,209 +197,783 @@ export default function HostPage() {
       setIsLoading(true);
       console.log("Host: Fetching quiz structure...");
       try {
-        // --- DEV MODE: Use Mock Data ---
-        if (process.env.NODE_ENV === 'development') {
-          console.log("Host (Dev Mode): Using mock quiz structure.");
-          // Add delay to simulate network
-          await new Promise(resolve => setTimeout(resolve, 700));
-          setQuizData(mockQuizStructureHost as QuizStructureHost); // Use imported mock
-          setCurrentQuestionIndex(0); // Start at the first question
-        } else {
-          // --- PRODUCTION: Actual REST API Call ---
-          // const response = await fetch(`/api/quizzes/${quizId}`); // Replace quizId
-          // if (!response.ok) throw new Error('Failed to fetch quiz');
-          // const data = await response.json();
-          // setQuizData(data as QuizStructureHost);
-          // setCurrentQuestionIndex(0);
-          console.error("Host (Prod Mode): Actual API fetch not implemented.");
-          // Handle error state appropriately
-        }
+        // Using Mock Data
+        await new Promise((resolve) => setTimeout(resolve, 500)); // Simulate network delay
+        const mockData = mockQuizStructureHost as QuizStructureHost;
+        setQuizData(mockData);
+        setLiveGameState((prev) => ({
+          ...prev,
+          quizId: mockData.uuid,
+          status: "LOBBY", // Start in Lobby
+          currentQuestionIndex: -1, // Indicate lobby state
+        }));
+        setIsLoading(false); // Loading done after quiz data is fetched
+        console.log("Host: Quiz structure loaded. In LOBBY state.");
       } catch (error) {
         console.error("Error fetching quiz data:", error);
-        // Handle error state (e.g., show error message)
         setQuizData(null);
-      } finally {
-        // Don't set loading false here, wait for the first block to be formatted
+        setIsLoading(false);
       }
     };
     fetchQuiz();
   }, []); // Run once on mount
 
-  // useEffect for updating currentBlock - NOW clears received answers
+  // --- Update currentBlock when index changes ---
   useEffect(() => {
-    if (quizData && quizData.questions.length > currentQuestionIndex) {
+    if (
+      liveGameState.status === "LOBBY" ||
+      liveGameState.status === "ENDED" ||
+      !quizData
+    ) {
+      setCurrentBlock(null);
+      return;
+    }
+
+    if (
+      quizData &&
+      quizData.questions.length > currentQuestionIndex &&
+      currentQuestionIndex >= 0
+    ) {
       console.log(`Host: Preparing block ${currentQuestionIndex}...`);
-      setIsLoading(true);
-      setAnswerCount(0); // Reset answer count for the new question
-      setReceivedAnswers({}); // --- CLEAR previous answers ---
-      const hostQuestion = quizData.questions[currentQuestionIndex];
-      const formattedBlock = formatQuestionForPlayer(hostQuestion);
+      const hostQuestion = getCurrentHostQuestion();
+      const formattedBlock = formatQuestionForPlayer(
+        hostQuestion,
+        currentQuestionIndex
+      );
       setCurrentBlock(formattedBlock);
-      // Send block AFTER state is set
-      sendBlockToPlayers(formattedBlock);
-      setIsLoading(false);
-    } else if (quizData && quizData.questions.length <= currentQuestionIndex) {
-      console.log("Host: Reached end of quiz."); setCurrentBlock(null); setIsLoading(false);
-    }
-  }, [currentQuestionIndex, quizData]); // Rerun when index or data changes
 
+      // Update LiveGameState for timing
+      setLiveGameState((prev) => ({
+        ...prev,
+        currentQuestionStartTime: Date.now(),
+        // Estimate end time based on available time + get ready time (adjust as needed)
+        currentQuestionEndTime:
+          Date.now() +
+          (formattedBlock?.timeAvailable ?? 0) +
+          (formattedBlock?.getReadyTimeAvailable ?? 0),
+      }));
+
+      sendBlockToPlayers(formattedBlock); // Send the prepared block
+    } else if (quizData && currentQuestionIndex >= quizData.questions.length) {
+      console.log("Host: Reached end of quiz questions.");
+      // Transition to PODIUM or ENDED state would happen here
+      setLiveGameState((prev) => ({ ...prev, status: "PODIUM" })); // Example transition
+      setCurrentBlock(null);
+    }
+  }, [
+    currentQuestionIndex,
+    quizData,
+    liveGameState.status,
+    formatQuestionForPlayer,
+    sendBlockToPlayers,
+    getCurrentHostQuestion,
+  ]);
+
+  // Update timerKey based on index
   useEffect(() => {
-    // Set timer key based *only* on the question index changing
-    console.log(`Host: Setting timer key for question index ${currentQuestionIndex}`);
     setTimerKey(currentQuestionIndex);
-  }, [currentQuestionIndex]); // <<< DEPENDS ONLY ON INDEX NOW
+  }, [currentQuestionIndex]);
 
-
-  // --- REMOVE Automatic Answer Count useEffect ---
-  // No longer needed as count is updated manually in handlePlayerAnswer
-
-
-  // --- *** CHANGE 1: Update Callback Signature *** ---
-  const handlePlayerAnswerMessage = useCallback((message: MockWebSocketMessage) => {
-    console.log(`Host received raw answer message:`, message);
-
-    // --- *** CHANGE 2: Extract CID and Content String *** ---
-    const playerId = message?.data?.cid; // Player Identifier from message
-    const contentString = message?.data?.content;
-    const messageTypeId = message?.data?.id;
-
-    if (!playerId || !contentString || messageTypeId !== 6) { // Check for CID, content, and correct message ID (6)
-      console.warn(`Host: Received invalid or non-answer message (ID: ${messageTypeId}, CID: ${playerId}). Ignoring.`);
-      return;
-    }
-    // --- *** END CHANGE 2 *** ---
-
-    // --- *** CHANGE 3: Use Extracted playerId for Duplicate Check *** ---
-    if (receivedAnswers[playerId]) {
-      console.log(`Host: Duplicate answer detected from ${playerId} for question ${currentQuestionIndex}. Ignoring.`);
-      return;
-    }
-    // --- *** END CHANGE 3 *** ---
-
-    try {
-      // --- *** CHANGE 4: Parse Content String *** ---
-      const payload = JSON.parse(contentString) as PlayerAnswerPayload;
-      console.log(`Host parsed answer from ${playerId}:`, payload);
-      // --- *** END CHANGE 4 *** ---
-
-      // Increment answer count
-      setAnswerCount(prev => {
-        const newCount = prev + 1;
-        console.log(`Host: Answer count incremented to ${newCount}`);
-        return newCount;
-      });
-
-      // --- *** CHANGE 5: Store Parsed Payload using Extracted playerId *** ---
-      setReceivedAnswers(prev => {
-        const updatedAnswers = {
+  // --- Player Join Logic ---
+  const addOrUpdatePlayer = useCallback((
+    cid: string,
+    nickname: string,
+    joinTimestamp: number,
+    status?: string
+  ) => {
+    console.log(`Host: Adding/Updating player - CID: ${cid}, Nickname: ${nickname}, Status: ${status}`);
+    setLiveGameState((prev: LiveGameState) => {
+      const existingPlayer = prev.players[cid];
+      if (existingPlayer) {
+        console.log(`Host: Player ${cid} already exists. Updating status/activity.`);
+        return {
           ...prev,
-          [playerId]: payload // Use playerId (CID) as key
+          players: {
+            ...prev.players,
+            [cid]: {
+              ...existingPlayer,
+              nickname: nickname,
+              isConnected: true,
+              playerStatus: 'PLAYING',
+              lastActivityAt: joinTimestamp,
+            }
+          }
         };
-        console.log(`Host: Stored answer for ${playerId}.`);
-        logAnswerStats(updatedAnswers);
-        return updatedAnswers;
-      });
-      // --- *** END CHANGE 5 *** ---
+      }
 
-    } catch (error) {
-      console.error(`Host: Error parsing answer content from ${playerId}:`, error, contentString);
-    }
+      const initialPlayerState: LivePlayerState = {
+        cid: cid,
+        nickname: nickname,
+        avatar: { type: 1800, item: 3100 },
+        isConnected: true,
+        joinedAt: Date.now(),
+        userId: undefined,
+        lastActivityAt: Date.now(),
+        playerStatus: 'PLAYING',
+        joinSlideIndex: prev.currentQuestionIndex, // Use index from previous state
+        waitingSince: null,
+        deviceInfoJson: null,
+        totalScore: 0,
+        rank: 0,
+        currentStreak: 0,
+        maxStreak: 0,
+        lastAnswerTimestamp: null,
+        answers: [],
+        correctCount: 0,
+        incorrectCount: 0,
+        unansweredCount: 0,
+        answersCount: 0,
+        totalReactionTimeMs: 0,
+      };
+      const newPlayersState = { ...prev.players, [cid]: initialPlayerState };
+      const newTotalPlayers = Object.keys(newPlayersState).length;
+      setTotalPlayers(newTotalPlayers); // Update separate totalPlayers state if still needed by UI
 
-  }, [receivedAnswers, currentQuestionIndex]); // Keep dependencies
-  // --- *** END CHANGE 1 *** ---
+      // Return the updated full game state
+      return {
+        ...prev,
+        players: newPlayersState,
+      };
+    });
+  }, []);
+  // --- *** END MOCK Player Join ---
 
-  // --- NEW: Helper function for logging stats (Example) ---
-  const logAnswerStats = (answers: ReceivedAnswersMap) => {
-    if (!currentBlock || (currentBlock.type !== 'quiz' && currentBlock.type !== 'survey')) return;
+  // --- Function for Logging Stats (Example - update to use liveGameState) ---
+  const logAnswerStats = useCallback(() => {
+    const hostQuestion = getCurrentHostQuestion();
+    if (
+      !hostQuestion ||
+      (hostQuestion.type !== "quiz" && hostQuestion.type !== "survey")
+    )
+      return;
 
     const choiceCounts: Record<number, number> = {};
-    Object.values(answers).forEach(ans => {
-      // Check if it's a quiz/survey answer and choice is a number
-      if ((ans.type === 'quiz' || ans.type === 'survey') && typeof ans.choice === 'number') {
-        choiceCounts[ans.choice] = (choiceCounts[ans.choice] || 0) + 1;
+    Object.values(liveGameState.players).forEach((player) => {
+      const answerForCurrentQ = player.answers.find(
+        (a) => a.questionIndex === currentQuestionIndex
+      );
+      if (
+        answerForCurrentQ &&
+        (answerForCurrentQ.blockType === "quiz" ||
+          answerForCurrentQ.blockType === "survey") &&
+        typeof answerForCurrentQ.choice === "number"
+      ) {
+        choiceCounts[answerForCurrentQ.choice] =
+          (choiceCounts[answerForCurrentQ.choice] || 0) + 1;
       }
     });
-    console.log("Host Stats: Current Choice Counts:", choiceCounts);
-    // In a real scenario, update state used for displaying charts/stats
-  };
-  // --- END NEW Helper ---
+    console.log(
+      `Host Stats (Q${currentQuestionIndex}): Current Choice Counts:`,
+      choiceCounts
+    );
+    // Here you would update state used for displaying charts/stats on the host UI
+  }, [liveGameState.players, currentQuestionIndex, getCurrentHostQuestion]);
 
+  // --- *** Refactored Answer Handler *** ---
+  const handlePlayerAnswerMessage = useCallback(
+    (message: MockWebSocketMessage) => {
+      console.log(`Host received raw answer message:`, message);
+      const playerId = message?.data?.cid;
+      const contentString = message?.data?.content;
+      const messageTypeId = message?.data?.id;
+      const answerTimestamp = message?.ext?.timetrack ?? Date.now(); // Use timetrack or fallback
 
-  // --- Dev Mock Controls Interaction ---
-  const loadBlockFromDevControls = useCallback((block: GameBlock | null) => {
-    // This function is primarily for the PLAYER view simulation via DevControls.
-    // Host view is driven by the quizData and currentQuestionIndex.
-    // However, we can allow DevControls to OVERRIDE the current block for testing display.
-    console.log("DEV (Host): DevControls requested block override:", block?.type);
-    setCurrentBlock(block);
-    // Note: This might desync from the actual quiz flow controlled by index/quizData.
-    // Decide if this override is desired or if DevControls should manipulate index instead.
-  }, []);
+      if (!playerId || !contentString || (messageTypeId !== 6 && messageTypeId !== 45)) { // Check for multiple possible answer IDs
+        console.warn(
+          `Host: Received invalid or non-answer message (ID: ${messageTypeId}, CID: ${playerId}). Ignoring.`
+        );
+        return;
+      }
 
-  const setMockResultFromDevControls = useCallback((result: QuestionResultPayload | null) => {
-    // Similar to loadBlockFromDevControls, this is more for player view.
-    // Host typically calculates results, doesn't display received ones.
-    console.log("DEV (Host): DevControls requested result display (usually for Player):", result?.type);
-    setCurrentResult(result); // Store it if needed for any host-side display during dev
-    setCurrentBlock(null); // Clear block when showing result (like player view)
-  }, []);
-  // --- End Dev Mock Controls Interaction ---
+      // Find the player in the state
+      const currentPlayerState = liveGameState.players[playerId];
+      if (!currentPlayerState) {
+        console.warn(
+          `Host: Received answer from unknown player CID: ${playerId}. Ignoring.`
+        );
+        return;
+      }
 
-  // handleTimeUp, handleSkip, handleNext (remain the same)
-  const handleNext = useCallback(() => {
-    console.log('Host clicked next');
-    // Dependencies: quizData, currentQuestionIndex
-    if (quizData && currentQuestionIndex < quizData.questions.length - 1) {
-      setCurrentQuestionIndex(prev => prev + 1);
-    } else {
-      console.log("Host: Next at end of quiz or no quiz data.");
-      // Handle end of quiz
+      // Check for duplicate answer for the current question
+      const hasAnsweredCurrent = currentPlayerState.answers.some(
+        (a) => a.questionIndex === currentQuestionIndex
+      );
+      if (hasAnsweredCurrent) {
+        console.log(
+          `Host: Duplicate answer detected from ${playerId} (${currentPlayerState.nickname}) for question ${currentQuestionIndex}. Ignoring.`
+        );
+        return;
+      }
+
+      try {
+        const submittedPayload = JSON.parse(
+          contentString
+        ) as PlayerAnswerPayload;
+        console.log(
+          `Host parsed answer from ${playerId} (${currentPlayerState.nickname}):`,
+          submittedPayload
+        );
+
+        // --- *** Placeholder for Scoring & Correctness Logic *** ---
+        // This needs to be implemented based on your game rules
+        const hostQuestion = getCurrentHostQuestion();
+        let isCorrect = false;
+        let basePoints = 0;
+        let finalPointsEarned = 0;
+        let currentStatus: PlayerAnswerRecord["status"] = "SUBMITTED"; // Start as submitted
+        let pointsDataResult: PointsData | null = null; // Store the result points data structure
+
+        // Calculate reaction time (example: using host's question start time)
+        const reactionTimeMs = liveGameState.currentQuestionStartTime
+          ? answerTimestamp - liveGameState.currentQuestionStartTime
+          : 0;
+
+        // *** FIX: Type-safe access to payload fields ***
+        let playerChoice: PlayerAnswerRecord["choice"] = null;
+        let playerText: PlayerAnswerRecord["text"] = null;
+
+        switch (submittedPayload.type) {
+          case "quiz":
+          case "survey":
+            playerChoice = (submittedPayload as AnswerPayloadQuiz).choice;
+            // Add logic to get choice text if needed for display later
+            break;
+          case "jumble":
+            playerChoice = (submittedPayload as AnswerPayloadJumble).choice;
+            // Add logic to get text representation if needed
+            break;
+          case "open_ended":
+            playerChoice = (submittedPayload as AnswerPayloadOpenEnded).text; // Store text as choice here for simplicity
+            playerText = (submittedPayload as AnswerPayloadOpenEnded).text; // Also store in text field
+            break;
+        }
+        // --- End Type-safe access ---
+
+        // --- Placeholder for Scoring & Correctness Logic ---
+        if (
+          hostQuestion &&
+          hostQuestion.type !== "content" &&
+          hostQuestion.type !== "survey"
+        ) {
+          // --- Scoring logic placeholder ---
+          // Compare submittedPayload.choice/text with hostQuestion.choices[...].correct / answer
+          // Calculate basePoints, apply pointsMultiplier, factor in reactionTimeMs...
+          // Example:
+          if (Math.random() > 0.3) {
+            // Simulate 70% correct chance
+            isCorrect = true;
+            currentStatus = "CORRECT";
+            basePoints = 500 + Math.floor(Math.random() * 500); // Random base points
+            // Simplified points calculation
+            const timeFactor = Math.max(
+              0,
+              1 - reactionTimeMs / (hostQuestion.time ?? 20000) / 2
+            );
+            const multiplier = hostQuestion.pointsMultiplier ?? 1;
+            finalPointsEarned = Math.round(
+              basePoints * multiplier * timeFactor
+            );
+          } else {
+            isCorrect = false;
+            currentStatus = "WRONG";
+            finalPointsEarned = 0;
+            basePoints = 0;
+          }
+
+          // Simulate constructing the pointsData portion of the result message
+          pointsDataResult = {
+            totalPointsWithBonuses: finalPointsEarned, // Simplified: Assume no separate bonuses for now
+            questionPoints: finalPointsEarned, // This is points for *this* question
+            answerStreakPoints: {
+              // This needs proper calculation based on streak
+              streakLevel: isCorrect ? currentPlayerState.currentStreak + 1 : 0,
+              previousStreakLevel: currentPlayerState.currentStreak,
+            },
+            lastGameBlockIndex: currentQuestionIndex,
+          };
+          // --- End Scoring Logic Placeholder ---
+        } else if (hostQuestion?.type === "survey") {
+          isCorrect = true; // Surveys always submitted correctly
+          currentStatus = "CORRECT"; // Treat survey submission as 'correct' for status
+          finalPointsEarned = 0;
+          basePoints = 0;
+          pointsDataResult = {
+            /* ... construct zero PointsData ... */
+            totalPointsWithBonuses: 0,
+            questionPoints: 0,
+            answerStreakPoints: {
+              streakLevel: 0,
+              previousStreakLevel: currentPlayerState.currentStreak,
+            },
+            lastGameBlockIndex: currentQuestionIndex,
+          };
+        }
+        // --- End Scoring Placeholder ---
+
+        const newAnswerRecord: PlayerAnswerRecord = {
+          questionIndex: currentQuestionIndex,
+          blockType: submittedPayload.type,
+          choice: playerChoice, // Use the extracted value
+          text: playerText, // Use the extracted value
+          reactionTimeMs: reactionTimeMs,
+          answerTimestamp: answerTimestamp,
+          isCorrect: isCorrect,
+          status: currentStatus,
+          basePoints: basePoints,
+          finalPointsEarned: finalPointsEarned,
+          pointsData: pointsDataResult,
+        };
+
+        // --- Update Player State Immutably ---
+        setLiveGameState((prev) => {
+          const updatedPlayer: LivePlayerState = {
+            ...currentPlayerState,
+            totalScore: currentPlayerState.totalScore + finalPointsEarned,
+            lastActivityAt: answerTimestamp,
+            currentStreak: isCorrect ? currentPlayerState.currentStreak + 1 : 0,
+            answers: [...currentPlayerState.answers, newAnswerRecord],
+            correctCount: currentPlayerState.correctCount + (isCorrect ? 1 : 0),
+            // *** FIX: Explicit check for 'WRONG' status ***
+            incorrectCount:
+              currentPlayerState.incorrectCount +
+              (currentStatus === "WRONG" ? 1 : 0),
+            answersCount: currentPlayerState.answersCount + 1,
+            totalReactionTimeMs:
+              currentPlayerState.totalReactionTimeMs + reactionTimeMs,
+            playerStatus: "PLAYING", // Assume still playing after answer
+          };
+          // Update maxStreak
+          updatedPlayer.maxStreak = Math.max(
+            updatedPlayer.maxStreak,
+            updatedPlayer.currentStreak
+          );
+
+          return {
+            ...prev,
+            players: {
+              ...prev.players,
+              [playerId]: updatedPlayer,
+            },
+          };
+        });
+        // --- End Update Player State ---
+
+        logAnswerStats(); // Log updated stats if needed
+      } catch (error) {
+        console.error(
+          `Host: Error processing answer from ${playerId}:`,
+          error,
+          contentString
+        );
+      }
+    },
+    [
+      liveGameState,
+      currentQuestionIndex,
+      getCurrentHostQuestion,
+      logAnswerStats,
+    ]
+  );
+
+  // --- Handle Avatar Change ---
+  const handleAvatarChangeMessage = useCallback((message: MockWebSocketMessage) => {
+    console.log("Host received Avatar Change message:", message);
+    const playerId = message?.data?.cid;
+    const contentString = message?.data?.content;
+
+    if (!playerId || !contentString) {
+      console.warn("Invalid avatar change message:", message);
+      return;
     }
-  }, [quizData, currentQuestionIndex]); // Add dependencies
 
-  const handleTimeUp = useCallback(() => {
-    console.log('Host detected time up!');
-    // TODO: Implement result calculation and move to result display phase
-    // Now handleNext reference is stable
-    setTimeout(handleNext, 2000);
-  }, [handleNext]); // Depend on the stable handleNext
+    try {
+      const parsedContent = JSON.parse(contentString);
+      const avatarId = parsedContent?.avatar?.id; // Extract avatar ID
+
+      if (typeof avatarId !== 'number') {
+        console.warn("Avatar ID missing or invalid in avatar change message:", parsedContent);
+        return;
+      }
+
+      // Update the specific player's avatar in the state
+      setLiveGameState((prev) => {
+        const playerToUpdate = prev.players[playerId];
+        if (!playerToUpdate) {
+          console.warn(`Avatar change for unknown player CID: ${playerId}`);
+          return prev; // Player not found
+        }
+
+        // Simple example mapping: Assumes ID 2300 -> type 2000, item 2300
+        // Adjust this logic based on your actual avatar ID system
+        const avatarType = Math.floor(avatarId / 1000) * 1000;
+        const avatarItem = avatarId;
+
+        const updatedPlayer: LivePlayerState = {
+          ...playerToUpdate,
+          avatar: { type: avatarType, item: avatarItem },
+          lastActivityAt: message?.ext?.timetrack ?? Date.now(),
+        };
+
+        return {
+          ...prev,
+          players: {
+            ...prev.players,
+            [playerId]: updatedPlayer,
+          },
+        };
+      });
+
+    } catch (error) {
+      console.error("Error parsing avatar change content:", error, contentString);
+    }
+  }, []);
+
+  // --- Generic WebSocket Message Handler ---
+  const handleWebSocketMessage = useCallback((message: MockWebSocketMessage) => {
+    console.log("Host received WebSocket message:", message);
+
+    if (message?.data?.type === 'joined') { // Handle specific join structure
+      const data = message.data;
+      const ext = message.ext;
+      if (data?.cid && data?.name) {
+        addOrUpdatePlayer(data.cid, data.name, ext?.timetrack ?? Date.now(), data.status);
+      } else {
+        console.warn("Received 'joined' message with missing cid or name:", message);
+      }
+    } else if (message?.data?.id === 6 || message?.data?.id === 45) { // Handle answers
+      handlePlayerAnswerMessage(message);
+    } else if (message?.data?.id === 46) { // Handle avatar changes
+      handleAvatarChangeMessage(message);
+    }
+    // Add other 'else if' blocks here for different message?.data?.id values
+    // (e.g., player left, specific game events)
+    else {
+      console.log("Host received unhandled message type:", message?.data?.id ?? message?.data?.type);
+    }
+  }, [addOrUpdatePlayer, handlePlayerAnswerMessage, handleAvatarChangeMessage]);
+
+
+  // --- Derive values for HostView ---
+  const currentQuestionAnswerCount = Object.values(
+    liveGameState.players
+  ).filter((p) =>
+    p.answers.some((a) => a.questionIndex === currentQuestionIndex)
+  ).length;
+  const currentTotalPlayers = Object.keys(liveGameState.players).length;
+
+  // --- Handlers for advancing game state ---
+  const advanceToQuestion = (index: number) => {
+    // Could add Get Ready state here later
+    setCurrentQuestionIndex(index);
+    setLiveGameState((prev) => ({
+      ...prev,
+      status: "QUESTION_SHOW",
+      currentQuestionIndex: index,
+    }));
+  };
+
+  // --- Refactored showResults (Placeholder for sending results) ---
+  const showResults = useCallback(() => {
+    console.log(
+      "Host: Calculating and showing results for question",
+      currentQuestionIndex
+    );
+    const hostQuestion = getCurrentHostQuestion();
+
+    // --- Rank Calculation Placeholder ---
+    setLiveGameState((prev) => {
+      const rankedPlayers = Object.values(prev.players).sort(
+        (a, b) => b.totalScore - a.totalScore
+      );
+      const updatedPlayers = { ...prev.players };
+      rankedPlayers.forEach((player, index) => {
+        if (updatedPlayers[player.cid]) {
+          updatedPlayers[player.cid].rank = index + 1;
+        }
+      });
+      // Update status AFTER ranking
+      return { ...prev, status: "QUESTION_RESULT", players: updatedPlayers };
+    });
+    // --- End Rank Calculation ---
+
+    // --- Result Broadcasting Placeholder ---
+
+    setLiveGameState(prev => {
+      Object.values(prev.players).forEach(player => {
+        const playerAnswerRecord = player.answers.find(a => a.questionIndex === currentQuestionIndex);
+
+        if (!playerAnswerRecord) {
+          // Handle timeout/no record case
+          console.log(`Host: No answer record for player ${player.cid} for Q${currentQuestionIndex}, skipping result send.`);
+          return;
+        }
+
+        // *** FIX: Add check for 'survey' type ***
+        if (playerAnswerRecord.blockType === 'content' || playerAnswerRecord.blockType === 'survey') {
+          console.warn(`Host: Skipping result send for ${playerAnswerRecord.blockType} block for player ${player.cid}`);
+          return; // Don't send results for content or survey blocks
+        }
+
+        // Construct base result payload (Now type is guaranteed to be quiz/jumble/open_ended)
+        const resultPayloadBase = { // Create a base object first
+          rank: player.rank,
+          totalScore: player.totalScore,
+          pointsData: playerAnswerRecord.pointsData ?? { /* Default PointsData */
+            totalPointsWithBonuses: 0, questionPoints: 0,
+            answerStreakPoints: { streakLevel: 0, previousStreakLevel: 0 },
+            lastGameBlockIndex: currentQuestionIndex
+          },
+          hasAnswer: playerAnswerRecord.status !== 'TIMEOUT',
+          type: playerAnswerRecord.blockType,
+          choice: playerAnswerRecord.choice, // Include initially, refine later
+          points: playerAnswerRecord.finalPointsEarned,
+          isCorrect: playerAnswerRecord.isCorrect,
+          text: playerAnswerRecord.text ?? '', // text is always string
+        };
+
+        // --- Refine payload based on actual type before sending ---
+        let finalPayloadToSend: QuestionResultPayload; // Declare with the final union type
+
+        // Use hostQuestion fetched outside the loop for efficiency
+        const correctChoicesIndices = hostQuestion?.choices?.map((choice, index) => choice.correct ? index : -1).filter(index => index !== -1) ?? [];
+        const correctChoiceTexts = hostQuestion?.choices?.map(choice => choice.answer) ?? [];
+
+        switch (resultPayloadBase.type) {
+          case 'quiz':
+            finalPayloadToSend = {
+              ...resultPayloadBase,
+              type: 'quiz',
+              choice: resultPayloadBase.choice as number, // Assert type
+              correctChoices: correctChoicesIndices,
+              // Remove text if not needed for quiz result (optional refinement)
+              // text: undefined
+            };
+            break;
+          case 'jumble':
+            finalPayloadToSend = {
+              ...resultPayloadBase,
+              type: 'jumble',
+              choice: resultPayloadBase.choice as number[], // Assert type
+              correctChoices: correctChoicesIndices, // Jumble correct order
+              // text: undefined
+            };
+            break;
+          case 'open_ended':
+            // *** FIX: Add required correctTexts field ***
+            finalPayloadToSend = {
+              ...resultPayloadBase,
+              type: 'open_ended',
+              text: resultPayloadBase.text, // text is the primary answer field here
+              correctTexts: correctChoiceTexts.filter((text): text is string => text !== undefined), // Add the required field
+              // Remove fields not applicable to open_ended
+              choice: undefined,
+              // points: undefined, // Points might still be applicable? Keep for now.
+              // isCorrect might still be applicable? Keep for now.
+            };
+            break;
+          // Should not happen due to earlier checks, but exhaustive switch is good practice
+          default:
+            console.error(`Host: Unexpected block type in showResults: ${playerAnswerRecord.blockType}`);
+            return; // Skip sending if type is wrong
+        }
+        // --- End refinement ---
+
+        // Simulate Sending
+        const contentString = JSON.stringify(finalPayloadToSend);
+        const wsMessage = { /* ... construct message ... */
+          channel: "/service/player",
+          data: { gameid: gamePin, type: "message", id: 8, content: contentString, cid: player.cid },
+          ext: { timetrack: Date.now() }
+        };
+        console.log(`DEV: Simulating Send Result to ${player.nickname} (CID: ${player.cid}):`, wsMessage);
+        // ws.send(JSON.stringify([wsMessage]));
+
+      }); // End of forEach player loop
+      return prev; // Return previous state from setLiveGameState updater
+    });
+    // --- End Result Broadcasting ---
+
+    setTimerKey(`result-${currentQuestionIndex}`);
+  }, [currentQuestionIndex, getCurrentHostQuestion, gamePin]);
+
+  const handleNext = useCallback(() => {
+    console.log("Host clicked next");
+    if (liveGameState.status === "LOBBY") {
+      advanceToQuestion(0);
+    } else if (liveGameState.status === "QUESTION_SHOW") {
+      // Force end question, calculate results, show results view
+      showResults();
+    } else if (liveGameState.status === "QUESTION_RESULT") {
+      // Move to the next question or end the game
+      const nextIndex = currentQuestionIndex + 1;
+      if (quizData && nextIndex < quizData.questions.length) {
+        advanceToQuestion(nextIndex);
+      } else {
+        console.log("Host: Reached end of quiz.");
+        setLiveGameState((prev) => ({ ...prev, status: "PODIUM" })); // Or ENDED
+        setCurrentBlock(null);
+        // TODO: Send final results DTO
+        // const finalDto = convertLiveStateToFinalizationDto(liveGameState, Date.now());
+        // console.log("Final DTO to send:", finalDto);
+        // api.post('/sessions/results', finalDto);
+      }
+    } else {
+      console.log(
+        `Host: Next clicked in unhandled state: ${liveGameState.status}`
+      );
+    }
+  }, [
+    liveGameState,
+    currentQuestionIndex,
+    quizData,
+    showResults,
+    advanceToQuestion,
+  ]); // Dependencies for handleNext
 
   const handleSkip = useCallback(() => {
-    console.log('Host skipped question');
-    // Dependencies: quizData, currentQuestionIndex
-    if (quizData && currentQuestionIndex < quizData.questions.length - 1) {
-      setCurrentQuestionIndex(prev => prev + 1);
+    console.log("Host skipped question");
+    // Skip directly to the next question's "get ready" or "show" state
+    const nextIndex = currentQuestionIndex + 1;
+    if (quizData && nextIndex < quizData.questions.length) {
+      advanceToQuestion(nextIndex);
     } else {
-      console.log("Host: Skip at end of quiz or no quiz data.");
-      // Handle end of quiz
+      console.log("Host: Skip at end of quiz.");
+      setLiveGameState((prev) => ({ ...prev, status: "PODIUM" })); // Or ENDED
+      setCurrentBlock(null);
+      // TODO: Send final results DTO
     }
-  }, [quizData, currentQuestionIndex]); // Add dependencies
-  // --- *** End useCallback Wrappers *** ---
+  }, [quizData, currentQuestionIndex, advanceToQuestion]);
 
+  // --- Refactored Time Up Handler ---
+  const handleTimeUp = useCallback(() => {
+    console.log("Host detected time up for question:", currentQuestionIndex);
+    const currentHostQuestion = getCurrentHostQuestion(); // Get question info once
+
+    // *** FIX: Ensure currentBlock/currentHostQuestion is valid before proceeding ***
+    if (!currentHostQuestion) {
+      console.error(
+        "handleTimeUp called but currentHostQuestion is null. Cannot process timeouts."
+      );
+      // Decide how to handle this - maybe advance state differently?
+      // For now, just return to prevent errors.
+      return;
+    }
+
+    const questionType = currentHostQuestion.type;
+    const questionTime = currentHostQuestion.time ?? 0;
+
+    setLiveGameState((prev) => {
+      const updatedPlayers = { ...prev.players };
+      let changesMade = false;
+      Object.keys(updatedPlayers).forEach((cid) => {
+        const player = updatedPlayers[cid];
+        const alreadyAnswered = player.answers.some(
+          (a) => a.questionIndex === currentQuestionIndex
+        );
+
+        if (!alreadyAnswered && player.isConnected) {
+          const timeoutAnswer: PlayerAnswerRecord = {
+            questionIndex: currentQuestionIndex,
+            // *** FIX: Use valid blockType ***
+            blockType: questionType, // Use type from host question
+            choice: null,
+            text: null,
+            reactionTimeMs: questionTime, // Use actual question time
+            answerTimestamp: Date.now(),
+            isCorrect: false,
+            status: "TIMEOUT",
+            basePoints: 0,
+            finalPointsEarned: 0,
+            pointsData: {
+              /* ... construct zero/timeout PointsData ... */
+              totalPointsWithBonuses: 0,
+              questionPoints: 0,
+              answerStreakPoints: {
+                streakLevel: 0,
+                previousStreakLevel: player.currentStreak,
+              },
+              lastGameBlockIndex: currentQuestionIndex,
+            },
+          };
+          updatedPlayers[cid] = {
+            ...player,
+            answers: [...player.answers, timeoutAnswer],
+            currentStreak: 0,
+            unansweredCount: player.unansweredCount + 1,
+            lastActivityAt: Date.now(),
+          };
+          changesMade = true;
+        }
+      });
+      return changesMade ? { ...prev, players: updatedPlayers } : prev;
+    });
+
+    showResults(); // showResults remains the same, called after state update
+  }, [currentQuestionIndex, getCurrentHostQuestion, showResults]); // Dependencies
+
+  // --- DevMockControls Interaction ---
+  // Host view is driven by game state, Dev controls mostly for player simulation now
+  const loadBlockFromDevControls = useCallback((block: GameBlock | null) => {
+    console.warn(
+      "DEV (Host): DevControls block override is generally ignored. Use game flow controls (Next/Skip)."
+    );
+    // Optionally allow override for specific testing:
+    // setCurrentBlock(block);
+    // setLiveGameState(prev => ({...prev, status: block ? 'QUESTION_SHOW' : 'LOBBY'}));
+  }, []);
+
+  const setMockResultFromDevControls = useCallback(
+    (result: QuestionResultPayload | null) => {
+      console.warn(
+        "DEV (Host): DevControls result setting ignored. Host calculates results."
+      );
+    },
+    []
+  );
+  // --- DevMockControls Handlers ---
+  const handleSimulatedJoin = useCallback((message: MockWebSocketMessage) => {
+    handleWebSocketMessage(message);
+  }, [handleWebSocketMessage]);
+  const handleSimulatedAnswer = useCallback((message: MockWebSocketMessage) => {
+    handleWebSocketMessage(message);
+  }, [handleWebSocketMessage]);
+
+  // --- End Dev Mock Controls Interaction ---
 
   return (
     <>
+      {/* Display loading state if quizData is null and not in lobby */}
+      {isLoading && liveGameState.status !== "LOBBY" && (
+        <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-50">
+          <Loader2 className="h-16 w-16 animate-spin text-white" />
+        </div>
+      )}
+
       <HostView
         // Pass timerKey down to HostView
-        timerKey={timerKey} // Pass the timerKey based on index
-        questionData={currentBlock}
-        currentAnswerCount={answerCount} // Pass the manually updated count
-        totalPlayers={totalPlayers}
+        timerKey={timerKey}
+        questionData={currentBlock} // Pass the GameBlock structure
+        currentAnswerCount={currentQuestionAnswerCount} // Pass the derived count
+        totalPlayers={currentTotalPlayers}
         gamePin={gamePin}
         accessUrl={accessUrl}
         onTimeUp={handleTimeUp}
         onSkip={handleSkip}
         onNext={handleNext}
-        isLoading={isLoading || !quizData}
+        isLoading={isLoading && liveGameState.status !== "LOBBY"} // Show loading only after trying to load quiz
+      // Add game state if HostView needs it (e.g., to show different UI for LOBBY/RESULT)
+      // gameState={liveGameState.status}
       />
 
+      {/* Dev Controls for triggering player actions */}
       <DevMockControls
-        // --- Pass the new handler ---
-        simulatePlayerAnswer={handlePlayerAnswerMessage}
-        // --- Pass existing handlers ---
+        simulateHostReceiveJoin={handleSimulatedJoin}
+        simulatePlayerAnswer={handleSimulatedAnswer}
+        // Below props likely don't directly affect Host state anymore
         loadMockBlock={loadBlockFromDevControls}
         setMockResult={setMockResultFromDevControls}
-      // simulateReceiveMessage prop is not needed/provided by HostPage
+      // Add mock join button for testing
+      // onMockJoin={handleMockPlayerJoin} // Need to add this prop to DevMockControls
       />
     </>
   );

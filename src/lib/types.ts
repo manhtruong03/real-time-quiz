@@ -259,7 +259,7 @@ export interface LivePlayerState {
   // --- Core Identification & Live Status ---
   cid: string; // Player's unique session identifier (maps to DTO clientId)
   nickname: string; // Player's display name (maps to DTO nickname)
-  avatar: { type: number; item: number } | null; // Current avatar (maps to DTO finalAvatar)
+  avatar: { id?: number; type?: number; item?: number } | null; // Current avatar (maps to DTO finalAvatar)
   isConnected: boolean; // Host tracks connection status (used to determine finalStatus for DTO)
   joinedAt: number; // Timestamp (ms) (maps to DTO joinedAt)
   userId?: string | null; // Optional: UUID if registered (maps to DTO userId)
