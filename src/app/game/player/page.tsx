@@ -1,8 +1,8 @@
 // src/app/game/player/page.tsx
 'use client';
 
-import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { Client, IFrame, IMessage } from '@stomp/stompjs';
+import React, { useState, useCallback, useEffect } from 'react';
+import { IMessage } from '@stomp/stompjs';
 
 import PlayerView from '@/src/components/game/views/PlayerView';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/src/components/ui/card';
@@ -11,69 +11,44 @@ import { Button } from '@/src/components/ui/button';
 import { Loader2, WifiOff, LogIn, UserPlus, AlertCircle } from 'lucide-react';
 import { GameBlock, PlayerAnswerPayload, QuestionResultPayload, isContentBlock } from '@/src/lib/types';
 import { cn } from '@/src/lib/utils';
-import DevMockControls, { MockWebSocketMessage } from '@/src/components/game/DevMockControls'; //
-
-
-// --- Constants ---
-const WEBSOCKET_URL = 'ws://localhost:8080/ws-quiz';
-const APP_PREFIX = '/app';
-const TOPIC_PREFIX = '/topic';
-const USER_QUEUE_PREFIX = '/user/queue';
+import DevMockControls, { MockWebSocketMessage } from '@/src/components/game/DevMockControls';
+import { usePlayerWebSocket, PlayerConnectionStatus } from '@/src/hooks/game/usePlayerWebSocket';
 
 interface PlayerInfoState {
   name: string;
   avatarUrl?: string;
   score: number;
   rank?: number;
-  cid?: string; // Client ID assigned by STOMP/backend
+  cid?: string | null;
 }
 
-type UiStateType = 'PIN_INPUT' | 'CONNECTING' | 'NICKNAME_INPUT' | 'JOINING' | 'PLAYING' | 'DISCONNECTED' | 'ERROR';
+// Page UI State (Removed JOINING and WAITING_FOR_GAME)
+type PageUiState = 'PIN_INPUT' | 'CONNECTING' | 'NICKNAME_INPUT' | 'PLAYING' | 'DISCONNECTED' | 'ERROR';
 
 export default function PlayerPage() {
-  // === UI and Connection State ===
-  const [uiState, setUiState] = useState<UiStateType>('PIN_INPUT');
+  const [uiState, setUiState] = useState<PageUiState>('PIN_INPUT');
   const [gamePin, setGamePin] = useState<string>('');
   const [nickname, setNickname] = useState<string>('');
-  const [connectionError, setConnectionError] = useState<string | null>(null);
-
-  // === Game State ===
+  const [pageError, setPageError] = useState<string | null>(null);
   const [currentBlock, setCurrentBlock] = useState<GameBlock | null>(null);
   const [currentResult, setCurrentResult] = useState<QuestionResultPayload | null>(null);
-  const [isWaiting, setIsWaiting] = useState(true); // Waiting for question/result
-  const [isSubmitting, setIsSubmitting] = useState(false); // Waiting for server ack after sending answer
-
-  // === Player State ===
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [playerInfo, setPlayerInfo] = useState<PlayerInfoState>({
-    name: '', // Start empty, set after joining
-    score: 0,
-    rank: undefined,
-    avatarUrl: undefined,
-    cid: undefined, // Set from STOMP connection
+    name: '', score: 0, rank: undefined, avatarUrl: undefined, cid: null,
   });
+  // Track if join was attempted to prevent accidental transitions
+  const [joinAttempted, setJoinAttempted] = useState(false);
 
-  // === WebSocket Refs ===
-  const stompClientRef = useRef<Client | null>(null);
-  const subscriptionsRef = useRef<{ [key: string]: any }>({});
-
-  // --- Logging Helper ---
-  const logMessage = (level: 'info' | 'warn' | 'error', ...args: any[]) => {
-    const timestamp = new Date().toLocaleTimeString();
-    console[level](`[PlayerPage ${timestamp}]`, ...args);
-  };
-
-
-  // --- Internal State Update Functions ---
+  // Internal state update functions (no change needed)
   const _setCurrentBlock = useCallback((block: GameBlock | null) => {
-    logMessage('info', "Setting block:", block?.type, "Index:", block?.gameBlockIndex);
+    // console.log("[PlayerPage] Setting block:", block?.type, "Index:", block?.gameBlockIndex);
     setCurrentResult(null);
-    setIsWaiting(false);
     setIsSubmitting(false);
     setCurrentBlock(block);
   }, []);
 
   const _setCurrentResult = useCallback((result: QuestionResultPayload | null) => {
-    logMessage('info', "Setting result:", result?.type);
+    // console.log("[PlayerPage] Setting result:", result?.type);
     setCurrentBlock(null);
     setIsSubmitting(false);
     setCurrentResult(result);
@@ -83,350 +58,199 @@ export default function PlayerPage() {
         score: result.totalScore,
         rank: result.rank,
       }));
-      setIsWaiting(true);
-    } else {
-      setIsWaiting(true);
-      logMessage('info', "Clearing result, setting to waiting.");
     }
   }, []);
 
-  const _resetGameState = () => {
-    logMessage('info', "Resetting game state.");
+  const _resetGameState = useCallback(() => {
+    // console.log("[PlayerPage] Resetting internal game state.");
     setCurrentBlock(null);
     setCurrentResult(null);
-    setIsWaiting(true);
     setIsSubmitting(false);
     setPlayerInfo(prev => ({ ...prev, score: 0, rank: undefined }));
-  }
+    setJoinAttempted(false); // Reset join attempt flag
+  }, []);
 
-  // --- WebSocket Message Handling (Receives IMessage from STOMP) ---
-  const handleReceivedMessage = useCallback((message: IMessage) => {
-    logMessage('info', `<<< Message received on ${message.headers.destination}:`);
+  // WebSocket Hook message handler (no change needed)
+  const handleReceivedMessageCallback = useCallback((message: IMessage) => {
+    // ... (message handling logic remains the same as previous version) ...
+    // console.log(`[PlayerPage] <<< Hook delivered message on ${message.headers.destination}:`);
     let parsedBody;
     try {
       parsedBody = JSON.parse(message.body);
       const messageData = Array.isArray(parsedBody) ? parsedBody[0] : parsedBody;
-      logMessage('info', 'Parsed body:', messageData);
 
       if (!messageData || !messageData.data) {
-        logMessage('warn', "Received message without 'data' field:", messageData);
         return;
       }
 
       const { id: dataTypeId, content, type: messageType } = messageData.data;
 
       if (message.headers.destination?.includes('/private')) {
-        if (messageData.type === 'PLAYER_ASSIGNED') {
-          logMessage('info', '*** Confirmed as PLAYER ***');
-        }
         return;
       }
 
-      if (typeof content !== 'string') {
-        if (messageType === 'GAME_START' && dataTypeId === 9) {
-          logMessage('info', 'Game starting signal received!');
-          setUiState('PLAYING');
-          _resetGameState();
-          setIsWaiting(true);
-        } else {
-          logMessage('warn', "Message content is not a string and not a known direct type:", messageData.data);
+      if (typeof content === 'string') {
+        const parsedContent = JSON.parse(content);
+        // console.log(`[PlayerPage] Processing data.id=${dataTypeId}, Content Type=${parsedContent?.type}`);
+
+        if (dataTypeId === 1 || dataTypeId === 2) { // Question data
+          // console.log(`[PlayerPage] Calling _setCurrentBlock for index: ${parsedContent?.gameBlockIndex}`);
+          _setCurrentBlock(parsedContent as GameBlock);
+        } else if (dataTypeId === 8) { // Result data
+          // console.log(`[PlayerPage] Calling _setCurrentResult for index: ${parsedContent?.pointsData?.lastGameBlockIndex}`);
+          _setCurrentResult(parsedContent as QuestionResultPayload);
+        } else if (dataTypeId === 13) { // Game End / Podium
+          console.log('[PlayerPage] Received Game End / Podium signal.');
+          _setCurrentResult(parsedContent as QuestionResultPayload);
         }
-        return;
-      }
-
-      const parsedContent = JSON.parse(content);
-      logMessage('info', `Processing data.id=${dataTypeId}, Type=${messageType || 'N/A'}`);
-
-      if (dataTypeId === 1 || dataTypeId === 2) {
-        logMessage('info', `Received Question Block (Type: ${dataTypeId}) - Index: ${parsedContent?.gameBlockIndex}`);
-        _setCurrentBlock(parsedContent as GameBlock);
-      } else if (dataTypeId === 8) {
-        logMessage('info', `Received Result - Index: ${parsedContent?.pointsData?.lastGameBlockIndex}`);
-        _setCurrentResult(parsedContent as QuestionResultPayload);
-      } else if (dataTypeId === 9) {
-        logMessage('info', 'Received Game Start / Blocks Overview signal.');
-        setUiState('PLAYING');
-        _resetGameState();
-        setIsWaiting(true);
-      } else if (dataTypeId === 13) {
-        logMessage('info', 'Received Game End / Podium signal.');
-        _setCurrentResult(parsedContent as QuestionResultPayload);
-        setTimeout(() => {
-          logMessage('info', 'Game ended, returning to PIN input.');
-          disconnectWebSocket();
-          setUiState('PIN_INPUT');
-        }, 10000);
-      }
-      else {
-        logMessage('warn', `Received message with unhandled data.id: ${dataTypeId}`, parsedContent);
       }
 
     } catch (e) {
-      logMessage('error', 'Failed to parse or process message body:', e, message.body);
-      return;
+      console.error('[PlayerPage] Failed to parse or process message body:', e, message.body);
     }
+  }, [_setCurrentBlock, _setCurrentResult]);
 
-  }, [_setCurrentBlock, _setCurrentResult]); // Added disconnectWebSocket dependency
+  const {
+    connect: connectWebSocket,
+    disconnect: disconnectWebSocket,
+    joinGame,
+    sendAnswer,
+    connectionStatus: wsConnectionStatus,
+    error: wsError,
+    playerClientId,
+  } = usePlayerWebSocket({
+    onMessageReceived: handleReceivedMessageCallback,
+  });
 
-
-  // --- *** NEW: Wrapper for DevMockControls *** ---
-  const handleSimulatedMessageFromDevControls = useCallback((mockMessage: MockWebSocketMessage) => {
-    logMessage('info', "Received simulated message from DevControls:", mockMessage);
-    // Reconstruct a partial IMessage-like object that handleReceivedMessage expects
-    // Primarily need 'body' and 'headers.destination'
-    const partialIMessage: Partial<IMessage> & { body: string, headers: { destination: string } } = {
-      body: JSON.stringify([mockMessage]), // Wrap in array like real messages
-      headers: {
-        destination: mockMessage.channel || `${TOPIC_PREFIX}/player/${gamePin || 'unknown'}` // Simulate destination
-      },
-      // Add dummy ack/nack if needed, though handleReceivedMessage doesn't use them
-      ack: () => { },
-      nack: () => { },
-      command: 'MESSAGE', // Simulate command
-      binaryBody: new Uint8Array() // Add missing properties with dummy values
-    };
-    // Call the actual handler with the simulated IMessage
-    handleReceivedMessage(partialIMessage as IMessage);
-  }, [handleReceivedMessage, gamePin]); // Add dependencies
-
-
-  // --- WebSocket Connection Logic ---
-  const connectWebSocket = useCallback((pin: string) => {
-    // ... (connection logic remains the same, uses handleReceivedMessage for real messages) ...
-    if (!pin) {
-      setConnectionError("Game PIN cannot be empty.");
-      setUiState('ERROR');
-      return;
-    }
-    if (stompClientRef.current?.active) {
-      logMessage('warn', 'WS already connected.');
-      return;
-    }
-    logMessage('info', `Attempting WebSocket connection for game pin ${pin}...`);
-    setUiState('CONNECTING');
-    setConnectionError(null);
-
-    const client = new Client({
-      brokerURL: WEBSOCKET_URL,
-      debug: (str) => { /* console.log("STOMP DEBUG:", str); */ },
-      reconnectDelay: 5000,
-      heartbeatIncoming: 4000,
-      heartbeatOutgoing: 4000,
-      onConnect: (frame: IFrame) => {
-        const connectedClientId = frame.headers['user-name'] || `player_${Date.now().toString().slice(-6)}`;
-        setPlayerInfo(prev => ({ ...prev, cid: connectedClientId }));
-        logMessage('info', `WebSocket Connected! Client ID: ${connectedClientId}`);
-
-        const playerTopic = `${TOPIC_PREFIX}/player/${pin}`;
-        const privateTopic = `${USER_QUEUE_PREFIX}/private`;
-
-        logMessage('info', `Subscribing to ${playerTopic} and ${privateTopic}`);
-        try {
-          if (!client.active) {
-            logMessage('warn', 'Client deactivated before subscriptions could be made.');
-            throw new Error("Client deactivated");
-          }
-          subscriptionsRef.current[playerTopic] = client.subscribe(playerTopic, handleReceivedMessage);
-          subscriptionsRef.current[privateTopic] = client.subscribe(privateTopic, handleReceivedMessage);
-          logMessage('info', 'Subscriptions successful.');
-          setUiState('NICKNAME_INPUT');
-        } catch (subError) {
-          logMessage('error', 'Subscription failed:', subError);
-          setConnectionError('Failed to subscribe to game topics.');
-          setUiState('ERROR');
-          if (client.active) client.deactivate();
-        }
-      },
-      onWebSocketClose: (event: CloseEvent) => {
-        logMessage('warn', `WebSocket closed. Code: ${event.code}, Reason: ${event.reason}`);
-      },
-      onWebSocketError: (error: Event) => {
-        logMessage('error', 'WS Error:', error);
-        setConnectionError("WebSocket connection error.");
-        setUiState('ERROR');
-      },
-      onStompError: (frame: IFrame) => {
-        logMessage('error', 'STOMP Error:', frame.headers['message'], frame.body);
-        setConnectionError(`Connection failed: ${frame.headers['message'] || 'Unknown STOMP error'}`);
-        setUiState('ERROR');
-      },
-      onDisconnect: () => {
-        logMessage('info', 'WS Disconnected.');
-        setUiState(prev => prev === 'ERROR' ? 'ERROR' : 'DISCONNECTED');
-        setPlayerInfo(prev => ({ ...prev, cid: undefined }));
-        subscriptionsRef.current = {};
-        stompClientRef.current = null;
-        _resetGameState();
-      }
-    });
-
-    client.activate();
-    stompClientRef.current = client;
-  }, [handleReceivedMessage]);
-
-  const disconnectWebSocket = useCallback(() => {
-    // ... (disconnect logic remains the same) ...
-    if (!stompClientRef.current) {
-      logMessage('info', 'Disconnect called but client already null.');
-      return;
-    }
-    logMessage('info', "Attempting disconnect...");
-    Object.values(subscriptionsRef.current).forEach((sub: any) => {
-      if (sub?.unsubscribe) try { sub.unsubscribe(); } catch (e) { console.error("Unsubscribe error", e) }
-    });
-    subscriptionsRef.current = {};
-    if (stompClientRef.current && typeof stompClientRef.current.deactivate === 'function') {
-      try {
-        stompClientRef.current.deactivate();
-      } catch (e) {
-        logMessage('error', 'Error during client deactivation:', e);
-        stompClientRef.current = null;
-        setUiState('DISCONNECTED');
-        _resetGameState();
-      }
-    } else {
-      logMessage('warn', 'Cannot deactivate, client ref is null or lacks deactivate method.');
-      stompClientRef.current = null;
-      setUiState('DISCONNECTED');
-      _resetGameState();
-    }
-  }, []);
-
-  // Clean up connection on component unmount
+  // Revised UI State Sync Effect
   useEffect(() => {
-    return () => {
-      disconnectWebSocket();
-    };
-  }, [disconnectWebSocket]);
+    setPageError(wsError); // Always reflect WS errors
 
-  // --- Action Handlers ---
-  const handleJoinGame = () => {
+    switch (wsConnectionStatus) {
+      case 'CONNECTING':
+        setUiState('CONNECTING');
+        break;
+      case 'NICKNAME_INPUT':
+        // Only go to nickname input if we haven't already attempted to join and aren't playing
+        if (!joinAttempted && uiState !== 'PLAYING') {
+          setUiState('NICKNAME_INPUT');
+        }
+        break;
+      // Removed JOINING case - managed by action handler
+      case 'CONNECTED':
+        // If WS is connected, but UI isn't PLAYING, stay in NICKNAME_INPUT
+        // The transition to PLAYING happens explicitly after joinGame succeeds.
+        if (uiState !== 'PLAYING' && uiState !== 'NICKNAME_INPUT') {
+          // If we got here unexpectedly (e.g. after error/disconnect), go back to nickname input
+          if (!joinAttempted) { // Make sure join wasn't already done
+            setUiState('NICKNAME_INPUT');
+          }
+        }
+        break;
+      case 'DISCONNECTED':
+        if (uiState !== 'PIN_INPUT' && uiState !== 'ERROR') {
+          setUiState('DISCONNECTED');
+          setJoinAttempted(false); // Allow re-joining
+        }
+        break;
+      case 'ERROR':
+        setUiState('ERROR');
+        setJoinAttempted(false); // Allow retry
+        break;
+      case 'INITIAL':
+        if (uiState !== 'PIN_INPUT') {
+          handleResetAndGoToPinInput();
+        }
+        break;
+    }
+  }, [wsConnectionStatus, wsError, uiState, joinAttempted]); // Added joinAttempted
+
+  // Update playerInfo CID
+  useEffect(() => {
+    if (playerClientId) {
+      setPlayerInfo(prev => ({ ...prev, cid: playerClientId }));
+    }
+  }, [playerClientId]);
+
+  // Action Handlers
+  const handlePinSubmit = () => {
+    // ... (validation) ...
     const pinRegex = /^\d{6,7}$/;
     if (!pinRegex.test(gamePin)) {
-      setConnectionError("Please enter a valid 6 or 7 digit Game PIN.");
-      setUiState('PIN_INPUT');
-      return;
+      setPageError("Please enter a valid 6 or 7 digit Game PIN.");
+      setUiState('PIN_INPUT'); return;
     }
-    setConnectionError(null);
+    setPageError(null);
+    setJoinAttempted(false); // Reset join attempt before connecting
     connectWebSocket(gamePin);
   };
 
-  const handleNicknameSubmit = () => {
-    // ... (nickname submit logic remains the same) ...
-    const trimmedNickname = nickname.trim();
-    if (!trimmedNickname) {
-      setConnectionError("Nickname cannot be empty.");
-      return;
-    }
-    setConnectionError(null);
+  const handleNicknameSubmitClick = async () => {
+    setPageError(null);
+    setJoinAttempted(true); // Mark that join is being attempted
 
-    if (!stompClientRef.current || !stompClientRef.current.connected) {
-      setConnectionError("Not connected to server.");
-      setUiState('ERROR');
-      return;
-    }
+    // *** Show a temporary loading state within the button if desired ***
+    // setUiState('JOINING'); // Or manage a separate loading state for the button
 
-    logMessage('info', `Joining game ${gamePin} as ${trimmedNickname}`);
-    setUiState('JOINING');
-    setPlayerInfo(prev => ({ ...prev, name: trimmedNickname }));
+    const success = await joinGame(nickname, gamePin);
 
-    const joinMessagePayload = {
-      name: trimmedNickname,
-      type: "joined",
-      content: JSON.stringify({ device: { userAgent: navigator.userAgent, screen: { width: window.screen.width, height: window.screen.height } } }),
-      cid: playerInfo.cid || "UNKNOWN_CID"
-    };
-
-    const messageToSend = {
-      channel: `${APP_PREFIX}/controller/${gamePin}`,
-      data: joinMessagePayload,
-      ext: { timetrack: Date.now() }
-    };
-
-    try {
-      stompClientRef.current.publish({
-        destination: messageToSend.channel,
-        body: JSON.stringify([messageToSend])
-      });
-      logMessage('info', 'Join message sent.');
-      setUiState('PLAYING');
-      _resetGameState();
-      setIsWaiting(true);
-
-    } catch (error) {
-      logMessage('error', 'Failed to send join message:', error);
-      setConnectionError('Failed to send join message.');
-      setUiState('ERROR');
+    if (success) {
+      console.log("[PlayerPage] Join message sent successfully. Transitioning to PLAYING state.");
+      setPlayerInfo(prev => ({ ...prev, name: nickname.trim() }));
+      _resetGameState(); // Reset scores etc.
+      setUiState('PLAYING'); // <<< Directly transition to PLAYING state
+    } else {
+      // Error should be set by the hook, useEffect handles uiState = 'ERROR'
+      setJoinAttempted(false); // Allow retry on failure
+      // setUiState('NICKNAME_INPUT'); // Optionally revert UI if needed, but ERROR state is better
     }
   };
 
-
-  const handleAnswerSubmit = (answerDetailPayload: PlayerAnswerPayload) => {
-    // ... (answer submit logic remains the same) ...
-    if (!stompClientRef.current || !stompClientRef.current.connected) {
-      logMessage('error', 'Cannot submit answer: Not connected.');
-      return;
-    }
-    if (isSubmitting) {
-      logMessage('warn', 'Already submitting an answer.');
-      return;
-    }
-    if (!playerInfo.cid || !gamePin) {
-      logMessage('error', "Cannot submit answer: Missing CID or Game PIN.");
-      return;
-    }
-
-    logMessage('info', 'Player submitting answer detail:', answerDetailPayload);
+  const handleAnswerSubmitClick = (answerDetailPayload: PlayerAnswerPayload) => {
+    // ... (validation) ...
+    if (!gamePin) { return; }
     setIsSubmitting(true);
-
-    const contentString = JSON.stringify(answerDetailPayload);
-    const messageToSend = {
-      channel: `${APP_PREFIX}/controller/${gamePin}`,
-      data: {
-        gameid: gamePin,
-        id: 6,
-        type: "message",
-        content: contentString,
-        cid: playerInfo.cid
-      },
-      ext: { timetrack: Date.now() }
-    };
-
-    try {
-      stompClientRef.current.publish({
-        destination: messageToSend.channel,
-        body: JSON.stringify([messageToSend])
-      });
-      logMessage('info', 'Answer message sent.');
-    } catch (error) {
-      logMessage('error', 'Failed to send answer message:', error);
-      setIsSubmitting(false);
-      setConnectionError("Failed to send answer. Please try again.");
-    }
+    sendAnswer(answerDetailPayload, gamePin);
   };
 
-  // --- Render Functions ---
-  const renderPinInput = () => (
+  const handleResetAndGoToPinInput = useCallback(() => {
+    disconnectWebSocket();
+    _resetGameState(); // This now also resets joinAttempted
+    setGamePin('');
+    setNickname('');
+    setPageError(null);
+    setUiState('PIN_INPUT');
+  }, [disconnectWebSocket, _resetGameState]);
+
+
+  // Dev Controls (no change)
+  const handleSimulatedMessageFromDevControls = useCallback((mockMessage: MockWebSocketMessage) => {
+    // ... (simulation logic) ...
+    console.log("[PlayerPage] Received simulated message from DevControls:", mockMessage);
+    const partialIMessage: Partial<IMessage> & { body: string, headers: { destination: string } } = {
+      body: JSON.stringify([mockMessage]),
+      headers: { destination: mockMessage.channel || `/topic/player/${gamePin || 'unknown'}` },
+      ack: () => { }, nack: () => { }, command: 'MESSAGE', binaryBody: new Uint8Array()
+    };
+    handleReceivedMessageCallback(partialIMessage as IMessage);
+  }, [handleReceivedMessageCallback, gamePin]);
+
+  // Render Functions (Remove renderJoining, renderWaitingForGame)
+  const renderPinInput = () => ( /* ... */
     <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-indigo-900 dark:to-purple-900">
       <Card className="w-full max-w-sm shadow-lg">
         <CardHeader>
           <CardTitle className="text-2xl font-bold text-center">Join Game</CardTitle>
-          <CardDescription className="text-center text-muted-foreground">
-            Enter the 6 or 7 digit PIN provided by the host.
-          </CardDescription>
+          <CardDescription className="text-center text-muted-foreground">Enter the 6 or 7 digit PIN.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <Input
-            type="number"
-            placeholder="Game PIN"
-            value={gamePin}
+            type="number" placeholder="Game PIN" value={gamePin}
             onChange={(e) => setGamePin(e.target.value.replace(/[^0-9]/g, '').slice(0, 7))}
-            className="text-center text-2xl h-14 tracking-widest"
-            maxLength={7}
-            aria-label="Game PIN"
+            className="text-center text-2xl h-14 tracking-widest" maxLength={7} aria-label="Game PIN"
           />
-          {connectionError && <p className="text-sm text-red-600 dark:text-red-400 text-center">{connectionError}</p>}
-          <Button onClick={handleJoinGame} className="w-full" size="lg" disabled={uiState === 'CONNECTING'}>
+          {pageError && <p className="text-sm text-red-600 dark:text-red-400 text-center">{pageError}</p>}
+          <Button onClick={handlePinSubmit} className="w-full" size="lg" disabled={uiState === 'CONNECTING'}>
             {uiState === 'CONNECTING' ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <LogIn className="mr-2 h-5 w-5" />}
             {uiState === 'CONNECTING' ? 'Connecting...' : 'Enter'}
           </Button>
@@ -434,110 +258,84 @@ export default function PlayerPage() {
       </Card>
     </div>
   );
-
-  const renderNicknameInput = () => (
+  const renderNicknameInput = () => ( /* ... */
     <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-gradient-to-br from-green-100 to-teal-100 dark:from-green-900 dark:to-teal-900">
       <Card className="w-full max-w-sm shadow-lg">
         <CardHeader>
           <CardTitle className="text-2xl font-bold text-center">Enter Nickname</CardTitle>
-          <CardDescription className="text-center text-muted-foreground">
-            Choose a nickname for the game.
-          </CardDescription>
+          <CardDescription className="text-center text-muted-foreground">Game PIN: {gamePin}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <Input
-            type="text"
-            placeholder="Your Nickname"
-            value={nickname}
-            onChange={(e) => setNickname(e.target.value)}
-            maxLength={25}
-            className="text-center text-lg h-12"
-            aria-label="Nickname"
+            type="text" placeholder="Your Nickname" value={nickname}
+            onChange={(e) => setNickname(e.target.value)} maxLength={25}
+            className="text-center text-lg h-12" aria-label="Nickname"
           />
-          {connectionError && <p className="text-sm text-red-600 dark:text-red-400 text-center">{connectionError}</p>}
-          <Button onClick={handleNicknameSubmit} className="w-full" size="lg" disabled={uiState === 'JOINING'}>
-            {uiState === 'JOINING' ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <UserPlus className="mr-2 h-5 w-5" />}
-            {uiState === 'JOINING' ? 'Joining...' : 'Join Game'}
+          {pageError && <p className="text-sm text-red-600 dark:text-red-400 text-center">{pageError}</p>}
+          {/* Consider adding a local loading state for the button itself during the async call */}
+          <Button onClick={handleNicknameSubmitClick} className="w-full" size="lg" >
+            <UserPlus className="mr-2 h-5 w-5" />
+            Join Game
           </Button>
         </CardContent>
       </Card>
     </div>
   );
-
-  const renderConnecting = () => (
+  const renderConnecting = () => ( /* ... */
     <div className="flex flex-col items-center justify-center min-h-screen p-4">
       <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
       <p className="text-muted-foreground text-center">Connecting to game {gamePin}...</p>
     </div>
   );
-
-  const renderJoining = () => (
-    <div className="flex flex-col items-center justify-center min-h-screen p-4">
-      <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-      <p className="text-muted-foreground text-center">Joining as {nickname}...</p>
-    </div>
-  );
-
-
-  const renderDisconnected = () => (
+  // Removed renderJoining
+  // Removed renderWaitingForGame
+  const renderDisconnected = () => ( /* ... */
     <div className="flex flex-col items-center justify-center min-h-screen p-4 text-center">
       <WifiOff className="h-12 w-12 text-muted-foreground mb-4" />
       <h2 className="text-xl font-semibold mb-2">Disconnected</h2>
-      <p className="text-muted-foreground mb-4">Connection lost. Please try joining again.</p>
-      <Button onClick={() => { setConnectionError(null); setGamePin(''); setNickname(''); setUiState('PIN_INPUT'); }}>
-        Join New Game
-      </Button>
+      <p className="text-muted-foreground mb-4">{pageError || "Connection lost. Please try joining again."}</p>
+      <Button onClick={handleResetAndGoToPinInput}>Join New Game</Button>
     </div>
   );
-
-  const renderError = () => (
+  const renderError = () => ( /* ... */
     <div className="flex flex-col items-center justify-center min-h-screen p-4 text-center">
       <AlertCircle className="h-12 w-12 text-destructive mb-4" />
       <h2 className="text-xl font-semibold text-destructive mb-2">Error</h2>
-      <p className="text-muted-foreground mb-4">{connectionError || "An unknown error occurred."}</p>
-      <Button onClick={() => { setConnectionError(null); setUiState('PIN_INPUT'); disconnectWebSocket(); }}>
-        Try Again
-      </Button>
+      <p className="text-muted-foreground mb-4">{pageError || "An unknown error occurred."}</p>
+      <Button onClick={handleResetAndGoToPinInput}>Try Again</Button>
     </div>
   );
 
-  // --- Main Render Logic ---
+
+  // Main Render Logic
   switch (uiState) {
-    case 'PIN_INPUT':
-      return renderPinInput();
-    case 'CONNECTING':
-      return renderConnecting();
-    case 'NICKNAME_INPUT':
-      return renderNicknameInput();
-    case 'JOINING':
-      return renderJoining();
+    case 'PIN_INPUT': return renderPinInput();
+    case 'CONNECTING': return renderConnecting();
+    case 'NICKNAME_INPUT': return renderNicknameInput();
+    // Removed JOINING case
     case 'PLAYING':
+      const derivedIsWaiting = !currentBlock && !currentResult && !isSubmitting;
       return (
         <>
           <PlayerView
             questionData={currentBlock}
             feedbackPayload={currentResult}
-            onSubmitAnswer={handleAnswerSubmit}
-            isWaiting={isWaiting}
+            onSubmitAnswer={handleAnswerSubmitClick}
+            isWaiting={derivedIsWaiting}
             isSubmitting={isSubmitting}
             playerInfo={playerInfo}
           />
-          {/* Pass the wrapper function to DevMockControls */}
           <DevMockControls
-            simulateReceiveMessage={handleSimulatedMessageFromDevControls} // Use the wrapper
-            loadMockBlock={(block) => { logMessage('warn', "DEV: Host override block ignored in PlayerPage"); }}
-            setMockResult={(result) => { logMessage('warn', "DEV: Host override result ignored in PlayerPage"); }}
+            simulateReceiveMessage={handleSimulatedMessageFromDevControls}
+            loadMockBlock={() => { }}
+            setMockResult={() => { }}
           />
         </>
       );
-    case 'DISCONNECTED':
-      return renderDisconnected();
-    case 'ERROR':
-      return renderError();
+    case 'DISCONNECTED': return renderDisconnected();
+    case 'ERROR': return renderError();
     default:
-      logMessage('error', 'Reached unknown UI state:', uiState);
-      setUiState('ERROR');
-      setConnectionError('Invalid application state.');
+      // Default to error state if something unexpected happens
       return renderError();
   }
 }
