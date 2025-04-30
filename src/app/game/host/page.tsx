@@ -10,7 +10,7 @@ import { Loader2, WifiOff } from "lucide-react"; //
 import DevMockControls, { MockWebSocketMessage } from "@/src/components/game/DevMockControls"; //
 import mockQuizStructureHost from "@/src/__mocks__/api/quiz_sample_all_types"; //
 import { QuizStructureHost, GameBlock, LiveGameState } from "@/src/lib/types"; //
-import { useHostGame } from "@/src/hooks/useHostGame"; //
+import { useHostGameCoordinator } from "@/src/hooks/useHostGameCoordinator"; //
 
 // --- Constants ---
 const API_BASE_URL = 'http://localhost:8080/api/session';
@@ -59,7 +59,7 @@ export default function HostPage() {
     handleWebSocketMessage, // <<< The function from the hook
     initializeSession,
     // sendBlockToPlayers, // We need to call this from HostPage now
-  } = useHostGame(quizData);
+  } = useHostGameCoordinator(quizData);
 
 
   // --- WebSocket Connection Logic ---
