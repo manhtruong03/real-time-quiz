@@ -2,47 +2,37 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { Loader2, WifiOff } from "lucide-react";
-
+import { Loader2, Settings, WifiOff } from "lucide-react"; // Added Settings just in case, though likely unused here directly
 import HostView from "@/src/components/game/views/HostView";
 import { Button } from "@/src/components/ui/button";
 import DevMockControls from "@/src/components/game/DevMockControls";
 import mockQuizStructureHost from "@/src/__mocks__/api/quiz_sample_all_types";
-import { QuizStructureHost } from "@/src/lib/types";
+import { QuizStructureHost } from "@/src/lib/types"; // Import Sound type
 import { useHostGameCoordinator } from "@/src/hooks/useHostGameCoordinator";
-// --- NEW Import ---
 import { useHostWebSocket, ConnectionStatus as WebSocketConnectionStatus } from "@/src/hooks/game/useHostWebSocket";
-import { GameAssetsProvider } from '@/src/context/GameAssetsContext';
+import { GameAssetsProvider, useGameAssets } from '@/src/context/GameAssetsContext';
+import { GameSettingsDialog } from "@/src/components/game/settings/GameSettingsDialog";
 
 // Constants
 const API_BASE_URL = 'http://localhost:8080/api/session';
-// --- REMOVE WebSocket Constants (managed by hook) ---
-// const WEBSOCKET_URL = 'ws://localhost:8080/ws-quiz';
-// const APP_PREFIX = '/app';
-const TOPIC_PREFIX = '/topic';
-// const USER_QUEUE_PREFIX = '/user/queue';
+const TOPIC_PREFIX = '/topic'; // Keep if needed for WS message sending
 
-export default function HostPage() {
+// Helper component to access context within the provider scope
+const HostPageContent = () => {
   // === State for UI Flow ===
-  // Combine Page UI state with WebSocket Connection Status
   type PageUiState = 'INITIAL' | 'FETCHING_PIN' | 'CONNECTING' | 'CONNECTED' | 'DISCONNECTED' | 'ERROR';
   const [uiState, setUiState] = useState<PageUiState>('INITIAL');
-  const [apiError, setApiError] = useState<string | null>(null); // For API/WS errors
+  const [apiError, setApiError] = useState<string | null>(null);
   const [fetchedGamePin, setFetchedGamePin] = useState<string | null>(null);
 
   // === State for Initial Data Loading ===
   const [quizData, setQuizData] = useState<QuizStructureHost | null>(null);
   const [isQuizLoading, setIsQuizLoading] = useState(true);
 
-  // === Load Mock Quiz Data ===
-  useEffect(() => {
-    // console.log("HostPage: Loading mock quiz structure...");
-    setIsQuizLoading(true);
-    const mockData = mockQuizStructureHost as QuizStructureHost;
-    setQuizData(mockData);
-    setIsQuizLoading(false);
-    // console.log("HostPage: Mock quiz structure loaded.");
-  }, []);
+  // === State for Settings ===
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [selectedBackgroundId, setSelectedBackgroundId] = useState<string | null>(null);
+  const [selectedSoundId, setSelectedSoundId] = useState<string | null>(null);
 
   // === Game Logic Coordinator Hook ===
   const {
@@ -54,142 +44,155 @@ export default function HostPage() {
     handleNext,
     handleSkip,
     handleTimeUp,
-    handleWebSocketMessage, // <<< The message handler from the coordinator
-    initializeSession, // <<< The session initializer from the coordinator
-    prepareQuestionMessage, // <<< Function to get the message string
-    prepareResultMessage,   // <<< Function to get the message string
-    resetGameState, // <<< Function to reset game state
+    handleWebSocketMessage,
+    initializeSession,
+    prepareQuestionMessage,
+    prepareResultMessage,
+    resetGameState,
   } = useHostGameCoordinator(quizData);
 
-  // === NEW: WebSocket Hook ===
+  // === WebSocket Hook ===
   const {
     connect: connectWebSocket,
     disconnect: disconnectWebSocket,
     sendMessage,
     connectionStatus: wsConnectionStatus,
     error: wsError,
-    hostClientId, // Get client ID from the hook
+    hostClientId,
   } = useHostWebSocket({
     onMessageReceived: (message) => {
-      // Pass the raw STOMP message body to the coordinator's handler
       handleWebSocketMessage(message.body);
     }
   });
 
-  // --- Sync Page UI State with WebSocket Connection Status ---
-  useEffect(() => {
-    // console.log("[HostPage] WS Connection Status Changed:", wsConnectionStatus);
-    if (wsConnectionStatus === 'CONNECTING') {
-      setUiState('CONNECTING');
-      setApiError(null); // Clear previous errors on reconnect attempt
-    } else if (wsConnectionStatus === 'CONNECTED') {
-      setUiState('CONNECTED');
-      setApiError(null); // Clear errors on successful connection
-    } else if (wsConnectionStatus === 'DISCONNECTED') {
-      // Only transition to DISCONNECTED if not already in INITIAL or ERROR
-      // to prevent flicker when starting fresh or after an error.
-      if (uiState !== 'INITIAL' && uiState !== 'ERROR') {
-        setUiState('DISCONNECTED');
-      }
-    } else if (wsConnectionStatus === 'ERROR') {
-      setApiError(wsError ?? "Unknown WebSocket error.");
-      setUiState('ERROR');
-    }
-  }, [wsConnectionStatus, wsError, uiState]); // Add uiState to dependencies
+  // === Game Assets Context Hook ===
+  const { backgrounds, sounds, isLoading: assetsLoading, error: assetsError } = useGameAssets();
 
-  // --- API Call to Start Game ---
-  const handleStartGameClick = async () => {
-    if (!quizData) {
-      setApiError("Quiz data not ready.");
-      setUiState('ERROR');
-      return;
+  // === Load Mock Quiz Data ===
+  useEffect(() => {
+    setIsQuizLoading(true);
+    const mockData = mockQuizStructureHost as QuizStructureHost;
+    setQuizData(mockData);
+    setIsQuizLoading(false);
+  }, []);
+
+  // === Effect to Set Initial Background and Sound ===
+  useEffect(() => {
+    if (!assetsLoading && !assetsError) {
+      // Set initial background if not already set
+      if (selectedBackgroundId === null && backgrounds.length > 0) {
+        const firstActiveBg = backgrounds.find(bg => bg.is_active);
+        if (firstActiveBg) {
+          console.log("[HostPage] Setting initial background:", firstActiveBg.background_id);
+          setSelectedBackgroundId(firstActiveBg.background_id);
+        }
+      }
+      // Set initial sound if not already set
+      if (selectedSoundId === null && sounds.length > 0) {
+        const firstActiveLobbySound = sounds.find(s => s.sound_type === 'LOBBY' && s.is_active);
+        if (firstActiveLobbySound) {
+          console.log("[HostPage] Setting initial lobby sound:", firstActiveLobbySound.sound_id);
+          setSelectedSoundId(firstActiveLobbySound.sound_id);
+        }
+      }
     }
-    setUiState('FETCHING_PIN');
-    setApiError(null);
-    // console.log("HostPage: Requesting game pin...");
+    // Run when assets load or error state changes
+  }, [assetsLoading, assetsError, backgrounds, sounds, selectedBackgroundId, selectedSoundId]);
+
+  // === Sync Page UI State with WebSocket Connection Status ===
+  useEffect(() => {
+    if (wsConnectionStatus === 'CONNECTING') {
+      setUiState('CONNECTING'); setApiError(null);
+    } else if (wsConnectionStatus === 'CONNECTED') {
+      setUiState('CONNECTED'); setApiError(null);
+    } else if (wsConnectionStatus === 'DISCONNECTED') {
+      if (uiState !== 'INITIAL' && uiState !== 'ERROR') setUiState('DISCONNECTED');
+    } else if (wsConnectionStatus === 'ERROR') {
+      setApiError(wsError ?? "Unknown WebSocket error."); setUiState('ERROR');
+    }
+  }, [wsConnectionStatus, wsError, uiState]);
+
+  // === API Call to Start Game ===
+  const handleStartGameClick = async () => {
+    if (!quizData) { setApiError("Quiz data not ready."); setUiState('ERROR'); return; }
+    setUiState('FETCHING_PIN'); setApiError(null);
     try {
       const response = await fetch(`${API_BASE_URL}/create`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) });
       const data = await response.json();
       if (response.ok && data.gamePin) {
-        console.log("HostPage: Game pin received:", data.gamePin);
         setFetchedGamePin(data.gamePin);
-        // Connect WS via hook, pass coordinator's initializeSession as callback
         connectWebSocket(data.gamePin, (clientId) => {
-          console.log("HostPage: WS Connected successfully via hook callback.");
-          initializeSession(data.gamePin, clientId); // Initialize coordinator state
+          initializeSession(data.gamePin, clientId);
         });
-        // uiState will update via useEffect based on wsConnectionStatus
       } else {
         throw new Error(data.error || `Failed to create session (Status: ${response.status})`);
       }
     } catch (error: any) {
       console.error("HostPage: Error creating session:", error);
-      setApiError(error.message || "Failed to start game.");
-      setUiState('ERROR');
+      setApiError(error.message || "Failed to start game."); setUiState('ERROR');
     }
   };
 
-  // --- Effect to Send Messages When State Changes ---
+  // === Effect to Send Messages ===
   useEffect(() => {
     if (uiState !== 'CONNECTED' || !liveGameState) return;
-
-    const { status, currentQuestionIndex } = liveGameState;
-    // console.log(`[HostPage Effect] Status: ${status}, Index: ${currentQuestionIndex}`);
+    const { status, gamePin, players, hostUserId } = liveGameState;
 
     if (status === 'QUESTION_SHOW' || status === 'QUESTION_GET_READY') {
-      const messageString = prepareQuestionMessage(); // Get message string from coordinator
-      if (messageString) {
-        // console.log("[HostPage Effect] Sending Question Message:", messageString);
-        // Assuming broadcast to players (check destination if needed)
-        sendMessage(`${TOPIC_PREFIX}/player/${liveGameState.gamePin}`, messageString);
-      } else {
-        // console.log("[HostPage Effect] No question message to send.");
+      const messageString = prepareQuestionMessage();
+      if (messageString && gamePin) {
+        sendMessage(`${TOPIC_PREFIX}/player/${gamePin}`, messageString);
       }
     } else if (status === 'QUESTION_RESULT') {
-      // Send result to each player
-      Object.keys(liveGameState.players).forEach(playerId => {
-        if (playerId !== liveGameState.hostUserId) { // Don't send to host
-          const messageString = prepareResultMessage(playerId); // Get result message string
-          if (messageString) {
-            // console.log(`[HostPage Effect] Sending Result Message to ${playerId}:`, messageString);
-            // Assuming results are sent to the general player topic or direct?
-            // Using player topic for now, adjust if private messages are needed
-            sendMessage(`${TOPIC_PREFIX}/player/${liveGameState.gamePin}`, messageString);
-            // OR if targeting specific user queue:
-            // sendMessage(`${USER_QUEUE_PREFIX}/${playerId}/private`, messageString);
+      Object.keys(players).forEach(playerId => {
+        if (playerId !== hostUserId) {
+          const messageString = prepareResultMessage(playerId);
+          if (messageString && gamePin) {
+            sendMessage(`${TOPIC_PREFIX}/player/${gamePin}`, messageString);
           }
         }
       });
     } else if (status === 'PODIUM') {
-      // Similar logic for podium/final results if needed
+      // TODO: Implement Podium message sending if needed
       console.log("[HostPage Effect] TODO: Send Podium Message");
-      // Object.keys(liveGameState.players).forEach(playerId => { ... preparePodiumMessage ... sendMessage ... });
     }
-
   }, [liveGameState?.status, liveGameState?.currentQuestionIndex, uiState, sendMessage, prepareQuestionMessage, prepareResultMessage, liveGameState?.gamePin, liveGameState?.players, liveGameState?.hostUserId]);
 
-
-  // --- Cleanup on Unmount ---
-  // The useHostWebSocket hook handles its own cleanup.
-  // We might need cleanup for the coordinator state if necessary.
+  // === Cleanup on Unmount ===
   useEffect(() => {
     return () => {
-      // console.log("HostPage unmounting. Disconnecting WebSocket.");
       disconnectWebSocket();
-      // resetGameState(); // Optionally reset coordinator state on unmount
     };
-  }, [disconnectWebSocket]); // Removed resetGameState dependency if not needed on unmount
+  }, [disconnectWebSocket]);
 
-  // --- Action Handlers (Reset Logic) ---
+  // --- Action Handlers ---
   const handleResetAndGoToInitial = () => {
-    disconnectWebSocket(); // Disconnect WS
-    resetGameState();      // Reset coordinator state
-    setApiError(null);
-    setFetchedGamePin(null);
-    setUiState('INITIAL'); // Go back to start screen
+    disconnectWebSocket(); resetGameState(); setApiError(null); setFetchedGamePin(null); setUiState('INITIAL');
   };
 
-  // --- Render Functions for UI States (Simplified) ---
+  const handleOpenSettings = () => { setIsSettingsOpen(true); };
+
+  const handleBackgroundSelect = (backgroundId: string) => {
+    console.log("HostPage: Background selected:", backgroundId);
+    setSelectedBackgroundId(backgroundId);
+    // TODO: Send WebSocket message to players about background change
+    // Example payload structure (adjust based on your websocket_message_structure.md):
+    // const wsPayload = { type: 'SET_BACKGROUND', id: backgroundId };
+    // const messageData = { gameid: liveGameState?.gamePin, type: 'message', id: YOUR_BACKGROUND_CHANGE_ID, content: JSON.stringify(wsPayload), host: 'VuiQuiz.com' };
+    // const fullMessage = JSON.stringify([{ channel: `/service/player`, data: messageData }]);
+    // if (liveGameState?.gamePin) sendMessage(`${TOPIC_PREFIX}/player/${liveGameState.gamePin}`, fullMessage);
+    setIsSettingsOpen(false); // Close dialog after selection
+  };
+
+  const handleSoundSelect = (soundId: string) => {
+    console.log("HostPage: Sound selected:", soundId);
+    setSelectedSoundId(soundId);
+    // TODO: Send WebSocket message to players about sound change
+    // Similar WS message structure as background change
+    setIsSettingsOpen(false); // Close dialog after selection
+  };
+
+  // --- Render Functions for UI States ---
   const renderInitialView = () => (
     <div className="flex flex-col items-center justify-center min-h-screen p-4">
       <h1 className="text-3xl font-bold mb-6">Start New Quiz Game</h1>
@@ -228,7 +231,6 @@ export default function HostPage() {
       <h2 className="text-xl font-semibold mb-2">Disconnected</h2>
       <p className="text-muted-foreground mb-4">The WebSocket connection was closed.</p>
       <Button onClick={handleResetAndGoToInitial}>Start New Game</Button>
-      {/* Optional Reconnect Button */}
       {fetchedGamePin && (
         <Button variant="outline" className="mt-2" onClick={() => connectWebSocket(fetchedGamePin, (clientId) => initializeSession(fetchedGamePin, clientId))}>
           Reconnect (Pin: {fetchedGamePin})
@@ -237,8 +239,8 @@ export default function HostPage() {
     </div>
   );
 
-  // --- Define the function that holds the rendering logic ---
-  const renderPageContent = () => {
+  // --- Main Return with Conditional Rendering ---
+  const renderPageActualContent = () => { // Renamed from renderPageContent to avoid conflict
     if (uiState === 'INITIAL') return renderInitialView();
     if (uiState === 'FETCHING_PIN' || uiState === 'CONNECTING') return renderConnectingView();
     if (uiState === 'ERROR') return renderErrorView();
@@ -253,18 +255,33 @@ export default function HostPage() {
             currentAnswerCount={currentQuestionAnswerCount}
             totalPlayers={currentTotalPlayers}
             gamePin={liveGameState.gamePin}
-            accessUrl={"VuiQuiz.com"} // Replace if needed
+            accessUrl={"VuiQuiz.com"}
             onTimeUp={handleTimeUp}
             onSkip={handleSkip}
             onNext={handleNext}
+            onSettingsClick={handleOpenSettings} // Pass the handler
+            selectedBackgroundId={selectedBackgroundId} // Pass selected ID down
+            selectedSoundId={selectedSoundId}      // Pass selected ID down
             isLoading={!currentBlock && liveGameState.status !== "LOBBY" && liveGameState.status !== "PODIUM" && liveGameState.status !== "ENDED"}
           />
-          <DevMockControls
-            simulateReceiveMessage={(msgBody) => handleWebSocketMessage(msgBody)}
-            simulatePlayerAnswer={(msgBody) => handleWebSocketMessage(msgBody)}
-            simulateHostReceiveJoin={(msgBody) => handleWebSocketMessage(msgBody)}
-            loadMockBlock={(block) => { console.warn("DevMockControls loadMockBlock ignored - use coordinator"); }}
-            setMockResult={(result) => { console.warn("DevMockControls setMockResult ignored - use coordinator"); }}
+          {/* Render DevControls only in development */}
+          {process.env.NODE_ENV === 'development' && (
+            <DevMockControls
+              simulateReceiveMessage={(msgBody) => handleWebSocketMessage(msgBody)}
+              simulatePlayerAnswer={(msgBody) => handleWebSocketMessage(msgBody)}
+              simulateHostReceiveJoin={(msgBody) => handleWebSocketMessage(msgBody)}
+              loadMockBlock={() => { console.warn("DevMockControls loadMockBlock ignored - use coordinator"); }}
+              setMockResult={() => { console.warn("DevMockControls setMockResult ignored - use coordinator"); }}
+            />
+          )}
+          {/* Render the Settings Dialog */}
+          <GameSettingsDialog
+            open={isSettingsOpen}
+            onOpenChange={setIsSettingsOpen}
+            selectedBackgroundId={selectedBackgroundId}
+            onBackgroundSelect={handleBackgroundSelect}
+            selectedSoundId={selectedSoundId}
+            onSoundSelect={handleSoundSelect}
           />
         </>
       );
@@ -272,12 +289,16 @@ export default function HostPage() {
     // Fallback view
     return renderConnectingView();
   };
-  // --- End function definition ---
 
-  // Fallback connecting/loading view
+  // Return the actual content determined above
+  return renderPageActualContent();
+};
+
+// Wrap the page component with the context provider
+export default function HostPage() {
   return (
     <GameAssetsProvider>
-      {renderPageContent()}
+      <HostPageContent />
     </GameAssetsProvider>
   );
 }

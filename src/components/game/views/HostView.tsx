@@ -1,23 +1,23 @@
 // src/components/game/views/HostView.tsx
 "use client";
 
-import React, { useState, useEffect, memo, useMemo } from "react";
-import { GameBlock, isContentBlock } from "@/src/lib/types"; // Import necessary types
+import React, { useState, useEffect, memo, useMemo, useRef } from "react";
+import { GameBlock, isContentBlock } from "@/src/lib/types"; // Import Sound
 import QuestionDisplay from "../display/QuestionDisplay";
 import MediaDisplay from "../display/MediaDisplay";
 import CountdownTimer from "../status/CountdownTimer";
 import AnswerCounter from "../status/AnswerCounter";
 import FooterBar from "../status/FooterBar";
-import AnswerInputArea from "../inputs/AnswerInputArea"; // Host uses this for display only
-import { Button } from "@/src/components/ui/button"; // Import Button for the example
+import AnswerInputArea from "../inputs/AnswerInputArea";
 import { cn } from "@/src/lib/utils";
-import { Loader2, Info } from "lucide-react";
-import { useGameBackground } from "@/src/lib/hooks/useGameBackground"; // Correct path assumed
-import { useGameAssets } from "@/src/context/GameAssetsContext"; // Import the context hook
+import { Loader2, Info, Volume2, VolumeX } from "lucide-react"; // Added Volume icons
+import { useGameBackground } from "@/src/lib/hooks/useGameBackground";
+import { useGameAssets } from "@/src/context/GameAssetsContext";
+import { Button } from "@/src/components/ui/button"; // For mute button example
 
 interface HostViewProps {
-  questionData: GameBlock | null; // Use GameBlock type
-  timerKey: string | number; // To ensure timer resets correctly
+  questionData: GameBlock | null;
+  timerKey: string | number;
   currentAnswerCount: number;
   totalPlayers: number;
   gamePin?: string;
@@ -27,11 +27,13 @@ interface HostViewProps {
   onNext?: () => void;
   isLoading?: boolean;
   className?: string;
+  selectedSoundId: string | null; // Receive selected sound ID
+  selectedBackgroundId: string | null; // Receive selected background ID
+  onSettingsClick?: () => void; // Receive settings click handler
 }
 
-// Use React.memo for performance optimization
 const HostViewComponent: React.FC<HostViewProps> = ({
-  questionData: currentBlock, // Rename prop internally for clarity
+  questionData: currentBlock,
   timerKey,
   currentAnswerCount,
   totalPlayers,
@@ -42,206 +44,230 @@ const HostViewComponent: React.FC<HostViewProps> = ({
   onNext,
   isLoading = false,
   className,
+  selectedSoundId, // Destructure
+  selectedBackgroundId, // Destructure
+  onSettingsClick, // Destructure
 }) => {
-  // --- Background from question block data ---
-  const { style: blockBackgroundStyle, hasCustomBackground: hasBlockBackground } =
-    useGameBackground(currentBlock);
+  const { backgrounds, sounds, isLoading: assetsLoading, error: assetsError } = useGameAssets();
+  const { style: blockBackgroundStyle, hasCustomBackground: hasBlockBackground } = useGameBackground(currentBlock);
 
-  // --- Asset Context ---
-  const { backgrounds, isLoading: assetsLoading, error: assetsError } = useGameAssets();
+  const audioPlayerRef = useRef<HTMLAudioElement | null>(null);
+  const [isMuted, setIsMuted] = useState(false);
+  // Track if the user *wants* audio playing, even if browser blocked initial autoplay
+  const [audioShouldBePlaying, setAudioShouldBePlaying] = useState(false);
 
-  // --- Example State: Simulate receiving a background ID ---
-  // In a real app, this ID would likely come from liveGameState or a WebSocket message handler
-  const [selectedBackgroundId, setSelectedBackgroundId] = useState<string | null>(null);
+  // --- Background Logic (no changes needed here) ---
 
-  // --- Find the selected background object using the ID ---
+  // --- Background Logic ---
   const selectedBackground = useMemo(() => {
-    // Don't try to find if assets are loading, there's an error, or no ID is selected
-    if (!selectedBackgroundId || assetsLoading || assetsError || backgrounds.length === 0) {
-      return null;
-    }
-    return backgrounds.find(bg => bg.background_id === selectedBackgroundId) || null; // Ensure null if not found
+    if (!selectedBackgroundId || assetsLoading || assetsError || backgrounds.length === 0) return null;
+    return backgrounds.find(bg => bg.background_id === selectedBackgroundId) || null;
   }, [selectedBackgroundId, backgrounds, assetsLoading, assetsError]);
 
-  // --- Determine final background style based on priority ---
   const finalBackgroundStyle = useMemo(() => {
     if (selectedBackground?.background_file_path) {
-      // 1. Prioritize explicitly selected background image
-      return {
-        backgroundImage: `url(${JSON.stringify(selectedBackground.background_file_path)})`,
-        backgroundSize: "cover",
-        backgroundPosition: "center center",
-        backgroundRepeat: "no-repeat",
-      };
+      return { backgroundImage: `url(${JSON.stringify(selectedBackground.background_file_path)})`, backgroundSize: "cover", backgroundPosition: "center center", backgroundRepeat: "no-repeat" };
     } else if (selectedBackground?.background_color) {
-      // 2. Fallback to selected background color
       return { backgroundColor: selectedBackground.background_color };
     } else if (hasBlockBackground) {
-      // 3. Fallback to question block's background (if any)
       return blockBackgroundStyle;
     }
-    // 4. Default if nothing else applies
     return {};
   }, [selectedBackground, hasBlockBackground, blockBackgroundStyle]);
 
-  // Determine if any custom background (selected or from block) is applied
   const hasFinalCustomBackground = !!(selectedBackground?.background_file_path || selectedBackground?.background_color || hasBlockBackground);
 
   const hostViewClasses = cn(
     "min-h-screen h-screen flex flex-col text-foreground relative",
-    !hasFinalCustomBackground && "default-quiz-background", // Apply default class only if no custom background found
+    !hasFinalCustomBackground && "default-quiz-background",
     className
   );
 
-  // --- Internal function to render the main content area based on state ---
+  // --- Audio Handling Effects ---
+
+  // Effect 1: Create/Update Audio Element and Source
+  useEffect(() => {
+    if (assetsLoading || assetsError || sounds.length === 0) return;
+
+    const lobbySounds = sounds.filter(s => s.sound_type === 'LOBBY' && s.is_active);
+    if (lobbySounds.length === 0) return;
+
+    const soundIdToUse = selectedSoundId ?? lobbySounds[0]?.sound_id;
+    const soundToPlay = lobbySounds.find(s => s.sound_id === soundIdToUse);
+
+    if (!soundToPlay) {
+      console.warn(`[HostView Audio] Sound not found for ID: ${soundIdToUse}`);
+      if (audioPlayerRef.current) {
+        audioPlayerRef.current.pause(); // Pause if selected sound is invalid
+        setAudioShouldBePlaying(false);
+      }
+      return;
+    }
+
+    const currentAudio = audioPlayerRef.current;
+    const needsNewUrl = !currentAudio || currentAudio.src !== soundToPlay.file_path;
+
+    if (!currentAudio) {
+      // --- Create Audio Element ---
+      console.log("[HostView Audio] Creating audio element for:", soundToPlay.name);
+      const newAudio = new Audio(soundToPlay.file_path);
+      newAudio.loop = true;
+      newAudio.volume = isMuted ? 0 : 0.5;
+      audioPlayerRef.current = newAudio;
+      setAudioShouldBePlaying(true); // Indicate intent to play
+
+    } else if (needsNewUrl) {
+      // --- Change Source ---
+      console.log(`[HostView Audio] Changing track to: ${soundToPlay.name}`);
+      currentAudio.pause(); // Pause before changing source
+      currentAudio.src = soundToPlay.file_path;
+      currentAudio.load(); // Important: load the new source
+      currentAudio.loop = true; // Ensure loop is set on new source
+      currentAudio.volume = isMuted ? 0 : 0.5; // Ensure volume is correct
+      setAudioShouldBePlaying(true); // Indicate intent to play new track
+    }
+    // Note: Play logic is handled in the next effect to coordinate with state changes
+
+  }, [assetsLoading, assetsError, sounds, selectedSoundId]); // Rerun when assets/selection change
+
+
+  // Effect 2: Handle Play/Pause/Volume based on state
+  useEffect(() => {
+    const audio = audioPlayerRef.current;
+    if (!audio) return;
+
+    audio.volume = isMuted ? 0 : 0.5; // Apply mute state
+
+    if (audioShouldBePlaying && !isMuted && audio.paused) {
+      // If it *should* be playing, isn't muted, but *is* paused (e.g., initial block or after track change)
+      console.log("[HostView Audio] Attempting to play (Effect 2)... Source:", audio.src);
+      audio.play().catch(error => {
+        console.warn("[HostView Audio] Playback failed (likely needs interaction):", error);
+        // Keep audioShouldBePlaying true, requires user action via unmute/play button
+      });
+    } else if ((!audioShouldBePlaying || isMuted) && !audio.paused) {
+      // If it *shouldn't* be playing OR is muted, pause it
+      console.log("[HostView Audio] Pausing (Effect 2)...");
+      audio.pause();
+    }
+
+  }, [audioShouldBePlaying, isMuted, selectedSoundId]); // React to intent, mute state, and track changes
+
+
+  // Effect 3: Cleanup on unmount
+  useEffect(() => {
+    // Return a cleanup function
+    return () => {
+      if (audioPlayerRef.current) {
+        console.log("[HostView Audio] Pausing audio and cleaning up on unmount");
+        audioPlayerRef.current.pause();
+        audioPlayerRef.current.removeAttribute('src'); // Release resource
+        audioPlayerRef.current.load(); // Abort loading if any
+        audioPlayerRef.current = null;
+        setAudioShouldBePlaying(false); // Reset intent
+      }
+    };
+  }, []); // Empty array ensures this runs only on unmount
+
+
+  // --- Toggle Mute Function ---
+  const toggleMute = () => {
+    const audio = audioPlayerRef.current;
+    if (!audio) return;
+
+    const newMutedState = !isMuted;
+    setIsMuted(newMutedState); // Update state first
+
+    // If unmuting, explicitly try to play again if it's paused
+    if (!newMutedState && audio.paused && audioShouldBePlaying) {
+      console.log("[HostView Audio] Attempting to play on unmute...");
+      audio.play().catch(error => {
+        console.warn("[HostView Audio] Playback failed on unmute (likely needs interaction):", error);
+      });
+    }
+    // The volume change will be handled by Effect 2 reacting to isMuted change
+    console.log("[HostView Audio] Toggled mute state to:", newMutedState);
+  };
+
+  // --- mainContent function (no changes needed) ---
   const mainContent = () => {
     if (isLoading || !currentBlock) {
-      // Loading or initial state (before first block)
       return (
         <div className="flex flex-col items-center justify-center text-center p-10 flex-grow">
           <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-          <p className="text-muted-foreground">
-            {isLoading
-              ? "Loading next question..."
-              : "Waiting for game to start..."}
-          </p>
+          <p className="text-muted-foreground">{isLoading ? "Loading..." : "Waiting..."}</p>
         </div>
       );
     }
-
-    // --- Handle Content Block Type ---
     if (isContentBlock(currentBlock)) {
       return (
         <div className="flex-grow flex flex-col items-center justify-center gap-4 md:gap-8 px-4 text-center bg-black/30 text-white backdrop-blur-sm p-6 rounded-lg shadow-lg">
           <Info className="h-12 w-12 text-blue-300 mb-4" />
-          {/* Display Title */}
-          <QuestionDisplay
-            title={currentBlock.title}
-            className="mb-2 bg-transparent shadow-none p-0 text-2xl md:text-3xl"
-          />
-          {/* Display Description */}
-          {currentBlock.description && (
-            <p className="text-lg md:text-xl mt-2 max-w-xl">{currentBlock.description}</p>
-          )}
-          {/* Display Media */}
+          <QuestionDisplay title={currentBlock.title} className="mb-2 bg-transparent shadow-none p-0 text-2xl md:text-3xl" />
+          {currentBlock.description && <p className="text-lg md:text-xl mt-2 max-w-xl">{currentBlock.description}</p>}
           <MediaDisplay questionData={currentBlock} priority className="mt-4 max-w-md" />
         </div>
       );
     }
-    // --- END Handle Content Block Type ---
-
-
-    // --- Default layout for interactive question types (Quiz, Jumble, Survey, OpenEnded) ---
+    // Default layout for interactive question types
     return (
       <>
-        {/* Question Title Area */}
-        <QuestionDisplay
-          title={currentBlock.title}
-          className="mb-4 md:mb-6 bg-black/30 text-white backdrop-blur-sm shadow-md"
-        />
-
-        {/* Main Area: Status, Media, Answer Display */}
+        {/* Interactive block UI (Question, Media, Status, Answers) */}
+        <QuestionDisplay title={currentBlock.title} className="mb-4 md:mb-6 bg-black/30 text-white backdrop-blur-sm shadow-md" />
         <div className="flex-grow flex flex-col md:flex-row items-stretch justify-center gap-4 md:gap-6 px-4">
-
-          {/* Left/Top: Status Indicators */}
+          {/* Status */}
           <div className="flex flex-row md:flex-col justify-around md:justify-start gap-4 order-2 md:order-1 mb-4 md:mb-0 bg-black/20 backdrop-blur-sm p-3 rounded-lg self-center md:self-start shadow">
-            {/* Timer (only if question is timed) */}
             {currentBlock.timeAvailable > 0 && (
-              <CountdownTimer
-                key={`cd-${timerKey}`} // Ensure key changes to reset
-                initialTime={currentBlock.timeAvailable}
-                timeKey={timerKey} // Pass the key to trigger reset
-                onTimeUp={onTimeUp}
-                className="bg-transparent shadow-none text-white min-w-[80px]" // Style for visibility
-              />
+              <CountdownTimer key={`cd-${timerKey}`} initialTime={currentBlock.timeAvailable} timeKey={timerKey} onTimeUp={onTimeUp} className="bg-transparent shadow-none text-white min-w-[80px]" />
             )}
-            {/* Answer Counter */}
-            <AnswerCounter
-              count={currentAnswerCount}
-              totalPlayers={totalPlayers}
-              className="bg-transparent shadow-none text-white min-w-[80px]" // Style for visibility
-            />
+            <AnswerCounter count={currentAnswerCount} totalPlayers={totalPlayers} className="bg-transparent shadow-none text-white min-w-[80px]" />
           </div>
-
-          {/* Center: Media & Answer Options Display */}
+          {/* Media & Answers */}
           <div className="w-full md:flex-grow order-1 md:order-2 flex flex-col items-center min-h-0">
-            {/* Media Display pushes answers down */}
             <MediaDisplay questionData={currentBlock} priority className="mb-auto max-w-lg w-full" />
-
-            {/* Display Answer Options (Non-interactive for Host) */}
+            {/* Answer Display Area */}
             {(currentBlock.type === 'quiz' || currentBlock.type === 'jumble' || currentBlock.type === 'survey') && currentBlock.choices && (
               <div className="w-full max-w-2xl mt-4">
-                <AnswerInputArea
-                  questionData={currentBlock}
-                  onAnswerSubmit={() => { }} // No-op for host
-                  isSubmitting={false}
-                  isInteractive={false} // Non-interactive Host view
-                />
+                <AnswerInputArea questionData={currentBlock} onAnswerSubmit={() => { }} isSubmitting={false} isInteractive={false} />
               </div>
             )}
-            {/* Placeholder for Open Ended */}
             {currentBlock.type === "open_ended" && (
               <div className="text-center p-4 mt-4 text-white/70 bg-black/20 rounded-lg w-full max-w-md shadow">
                 (Players are typing answers)
               </div>
             )}
           </div>
-
-          {/* Right/Bottom placeholder (for layout balance) */}
-          <div className="order-3 w-[100px] hidden md:block flex-shrink-0">
-            {/* Empty space */}
-          </div>
+          {/* Spacer */}
+          <div className="order-3 w-[100px] hidden md:block flex-shrink-0"></div>
         </div>
       </>
     );
   };
 
-  // --- Example button function to simulate changing background ID ---
-  const simulateBackgroundChange = () => {
-    if (assetsLoading || assetsError || backgrounds.length === 0) {
-      console.log("Cannot simulate background change: Assets not ready.");
-      return;
-    }
-    const currentBgIndex = backgrounds.findIndex(b => b.background_id === selectedBackgroundId);
-    const nextIndex = (currentBgIndex + 1) % backgrounds.length; // Cycle through available backgrounds
-    const nextBgId = backgrounds[nextIndex]?.background_id || null;
-    setSelectedBackgroundId(nextBgId);
-    console.log("[HostView Example] Simulated background change to ID:", nextBgId);
-  };
-  // --- End Example ---
-
   // --- Main Return Structure ---
   return (
-    <div
-      className={hostViewClasses}
-      style={finalBackgroundStyle} // Apply the final calculated style
-    >
-      {/* Conditional default background elements */}
+    <div className={hostViewClasses} style={finalBackgroundStyle}>
       {!hasFinalCustomBackground && <div className="stars-layer"></div>}
-      {/* Overlay only if there's a final background AND it's an image (not just color) */}
       {hasFinalCustomBackground && !selectedBackground?.background_color && (
         <div className="absolute inset-0 bg-black/40 z-0"></div>
       )}
 
+      {/* Mute Button Example */}
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={toggleMute}
+        className="absolute top-4 right-4 z-20 text-white bg-black/30 hover:bg-black/50"
+        title={isMuted ? "Unmute Lobby Music" : "Mute Lobby Music"}
+      >
+        {isMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
+      </Button>
 
-      {/* Main Content Area */}
+
       <main className="flex-grow flex flex-col justify-center items-stretch p-4 md:p-6 relative z-10 overflow-y-auto">
         {mainContent()}
-        {/* Example Button (Positioned for visibility) */}
-        {process.env.NODE_ENV === 'development' && ( // Only show in dev
-          <Button
-            onClick={simulateBackgroundChange}
-            variant="secondary"
-            size="sm"
-            className="absolute bottom-20 right-4 z-20 shadow-lg"
-            disabled={assetsLoading || !!assetsError || backgrounds.length === 0}
-          >
-            Simulate BG Change
-          </Button>
-        )}
       </main>
 
-      {/* Footer Bar */}
       <FooterBar
         currentQuestionIndex={currentBlock?.gameBlockIndex ?? -1}
         totalQuestions={currentBlock?.totalGameBlockCount ?? 0}
@@ -249,13 +275,12 @@ const HostViewComponent: React.FC<HostViewProps> = ({
         accessUrl={accessUrl}
         onSkip={onSkip}
         onNext={onNext}
-        className="relative z-10" // Ensure footer is above background overlay
+        onSettingsClick={onSettingsClick} // Pass down handler
+        className="relative z-10"
       />
     </div>
   );
 };
 
-// Memoize the component
 const HostView = memo(HostViewComponent);
-
 export default HostView;

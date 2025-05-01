@@ -1,8 +1,8 @@
 import React from 'react';
 import ProgressTracker from './ProgressTracker';
-import { cn } from '@/src/lib/utils'; // [cite: 575]
-import { Button } from '@/src/components/ui/button'; // [cite: 535]
-import { SkipForward, Play } from 'lucide-react'; // [cite: 632]
+import { cn } from '@/src/lib/utils';
+import { Button } from '@/src/components/ui/button';
+import { SkipForward, Play, Settings } from 'lucide-react'; // Add Settings
 
 interface FooterBarProps {
   currentQuestionIndex: number; // 0-based
@@ -11,6 +11,7 @@ interface FooterBarProps {
   accessUrl?: string;
   onSkip?: () => void;
   onNext?: () => void; // Could be for manually advancing after answer reveal
+  onSettingsClick?: () => void; // Add callback for settings
   className?: string;
 }
 
@@ -21,11 +22,12 @@ const FooterBar: React.FC<FooterBarProps> = ({
   accessUrl,
   onSkip,
   onNext,
+  onSettingsClick, // Destructure new prop
   className,
 }) => {
   return (
     <footer className={cn(
-      "bg-muted/80 dark:bg-muted/50 backdrop-blur-sm p-3 border-t border-border/50 w-full", // [cite: 606, 613, 607, 614]
+      "bg-muted/80 dark:bg-muted/50 backdrop-blur-sm p-3 border-t border-border/50 w-full",
       className
     )}>
       <div className="container mx-auto flex items-center justify-between gap-4">
@@ -43,15 +45,22 @@ const FooterBar: React.FC<FooterBarProps> = ({
 
         {/* Right Side: Host Controls (Optional) */}
         <div className="flex-shrink-0 flex gap-2">
+          {onSettingsClick && (
+            <Button variant="outline" size="icon" onClick={onSettingsClick} title="Game Settings" className="h-9 w-9 md:h-8 md:w-8">
+              {/* Adjusted size */}
+              <Settings className="h-4 w-4" />
+              <span className="sr-only">Settings</span>
+            </Button>
+          )}
           {onSkip && (
-            <Button variant="outline" size="sm" onClick={onSkip} title="Skip Question"> {/* [cite: 536, 537] */}
+            <Button variant="outline" size="sm" onClick={onSkip} title="Skip Question" className="h-9 md:h-8 px-2"> {/* Adjusted size */}
               <SkipForward className="h-4 w-4" />
               <span className="sr-only md:not-sr-only md:ml-1">Skip</span>
             </Button>
           )}
           {/* Add Next button logic if needed */}
           {onNext && (
-            <Button variant="default" size="sm" onClick={onNext} title="Next"> {/* [cite: 536, 537] */}
+            <Button variant="default" size="sm" onClick={onNext} title="Next" className="h-9 md:h-8 px-2"> {/* Adjusted size */}
               <Play className="h-4 w-4" />
               <span className="sr-only md:not-sr-only md:ml-1">Next</span>
             </Button>
