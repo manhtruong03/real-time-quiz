@@ -12,6 +12,7 @@ import { QuizStructureHost } from "@/src/lib/types";
 import { useHostGameCoordinator } from "@/src/hooks/useHostGameCoordinator";
 // --- NEW Import ---
 import { useHostWebSocket, ConnectionStatus as WebSocketConnectionStatus } from "@/src/hooks/game/useHostWebSocket";
+import { GameAssetsProvider } from '@/src/context/GameAssetsContext';
 
 // Constants
 const API_BASE_URL = 'http://localhost:8080/api/session';
@@ -236,40 +237,47 @@ export default function HostPage() {
     </div>
   );
 
-  // --- Main Return with Conditional Rendering ---
-  if (uiState === 'INITIAL') return renderInitialView();
-  if (uiState === 'FETCHING_PIN' || uiState === 'CONNECTING') return renderConnectingView();
-  if (uiState === 'ERROR') return renderErrorView();
-  if (uiState === 'DISCONNECTED') return renderDisconnectedView();
+  // --- Define the function that holds the rendering logic ---
+  const renderPageContent = () => {
+    if (uiState === 'INITIAL') return renderInitialView();
+    if (uiState === 'FETCHING_PIN' || uiState === 'CONNECTING') return renderConnectingView();
+    if (uiState === 'ERROR') return renderErrorView();
+    if (uiState === 'DISCONNECTED') return renderDisconnectedView();
 
-  if (uiState === 'CONNECTED' && liveGameState) {
-    return (
-      <>
-        <HostView
-          timerKey={timerKey}
-          questionData={currentBlock}
-          currentAnswerCount={currentQuestionAnswerCount}
-          totalPlayers={currentTotalPlayers}
-          gamePin={liveGameState.gamePin}
-          accessUrl={"VuiQuiz.com"} // Replace with dynamic URL if needed
-          onTimeUp={handleTimeUp}
-          onSkip={handleSkip}
-          onNext={handleNext}
-          isLoading={!currentBlock && liveGameState.status !== "LOBBY" && liveGameState.status !== "PODIUM" && liveGameState.status !== "ENDED"}
-        />
-        {/* Dev Controls use the coordinator's message handler */}
-        <DevMockControls
-          simulateReceiveMessage={(msgBody) => handleWebSocketMessage(msgBody)} // Pass body string directly
-          simulatePlayerAnswer={(msgBody) => handleWebSocketMessage(msgBody)}   // Pass body string directly
-          simulateHostReceiveJoin={(msgBody) => handleWebSocketMessage(msgBody)} // Pass body string directly
-          // Host override props are less relevant now, handled by coordinator
-          loadMockBlock={(block) => { console.warn("DevMockControls loadMockBlock ignored - use coordinator"); }}
-          setMockResult={(result) => { console.warn("DevMockControls setMockResult ignored - use coordinator"); }}
-        />
-      </>
-    );
-  }
+    if (uiState === 'CONNECTED' && liveGameState) {
+      return (
+        <>
+          <HostView
+            timerKey={timerKey}
+            questionData={currentBlock}
+            currentAnswerCount={currentQuestionAnswerCount}
+            totalPlayers={currentTotalPlayers}
+            gamePin={liveGameState.gamePin}
+            accessUrl={"VuiQuiz.com"} // Replace if needed
+            onTimeUp={handleTimeUp}
+            onSkip={handleSkip}
+            onNext={handleNext}
+            isLoading={!currentBlock && liveGameState.status !== "LOBBY" && liveGameState.status !== "PODIUM" && liveGameState.status !== "ENDED"}
+          />
+          <DevMockControls
+            simulateReceiveMessage={(msgBody) => handleWebSocketMessage(msgBody)}
+            simulatePlayerAnswer={(msgBody) => handleWebSocketMessage(msgBody)}
+            simulateHostReceiveJoin={(msgBody) => handleWebSocketMessage(msgBody)}
+            loadMockBlock={(block) => { console.warn("DevMockControls loadMockBlock ignored - use coordinator"); }}
+            setMockResult={(result) => { console.warn("DevMockControls setMockResult ignored - use coordinator"); }}
+          />
+        </>
+      );
+    }
+    // Fallback view
+    return renderConnectingView();
+  };
+  // --- End function definition ---
 
   // Fallback connecting/loading view
-  return renderConnectingView();
+  return (
+    <GameAssetsProvider>
+      {renderPageContent()}
+    </GameAssetsProvider>
+  );
 }

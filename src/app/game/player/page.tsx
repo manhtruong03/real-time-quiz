@@ -13,6 +13,7 @@ import { GameBlock, PlayerAnswerPayload, QuestionResultPayload, isContentBlock }
 import { cn } from '@/src/lib/utils';
 import DevMockControls, { MockWebSocketMessage } from '@/src/components/game/DevMockControls';
 import { usePlayerWebSocket, PlayerConnectionStatus } from '@/src/hooks/game/usePlayerWebSocket';
+import { GameAssetsProvider } from '@/src/context/GameAssetsContext';
 
 interface PlayerInfoState {
   name: string;
@@ -307,35 +308,43 @@ export default function PlayerPage() {
   );
 
 
-  // Main Render Logic
-  switch (uiState) {
-    case 'PIN_INPUT': return renderPinInput();
-    case 'CONNECTING': return renderConnecting();
-    case 'NICKNAME_INPUT': return renderNicknameInput();
-    // Removed JOINING case
-    case 'PLAYING':
-      const derivedIsWaiting = !currentBlock && !currentResult && !isSubmitting;
-      return (
-        <>
-          <PlayerView
-            questionData={currentBlock}
-            feedbackPayload={currentResult}
-            onSubmitAnswer={handleAnswerSubmitClick}
-            isWaiting={derivedIsWaiting}
-            isSubmitting={isSubmitting}
-            playerInfo={playerInfo}
-          />
-          <DevMockControls
-            simulateReceiveMessage={handleSimulatedMessageFromDevControls}
-            loadMockBlock={() => { }}
-            setMockResult={() => { }}
-          />
-        </>
-      );
-    case 'DISCONNECTED': return renderDisconnected();
-    case 'ERROR': return renderError();
-    default:
-      // Default to error state if something unexpected happens
-      return renderError();
-  }
+  // --- Define the function that holds the rendering logic ---
+  const renderPageContent = () => {
+    switch (uiState) {
+      case 'PIN_INPUT': return renderPinInput();
+      case 'CONNECTING': return renderConnecting();
+      case 'NICKNAME_INPUT': return renderNicknameInput();
+      case 'PLAYING':
+        const derivedIsWaiting = !currentBlock && !currentResult && !isSubmitting;
+        return (
+          <>
+            <PlayerView
+              questionData={currentBlock}
+              feedbackPayload={currentResult}
+              onSubmitAnswer={handleAnswerSubmitClick}
+              isWaiting={derivedIsWaiting}
+              isSubmitting={isSubmitting}
+              playerInfo={playerInfo}
+            />
+            <DevMockControls
+              simulateReceiveMessage={handleSimulatedMessageFromDevControls}
+              loadMockBlock={() => { }}
+              setMockResult={() => { }}
+            />
+          </>
+        );
+      case 'DISCONNECTED': return renderDisconnected();
+      case 'ERROR': return renderError();
+      default:
+        return renderError(); // Default to error state
+    }
+  };
+  // --- End function definition ---
+
+  // Wrap the call to the rendering function in the provider
+  return (
+    <GameAssetsProvider>
+      {renderPageContent()}
+    </GameAssetsProvider>
+  );
 }

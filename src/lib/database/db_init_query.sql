@@ -286,6 +286,7 @@ CREATE TABLE "sound" (
     "sound_id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     "name" VARCHAR(100) NOT NULL UNIQUE,
     "description" TEXT,
+    "sound_type" VARCHAR(50) NOT NULL,
     "file_path" VARCHAR(512) NOT NULL UNIQUE,
     -- Đường dẫn đến file âm thanh
     "duration" INTEGER NOT NULL,

@@ -1,8 +1,9 @@
 import React from 'react';
-import { Avatar, AvatarFallback, AvatarImage } from '@/src/components/ui/avatar'; // [cite: 545]
-import { Badge } from '@/src/components/ui/badge'; // [cite: 543]
-import { Trophy } from 'lucide-react'; // [cite: 632]
-import { cn } from '@/src/lib/utils'; // [cite: 575]
+import { Avatar, AvatarFallback, AvatarImage } from '@/src/components/ui/avatar';
+import { Badge } from '@/src/components/ui/badge';
+import { Trophy } from 'lucide-react';
+import { cn } from '@/src/lib/utils';
+import { useGameAssets } from '@/src/context/GameAssetsContext'; // Import the hook
 
 interface PlayerStatusBarProps {
   playerName: string;
@@ -19,9 +20,11 @@ const PlayerStatusBar: React.FC<PlayerStatusBarProps> = ({
   rank,
   className
 }) => {
+  const { avatars, isLoading: assetsLoading, error: assetsError } = useGameAssets(); // Use the context hook
+
   return (
     <footer className={cn(
-      "bg-muted/80 dark:bg-muted/50 backdrop-blur-sm p-2 border-t border-border/50 w-full", // [cite: 606, 613, 607, 614]
+      "bg-muted/80 dark:bg-muted/50 backdrop-blur-sm p-2 border-t border-border/50 w-full",
       className
     )}>
       <div className="container mx-auto flex items-center justify-between gap-3">
@@ -36,8 +39,18 @@ const PlayerStatusBar: React.FC<PlayerStatusBarProps> = ({
 
         {/* Score and Rank */}
         <div className="flex items-center gap-3">
+          {/* Example: Show avatar count */}
+          {assetsLoading && <Badge variant="outline" className="text-xs">Loading Assets...</Badge>}
+          {assetsError && <Badge variant="destructive" className="text-xs">Asset Error</Badge>}
+          {!assetsLoading && !assetsError && (
+            <Badge variant="secondary" className="text-xs gap-1">
+              {/* <Users className="h-3 w-3" /> {avatars.length} Avatars */}
+            </Badge>
+          )}
+          {/* End Example */}
+
           {rank !== undefined && (
-            <Badge variant="outline" className="text-xs">Rank #{rank}</Badge> // [cite: 544]
+            <Badge variant="outline" className="text-xs">Rank #{rank}</Badge>
           )}
           <Badge variant="default" className="text-xs md:text-sm gap-1"> {/* [cite: 544] */}
             <Trophy className="h-3 w-3" />

@@ -452,3 +452,17 @@ export interface Question {
   options: string[];
   correctAnswer: string;
 }
+
+// src/lib/types.ts (or GameAssetsContext.tsx)
+import { Background, Sound, Avatar, PowerUp } from "./types/assets"; // Adjust path if needed
+
+// Type for the context state
+export interface GameAssetsState {
+  backgrounds: Background[];
+  sounds: Sound[];
+  avatars: Avatar[];
+  powerups: PowerUp[];
+  isLoading: boolean;
+  error: string | null;
+  preloadedPaths: Set<string>; // Keep track of preloaded resource paths
+}
