@@ -39,7 +39,7 @@ Application-level WebSocket messages exchanged between the Host and Players gene
 - **`data`**: The container for the actual application-level information.
   - **`gameid`**: Consistently identifies the specific quiz session.
   - **`type`**: Often `"message"` for standard application data exchange, but can vary (e.g., `"joined"` for join events)..
-  - **`id` (within `data`)**: This numeric ID is crucial as it distinguishes the _purpose_ or _type_ of the payload contained within `data.content`. Examples include `1` or `2` for question stages, `6` or `45` for answers, and `8` or `13` for results, and potentially others like `46` for avatar changes (see Example 3.3 below). **Consistent use of these IDs is vital.**
+  - **`id` (within `data`)**: This numeric ID is crucial as it distinguishes the _purpose_ or _type_ of the payload contained within `data.content`. Examples include `1` or `2` for question stages, `6` or `45` for answers, and `8` or `13` for results, `35` for host-initiated updates like background changes, and potentially others like `46` for avatar changes. **Consistent use of these IDs is vital.**
   - **`content`**: **This field contains a JSON object that has been _stringified_.** The internal structure of this JSON object varies significantly depending on whether it's a question broadcast, an answer submission, or a result notification, or avatar info, and further depends on the specific question type (quiz, jumble, survey, etc.).
     - **Detailed structures** for the _parsed_ `content` payload for each phase are documented separately in:
       - `./data_structures/phase2_ws_question_detail.md` (Host -> Player Question Details)
@@ -132,10 +132,47 @@ This message follows the general envelope structure. The key identifier is the `
       "id": 46, // <<< Specific ID indicating Avatar Change payload type
       "type": "message", // General message type
       // Content is a JSON string containing the avatar update:
-      "content": "{\"avatar\":{\"id\":2300}}",
+      "content": "{\"avatar\":{\"id\":avatar-cat-uuid-9i8j}}",
       "cid": "1992509558" // Player's unique connection ID
     },
     "channel": "/controller/1480287" // Specific game channel
+  }
+]
+```
+
+#### 3.4. Host Background Change Message (Host Broadcasts - _Standard Structure_)
+
+This message follows the general envelope structure. It's sent by the Host to all players when the lobby background is changed via settings. The key identifier is the `data.id` value (e.g., `35` in this example), distinguishing it as a game setting update containing background information within the `data.content` string.
+
+- **Direction:** Host -> Player Clients (Broadcast)
+- **Channel:** `/service/player`
+- **`data.id` Value:** `35` (Example ID for this specific Host update - **Please confirm/choose an appropriate ID**)
+- **`data.content` Structure:** JSON string: `{"background":{"id":"<selected_background_uuid>"}}`
+
+```json
+// Example Host Background Change Message (Sent by Host)
+[
+  {
+    // Top-level Bayeux ID might be present if sent as a request requiring ack,
+    // or absent if just a broadcast publish. Example assumes broadcast.
+    // "id": "...",
+    "channel": "/service/player", // Standard broadcast channel
+    "clientId": null, // Usually null for broadcasts from host? Confirm necessity.
+    "data": {
+      // Standard data structure:
+      "gameid": "1480287", // Game session ID
+      "id": 35, // <<< Specific ID indicating Background Change payload type
+      "type": "message", // General message type
+      "host": "VuiQuiz.com", // Optional: Host identifier
+      // Content is a JSON string containing the background update:
+      "content": "{\"background\":{\"id\":\"bg-spring-uuid-3cd4\"}}" // Example with a background UUID
+      // "cid" is usually absent in broadcast messages from host -> all players
+    },
+    "ext": {
+      "timetrack": 1744956128979 // Timestamp of change broadcast
+      // Other extensions like 'ack' might depend on publish method
+    }
+    // "successful" field is typically for server->client ACKs, not host broadcasts
   }
 ]
 ```

@@ -69,7 +69,7 @@ export function useGameViewBackground({
       const imageUrl =
         blockBackgroundMedia.url ||
         (blockBackgroundMedia.id
-          ? `<span class="math-inline">\{KAHOOT\_MEDIA\_BASE\_URL\}</span>{blockBackgroundMedia.id}`
+          ? `${KAHOOT_MEDIA_BASE_URL}${blockBackgroundMedia.id}`
           : null);
       if (imageUrl) {
         style = {
