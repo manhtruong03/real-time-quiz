@@ -2,52 +2,60 @@
 import { useState, useCallback } from "react";
 import { LiveGameState, LivePlayerState } from "@/src/lib/types";
 
-// This hook assumes it receives the full gameState and a function to update it.
-// Alternatively, it could manage just the 'players' slice internally.
-// Using the full state setter is often simpler for coordination.
 export function usePlayerManagement(
-  // No longer takes gameState directly, relies on setLiveGameState closure
   setLiveGameState: React.Dispatch<React.SetStateAction<LiveGameState | null>>
 ) {
   const addOrUpdatePlayer = useCallback(
-    (cid: string, nickname: string, joinTimestamp: number) => {
-      //   console.log(`[PlayerMgmtHook] Adding/Updating player - CID: ${cid}, Nickname: ${nickname}`);
+    // --- MODIFIED: Add avatarId parameter ---
+    (
+      cid: string,
+      nickname: string,
+      joinTimestamp: number,
+      avatarId: string | null
+    ) => {
       setLiveGameState((prev) => {
-        if (!prev) return null; // Should not happen if initialized correctly
+        if (!prev) return null;
 
         const existingPlayer = prev.players[cid];
         let updatedPlayer: LivePlayerState;
 
         if (existingPlayer) {
-          // Update existing player (e.g., reconnected with same CID or nickname change allowed)
           updatedPlayer = {
             ...existingPlayer,
-            nickname: nickname, // Update nickname
-            isConnected: true, // Mark as connected
-            playerStatus: "PLAYING", // Reset status on rejoin maybe?
+            nickname: nickname,
+            isConnected: true,
+            // --- MODIFIED: Update avatarId if provided ---
+            avatarId: avatarId ?? existingPlayer.avatarId, // Use new one, fallback to existing
+            // --- END MODIFIED ---
+
+            playerStatus: "PLAYING",
             lastActivityAt: joinTimestamp,
           };
         } else {
-          // Create new player state
           updatedPlayer = {
             cid: cid,
             nickname: nickname,
-            avatar: { type: 1800, item: 3100 }, // Default avatar
+            // --- MODIFIED: Set avatarId on creation ---
+            avatarId: avatarId, // Use the provided avatarId
+            // --- END MODIFIED ---
             isConnected: true,
-            joinedAt: joinTimestamp, // Use provided timestamp
-            userId: undefined, // Assuming guest for now
+
+            joinedAt: joinTimestamp,
+            userId: undefined,
             lastActivityAt: joinTimestamp,
-            playerStatus: "PLAYING", // Player is active immediately after join logic
-            joinSlideIndex: prev.currentQuestionIndex, // Record when they joined
+            playerStatus: "PLAYING",
+            joinSlideIndex: prev.currentQuestionIndex,
             waitingSince: null,
+
             deviceInfoJson: null,
             totalScore: 0,
-            rank: 0, // Initial rank
+            rank: 0,
             currentStreak: 0,
             maxStreak: 0,
             lastAnswerTimestamp: null,
-            answers: [], // Initialize empty answers
+            answers: [],
             correctCount: 0,
+
             incorrectCount: 0,
             unansweredCount: 0,
             answersCount: 0,
@@ -57,31 +65,29 @@ export function usePlayerManagement(
 
         const updatedPlayers = { ...prev.players, [cid]: updatedPlayer };
 
-        // Return the new state object
         return { ...prev, players: updatedPlayers };
       });
     },
-    [setLiveGameState] // Dependency on the state setter function
+    [setLiveGameState]
   );
 
   const updatePlayerAvatar = useCallback(
-    (playerId: string, avatarId: number, timestamp: number) => {
-      //   console.log(`[PlayerMgmtHook] Updating avatar for player ${playerId} to ${avatarId}`);
+    // This function might become redundant if join handles the initial avatar,
+    // but keep it for potential future avatar changes during the game.
+    // We'll update it to use avatarId string now.
+    (playerId: string, newAvatarId: string, timestamp: number) => {
       setLiveGameState((prev) => {
         if (!prev) return null;
         const playerToUpdate = prev.players[playerId];
         if (!playerToUpdate) {
-          //   console.warn(`(PlayerMgmtHook) Avatar change for unknown player CID: ${playerId}`);
           return prev;
         }
 
-        // Logic to determine type/item from ID (assuming convention)
-        const avatarType = Math.floor(avatarId / 1000) * 1000;
-        const avatarItem = avatarId;
-
         const updatedPlayer: LivePlayerState = {
           ...playerToUpdate,
-          avatar: { type: avatarType, item: avatarItem },
+          // --- MODIFIED: Directly set avatarId ---
+          avatarId: newAvatarId,
+          // --- END MODIFIED ---
           lastActivityAt: timestamp,
         };
 
@@ -94,15 +100,14 @@ export function usePlayerManagement(
     [setLiveGameState]
   );
 
-  // Example: Function to update connection status (could be expanded)
   const updatePlayerConnectionStatus = useCallback(
     (playerId: string, isConnected: boolean, timestamp: number) => {
-      // console.log(`[PlayerMgmtHook] Updating connection status for ${playerId} to ${isConnected}`);
       setLiveGameState((prev) => {
         if (!prev || !prev.players[playerId]) return prev;
         const updatedPlayer = {
           ...prev.players[playerId],
           isConnected: isConnected,
+
           lastActivityAt: timestamp,
           playerStatus: isConnected
             ? prev.players[playerId].playerStatus
@@ -117,13 +122,9 @@ export function usePlayerManagement(
     [setLiveGameState]
   );
 
-  // Note: Calculating totalPlayers might be better done in the coordinator or page
-  // based on the latest liveGameState.players object.
-
   return {
     addOrUpdatePlayer,
     updatePlayerAvatar,
     updatePlayerConnectionStatus,
-    // Expose functions needed by other hooks or the coordinator
   };
 }

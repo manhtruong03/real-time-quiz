@@ -17,10 +17,15 @@ import { MockWebSocketMessage } from "@/src/components/game/DevMockControls"; //
 
 // Define the expected structure for callbacks passed to this hook
 interface MessagingCallbacks {
-  addOrUpdatePlayer: (cid: string, nickname: string, timestamp: number) => void;
+  addOrUpdatePlayer: (
+    cid: string,
+    nickname: string,
+    timestamp: number,
+    avatarId: string | null
+  ) => void;
   updatePlayerAvatar: (
     cid: string,
-    avatarId: number,
+    avatarId: string,
     timestamp: number
   ) => void;
   processPlayerAnswer: (
@@ -254,10 +259,33 @@ export function useWebSocketMessaging(
             `[MessagingHook] Processing join for ${cid} (${data.name})`
           );
           // Step 1: Update player state
+
+          // --- Try parsing avatarId from content ---
+          let avatarId: string | null = null;
+          if (data.content && typeof data.content === "string") {
+            try {
+              const parsedContent = JSON.parse(data.content);
+              avatarId = parsedContent?.avatar?.id ?? null;
+              if (avatarId && typeof avatarId !== "string") {
+                console.warn(
+                  `[MessagingHook] Received avatar ID is not a string: ${avatarId}. Treating as null.`
+                );
+                avatarId = null; // Ensure it's string or null
+              }
+            } catch (e) {
+              console.warn(
+                "[MessagingHook] Error parsing avatar content from join message:",
+                e,
+                data.content
+              );
+            }
+          }
+          // --- End parsing avatarId ---
           callbacks.addOrUpdatePlayer(
             cid,
             data.name,
-            parsedMessage.ext?.timetrack ?? Date.now()
+            parsedMessage.ext?.timetrack ?? Date.now(),
+            avatarId // Pass the parsed avatarId
           );
           // Step 2: Notify coordinator that this player joined
           callbacks.notifyPlayerJoined(cid); // <<< Call the new callback
@@ -311,16 +339,18 @@ export function useWebSocketMessaging(
         if (cid && data.content) {
           try {
             const parsedContent = JSON.parse(data.content);
-            const avatarId = parsedContent?.avatar?.id;
-            if (typeof avatarId === "number") {
+
+            const avatarIdStr = parsedContent?.avatar?.id; // Expecting string UUID now
+            if (typeof avatarIdStr === "string" && avatarIdStr) {
+              // Check if it's a non-empty string
               callbacks.updatePlayerAvatar(
                 cid,
-                avatarId,
+                avatarIdStr, // Pass the string ID
                 parsedMessage.ext?.timetrack ?? Date.now()
               );
             } else {
               console.warn(
-                "[MessagingHook] Invalid avatar payload",
+                "[MessagingHook] Invalid avatar payload (expected string ID)",
                 parsedContent
               );
             }

@@ -1,11 +1,12 @@
 // src/hooks/game/usePlayerWebSocket.ts
 import { useState, useRef, useCallback, useEffect } from "react";
 import { Client, IFrame, IMessage, StompSubscription } from "@stomp/stompjs";
-import { PlayerAnswerPayload } from "@/src/lib/types"; // Import necessary types
 
-// Constants
+import { PlayerAnswerPayload } from "@/src/lib/types";
+
 const WEBSOCKET_URL = "ws://localhost:8080/ws-quiz";
 const APP_PREFIX = "/app";
+
 const TOPIC_PREFIX = "/topic";
 const USER_QUEUE_PREFIX = "/user/queue";
 
@@ -24,10 +25,18 @@ interface PlayerWebSocketHookProps {
 
 interface PlayerWebSocketHookReturn {
   connect: (gamePin: string) => void;
+
   disconnect: () => void;
-  joinGame: (nickname: string, gamePin: string) => Promise<boolean>; // Returns true on success, false on failure
+  // --- MODIFIED: Add avatarId parameter ---
+  joinGame: (
+    nickname: string,
+    gamePin: string,
+    avatarId: string | null
+  ) => Promise<boolean>;
+
   sendAnswer: (payload: PlayerAnswerPayload, gamePin: string) => void;
   connectionStatus: PlayerConnectionStatus;
+
   error: string | null;
   playerClientId: string | null;
 }
@@ -36,16 +45,17 @@ export function usePlayerWebSocket({
   onMessageReceived,
 }: PlayerWebSocketHookProps): PlayerWebSocketHookReturn {
   const stompClientRef = useRef<Client | null>(null);
+
   const subscriptionsRef = useRef<{ [key: string]: StompSubscription }>({});
   const [connectionStatus, setConnectionStatus] =
     useState<PlayerConnectionStatus>("INITIAL");
+
   const [error, setError] = useState<string | null>(null);
   const [playerClientId, setPlayerClientId] = useState<string | null>(null);
-  const currentPinRef = useRef<string | null>(null); // Keep track of the current pin
+  const currentPinRef = useRef<string | null>(null);
 
   const stableOnMessageReceived = useCallback(
     (message: IMessage) => {
-      // console.log("[PlayerWS Hook] Received message on:", message.headers.destination);
       onMessageReceived(message);
     },
     [onMessageReceived]
@@ -67,20 +77,22 @@ export function usePlayerWebSocket({
     if (stompClientRef.current.active) {
       stompClientRef.current
         .deactivate()
+
         .catch((err) =>
           console.error("[PlayerWS Hook] Error during deactivate:", err)
         )
+
         .finally(() => {
           stompClientRef.current = null;
           setPlayerClientId(null);
           setConnectionStatus("DISCONNECTED");
           currentPinRef.current = null;
-          // console.log("[PlayerWS Hook] WS state set to DISCONNECTED.");
         });
     } else {
       stompClientRef.current = null;
       setPlayerClientId(null);
       setConnectionStatus("DISCONNECTED");
+
       currentPinRef.current = null;
     }
   }, []);
@@ -95,14 +107,13 @@ export function usePlayerWebSocket({
       }
       if (stompClientRef.current?.active) {
         console.warn("[PlayerWS Hook] WS already connected or connecting.");
-        // If connecting to a different pin, disconnect first
+
         if (currentPinRef.current && currentPinRef.current !== gamePin) {
           console.log(
             `[PlayerWS Hook] Different pin detected (${gamePin} vs ${currentPinRef.current}), disconnecting first.`
           );
           disconnect();
         } else {
-          // Already connected/connecting to the same pin, maybe transition state?
           if (connectionStatus === "CONNECTED")
             setConnectionStatus("NICKNAME_INPUT");
           return;
@@ -111,9 +122,10 @@ export function usePlayerWebSocket({
       console.log(
         `[PlayerWS Hook] Attempting WebSocket connection for game pin ${gamePin}...`
       );
+
       setError(null);
       setConnectionStatus("CONNECTING");
-      currentPinRef.current = gamePin; // Store the pin we are connecting to
+      currentPinRef.current = gamePin;
 
       const client = new Client({
         brokerURL: WEBSOCKET_URL,
@@ -133,16 +145,16 @@ export function usePlayerWebSocket({
           );
 
           const playerTopic = `${TOPIC_PREFIX}/player/${gamePin}`;
-          const privateTopic = `${USER_QUEUE_PREFIX}/private`; // Player's private message queue
+          const privateTopic = `${USER_QUEUE_PREFIX}/private`;
 
           console.log(
             `[PlayerWS Hook] Subscribing to ${playerTopic} and ${privateTopic}`
           );
           try {
-            // Clear old subs
             Object.values(subscriptionsRef.current).forEach((sub) =>
               sub.unsubscribe()
             );
+
             subscriptionsRef.current = {};
 
             if (!client.active)
@@ -152,35 +164,41 @@ export function usePlayerWebSocket({
               playerTopic,
               stableOnMessageReceived
             );
+
             subscriptionsRef.current[privateTopic] = client.subscribe(
               privateTopic,
               stableOnMessageReceived
             );
 
             console.log("[PlayerWS Hook] Subscriptions successful.");
-            setConnectionStatus("NICKNAME_INPUT"); // Ready for nickname
+            setConnectionStatus("NICKNAME_INPUT");
             setError(null);
           } catch (subError: any) {
             console.error("[PlayerWS Hook] Subscription failed:", subError);
+
             setError(
               `Failed to subscribe: ${subError?.message || "Unknown error"}`
             );
+
             setConnectionStatus("ERROR");
             if (client.active) client.deactivate();
           }
         },
         onWebSocketError: (error: Event | CloseEvent) => {
           console.error("[PlayerWS Hook] WS Error:", error);
+
           let reason = "WebSocket error.";
           if (error instanceof CloseEvent) {
             reason = `WebSocket closed unexpectedly. Code: ${
               error.code
             }, Reason: ${error.reason || "No reason given"}`;
           }
+
           setError(reason);
           setConnectionStatus("ERROR");
           stompClientRef.current = null;
           setPlayerClientId(null);
+
           currentPinRef.current = null;
         },
         onStompError: (frame: IFrame) => {
@@ -189,11 +207,13 @@ export function usePlayerWebSocket({
             frame.headers["message"],
             frame.body
           );
+
           setError(
             `Connection failed: ${
               frame.headers["message"] || "Unknown STOMP error"
             }`
           );
+
           setConnectionStatus("ERROR");
           stompClientRef.current = null;
           setPlayerClientId(null);
@@ -201,12 +221,13 @@ export function usePlayerWebSocket({
         },
         onDisconnect: () => {
           console.log("[PlayerWS Hook] WS Disconnected unexpectedly.");
+
           if (
             connectionStatus !== "DISCONNECTED" &&
             connectionStatus !== "INITIAL"
           ) {
-            // Avoid state change if already disconnected/initial
             setError("Connection lost.");
+
             setConnectionStatus("DISCONNECTED");
             setPlayerClientId(null);
             subscriptionsRef.current = {};
@@ -220,14 +241,18 @@ export function usePlayerWebSocket({
       stompClientRef.current = client;
     },
     [stableOnMessageReceived, disconnect, connectionStatus]
-  ); // Include disconnect and status
+  );
 
   const joinGame = useCallback(
-    async (nickname: string, gamePin: string): Promise<boolean> => {
+    // --- MODIFIED: Accept avatarId ---
+    async (
+      nickname: string,
+      gamePin: string,
+      avatarId: string | null
+    ): Promise<boolean> => {
       const trimmedNickname = nickname.trim();
       if (!trimmedNickname) {
         setError("Nickname cannot be empty.");
-        // setConnectionStatus('NICKNAME_INPUT'); // Stay on nickname input
         return false;
       }
       if (!stompClientRef.current || !stompClientRef.current.active) {
@@ -237,36 +262,42 @@ export function usePlayerWebSocket({
       }
       if (!playerClientId) {
         setError("Client ID not assigned yet.");
-        setConnectionStatus("ERROR"); // Or maybe retry connection?
+        setConnectionStatus("ERROR");
         return false;
       }
 
       console.log(
-        `[PlayerWS Hook] Joining game ${gamePin} as ${trimmedNickname}`
+        `[PlayerWS Hook] Joining game ${gamePin} as ${trimmedNickname} with avatar ${avatarId}`
       );
-      setConnectionStatus("JOINING"); // Indicate joining process
+      setConnectionStatus("JOINING");
       setError(null);
 
-      // Simplified join payload based on PlayerPage logic
+      // --- MODIFIED: Construct content payload including avatar ---
+      const contentPayload = {
+        avatar: avatarId ? { id: avatarId } : null, // Include avatar ID if present
+        device: {
+          // Keep existing device info if needed
+          userAgent: navigator?.userAgent,
+          screen: {
+            width: window?.screen?.width,
+            height: window?.screen?.height,
+          },
+        },
+      };
+      const contentString = JSON.stringify(contentPayload);
+      // --- END MODIFIED ---
+
       const joinMessagePayload = {
         name: trimmedNickname,
-        type: "joined", // Event type for join
-        // Send minimal content, or gather device info if needed
-        content: JSON.stringify({
-          device: {
-            userAgent: navigator?.userAgent,
-            screen: {
-              width: window?.screen?.width,
-              height: window?.screen?.height,
-            },
-          },
-        }),
+        type: "joined",
+        // --- MODIFIED: Use the new content string ---
+        content: contentString,
+        // --- END MODIFIED ---
         cid: playerClientId,
       };
 
-      // Message structure based on PlayerPage logic
       const messageToSend = {
-        channel: `${APP_PREFIX}/controller/${gamePin}`, // Destination for host controller
+        channel: `${APP_PREFIX}/controller/${gamePin}`,
         data: joinMessagePayload,
         ext: { timetrack: Date.now() },
       };
@@ -274,23 +305,25 @@ export function usePlayerWebSocket({
       try {
         stompClientRef.current.publish({
           destination: messageToSend.channel,
-          body: JSON.stringify([messageToSend]), // Wrap in array
+          body: JSON.stringify([messageToSend]),
         });
+
         console.log("[PlayerWS Hook] Join message sent.");
-        // Assume success for now, transition in page based on game start message
-        // setConnectionStatus('CONNECTED'); // Or 'PLAYING' - Let page handle this transition
-        return true; // Indicate successful send attempt
+        // Page transitions to 'PLAYING' on successful send
+        return true;
       } catch (error: any) {
         console.error("[PlayerWS Hook] Failed to send join message:", error);
+
         setError(
           `Failed to send join message: ${error?.message || "Unknown error"}`
         );
-        setConnectionStatus("ERROR"); // Error occurred during publish
+
+        setConnectionStatus("ERROR");
         return false;
       }
     },
     [playerClientId]
-  ); // Dependency on playerClientId
+  );
 
   const sendAnswer = useCallback(
     (payload: PlayerAnswerPayload, gamePin: string) => {
@@ -299,7 +332,6 @@ export function usePlayerWebSocket({
           "[PlayerWS Hook] Cannot send answer: Client not connected."
         );
         setError("Cannot send answer: Not connected.");
-        // Optionally set status to ERROR or DISCONNECTED
         return;
       }
       if (!playerClientId) {
@@ -314,13 +346,13 @@ export function usePlayerWebSocket({
       }
 
       const contentString = JSON.stringify(payload);
-      // Structure based on PlayerPage logic and protocol doc phase 3
       const messageToSend = {
         channel: `${APP_PREFIX}/controller/${gamePin}`,
         data: {
           gameid: gamePin,
-          id: 6, // ID for answer submission
+          id: 6,
           type: "message",
+
           content: contentString,
           cid: playerClientId,
         },
@@ -330,19 +362,17 @@ export function usePlayerWebSocket({
       try {
         stompClientRef.current.publish({
           destination: messageToSend.channel,
-          body: JSON.stringify([messageToSend]), // Wrap in array
+          body: JSON.stringify([messageToSend]),
         });
-        // console.log('[PlayerWS Hook] Answer message sent.');
       } catch (error: any) {
         console.error("[PlayerWS Hook] Failed to send answer message:", error);
+
         setError(`Failed to send answer: ${error?.message || "Unknown error"}`);
-        // Maybe set error state?
       }
     },
     [playerClientId]
-  ); // Dependency
+  );
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       disconnect();

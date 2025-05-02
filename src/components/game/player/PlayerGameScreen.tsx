@@ -2,27 +2,38 @@
 import React from 'react';
 import PlayerView from '@/src/components/game/views/PlayerView';
 import DevMockControls, { MockWebSocketMessage } from '@/src/components/game/DevMockControls';
-import { GameBlock, PlayerAnswerPayload, QuestionResultPayload, LivePlayerState } from '@/src/lib/types';
+
+import { GameBlock, PlayerAnswerPayload, QuestionResultPayload } from '@/src/lib/types'; // Removed LivePlayerState import
 
 interface PlayerGameScreenProps {
     currentBlock: GameBlock | null;
+
     currentResult: QuestionResultPayload | null;
+
     isSubmitting: boolean;
-    playerInfo: LivePlayerState;
+    // --- MODIFIED: Receive specific info needed for status bar ---
+    playerInfoForStatusBar: {
+        name: string;
+        avatarUrl: string | null;
+        score: number;
+        rank?: number;
+    };
+    // --- END MODIFIED ---
     onSubmitAnswer: (payload: PlayerAnswerPayload) => void;
     handleSimulatedMessage?: (message: MockWebSocketMessage) => void;
-    // +++ Add prop for background ID +++
+
     currentBackgroundId: string | null;
+
 }
 
 export const PlayerGameScreen: React.FC<PlayerGameScreenProps> = ({
     currentBlock,
     currentResult,
     isSubmitting,
-    playerInfo,
+    playerInfoForStatusBar, // Destructure new prop
     onSubmitAnswer,
     handleSimulatedMessage,
-    currentBackgroundId, // Destructure the new prop
+    currentBackgroundId,
 }) => {
     const isWaiting = !currentBlock && !currentResult && !isSubmitting;
 
@@ -33,23 +44,29 @@ export const PlayerGameScreen: React.FC<PlayerGameScreenProps> = ({
                 feedbackPayload={currentResult}
                 onSubmitAnswer={onSubmitAnswer}
                 isWaiting={isWaiting}
+
                 isSubmitting={isSubmitting}
-                playerInfo={{ // Map LivePlayerState to PlayerView's expected props
-                    name: playerInfo.nickname,
-                    avatarUrl: undefined, // Add avatar URL logic later if needed
-                    score: playerInfo.totalScore,
-                    rank: playerInfo.rank
+                // --- MODIFIED: Pass the received status bar info directly ---
+                playerInfo={{
+                    name: playerInfoForStatusBar.name,
+                    avatarUrl: playerInfoForStatusBar.avatarUrl ?? undefined, // Pass URL or undefined
+                    score: playerInfoForStatusBar.score,
+                    rank: playerInfoForStatusBar.rank
                 }}
-                // +++ Pass background ID down +++
+
                 currentBackgroundId={currentBackgroundId}
+
             />
             {process.env.NODE_ENV === 'development' && handleSimulatedMessage && (
+
                 <DevMockControls
                     simulateReceiveMessage={handleSimulatedMessage}
                     loadMockBlock={() => { /* Host responsibility */ }}
                     setMockResult={() => { /* Host responsibility */ }}
+
                 />
             )}
         </>
     );
+
 };

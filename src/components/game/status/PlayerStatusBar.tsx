@@ -39,15 +39,7 @@ const PlayerStatusBar: React.FC<PlayerStatusBarProps> = ({
 
         {/* Score and Rank */}
         <div className="flex items-center gap-3">
-          {/* Example: Show avatar count */}
-          {assetsLoading && <Badge variant="outline" className="text-xs">Loading Assets...</Badge>}
-          {assetsError && <Badge variant="destructive" className="text-xs">Asset Error</Badge>}
-          {!assetsLoading && !assetsError && (
-            <Badge variant="secondary" className="text-xs gap-1">
-              {/* <Users className="h-3 w-3" /> {avatars.length} Avatars */}
-            </Badge>
-          )}
-          {/* End Example */}
+
 
           {rank !== undefined && (
             <Badge variant="outline" className="text-xs">Rank #{rank}</Badge>
