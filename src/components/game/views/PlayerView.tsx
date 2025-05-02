@@ -5,20 +5,19 @@ import React from 'react';
 import {
     GameBlock, ContentBlock, PlayerAnswerPayload, QuestionResultPayload,
     isContentBlock, LivePlayerState // Assuming LivePlayerState is used for playerInfo prop consistency
-} from '@/src/lib/types'; // Adjust path if needed
+} from '@/src/lib/types';
 import PlayerStatusBar from '../status/PlayerStatusBar';
 import ProgressTracker from '../status/ProgressTracker';
 import { cn } from '@/src/lib/utils';
-import { useGameBackground } from '@/src/lib/hooks/useGameBackground'; // Adjust path
-import { Loader2 } from 'lucide-react'; // Keep for fallback
-
-// --- Import the new view components ---
+// --- Ensure the correct background hook is imported ---
+import { useGameViewBackground } from '@/src/hooks/game/useGameViewBackground'; // Corrected path if needed
+// ---
+import { Loader2 } from 'lucide-react';
 import { PlayerWaitingView } from '../player/views/PlayerWaitingView';
 import { PlayerSubmittingView } from '../player/views/PlayerSubmittingView';
 import { PlayerResultView } from '../player/views/PlayerResultView';
 import { PlayerContentBlockView } from '../player/views/PlayerContentBlockView';
 import { PlayerActiveQuestionView } from '../player/views/PlayerActiveQuestionView';
-// ---
 
 interface PlayerViewProps {
     questionData: GameBlock | null;
@@ -26,13 +25,14 @@ interface PlayerViewProps {
     onSubmitAnswer: (payload: PlayerAnswerPayload) => void;
     isWaiting?: boolean;
     isSubmitting?: boolean;
-    // Use a more consistent type if possible, e.g., partial LivePlayerState or a dedicated PlayerInfo type
     playerInfo: {
         name: string;
         avatarUrl?: string;
         score: number;
         rank?: number;
     };
+    // +++ Add prop for background ID +++
+    currentBackgroundId: string | null;
     className?: string;
 }
 
@@ -43,42 +43,41 @@ const PlayerView: React.FC<PlayerViewProps> = ({
     isWaiting = false,
     isSubmitting = false,
     playerInfo,
+    currentBackgroundId, // Destructure the new prop
     className,
 }) => {
-    // Background logic remains the same
-    const { style: backgroundStyle, hasCustomBackground } = useGameBackground(currentBlock);
+    // --- Use the background hook with the received ID ---
+    // It takes an object with selectedBackgroundId and currentBlock
+    const { style: backgroundStyle, hasCustomBackground } = useGameViewBackground({
+        selectedBackgroundId: currentBackgroundId, // Pass the prop here
+        currentBlock: currentBlock, // Pass current block for potential overrides
+    });
+    // --- END ---
+
     const viewClasses = cn(
         "min-h-screen h-screen flex flex-col text-foreground relative",
-        !hasCustomBackground && "default-quiz-background", // Add default background class if needed
+        !hasCustomBackground && "default-quiz-background", // Apply default if hook returns no custom BG
         className
     );
 
-    // --- Simplified renderContent function ---
+    // --- renderContent function (no changes needed here) ---
     const renderContent = () => {
-        if (isWaiting) {
-            return <PlayerWaitingView />;
-        }
-        if (currentResult) {
-            return <PlayerResultView result={currentResult} />;
-        }
-        if (isSubmitting) {
-            return <PlayerSubmittingView />;
-        }
+        if (isWaiting) { return <PlayerWaitingView />; }
+        if (currentResult) { return <PlayerResultView result={currentResult} />; }
+        if (isSubmitting) { return <PlayerSubmittingView />; }
         if (currentBlock) {
             if (isContentBlock(currentBlock)) {
-                // Type is narrowed to ContentBlock here
                 return <PlayerContentBlockView block={currentBlock} />;
             } else {
-                // Type is narrowed to Exclude<GameBlock, ContentBlock> here
-                // Use type assertion if TypeScript still complains
+                // Use type assertion to satisfy the stricter type of PlayerActiveQuestionView
+                const activeBlock = currentBlock as Exclude<GameBlock, ContentBlock>;
                 return <PlayerActiveQuestionView
-                    block={currentBlock as Exclude<GameBlock, ContentBlock>} // Type Assertion
+                    block={activeBlock}
                     onSubmitAnswer={onSubmitAnswer}
                     isSubmitting={isSubmitting}
                 />;
             }
         }
-
         // Fallback / Waiting for game state
         return (
             <div className="flex flex-col items-center justify-center text-center p-10 flex-grow">
@@ -87,16 +86,20 @@ const PlayerView: React.FC<PlayerViewProps> = ({
             </div>
         );
     };
-    // --- End simplified renderContent ---
+    // --- End renderContent ---
 
-    // Main component return structure remains largely the same
     return (
+        // Apply the dynamic style from the hook
         <div className={viewClasses} style={backgroundStyle}>
             {!hasCustomBackground && <div className="stars-layer"></div>}
-            {hasCustomBackground && <div className="absolute inset-0 bg-black/60 z-0"></div>}
+            {/* Add overlay only if it's an image (style has backgroundImage) */}
+            {hasCustomBackground && backgroundStyle.backgroundImage && (
+                <div className="absolute inset-0 bg-black/60 z-0"></div>
+            )}
 
             <header className="p-2 border-b border-border/50 relative z-10 bg-background/50 backdrop-blur-sm">
                 <div className="container mx-auto flex justify-end">
+                    {/* Show progress only for non-content blocks */}
                     {currentBlock && !isContentBlock(currentBlock) &&
                         <ProgressTracker current={currentBlock.gameBlockIndex + 1} total={currentBlock.totalGameBlockCount} />
                     }
@@ -118,4 +121,4 @@ const PlayerView: React.FC<PlayerViewProps> = ({
     );
 };
 
-export default PlayerView; // Export the main view
+export default PlayerView;

@@ -28,6 +28,7 @@ interface MessagingCallbacks {
     payload: PlayerAnswerPayload,
     timestamp: number | undefined
   ) => void;
+  notifyPlayerJoined: (cid: string) => void;
   // Add other callbacks if needed (e.g., handleDisconnect)
 }
 
@@ -247,12 +248,19 @@ export function useWebSocketMessaging(
 
       // --- Routing based on message type/ID ---
       if (type === "login" || type === "joined" || type === "IDENTIFY") {
+        // Player Join/Identify message
         if (cid && data.name) {
+          console.log(
+            `[MessagingHook] Processing join for ${cid} (${data.name})`
+          );
+          // Step 1: Update player state
           callbacks.addOrUpdatePlayer(
             cid,
             data.name,
             parsedMessage.ext?.timetrack ?? Date.now()
           );
+          // Step 2: Notify coordinator that this player joined
+          callbacks.notifyPlayerJoined(cid); // <<< Call the new callback
         } else {
           console.warn(
             "[MessagingHook] Join/Login message missing cid or name",

@@ -23,9 +23,17 @@ import { usePlayerManagement } from "./game/usePlayerManagement";
 import { useAnswerProcessing } from "./game/useAnswerProcessing";
 import { useWebSocketMessaging } from "./game/useWebSocketMessaging";
 
-export function useHostGameCoordinator(
-  initialQuizData: QuizStructureHost | null
-) {
+interface HostGameCoordinatorProps {
+  initialQuizData: QuizStructureHost | null;
+  onPlayerJoined?: (cid: string) => void; // Optional callback
+}
+
+export function useHostGameCoordinator({
+  // Destructure the props object
+  initialQuizData,
+  onPlayerJoined, // Get the callback from props
+}: HostGameCoordinatorProps) {
+  // Use the interface
   // --- Base State Management ---
   const {
     liveGameState,
@@ -43,7 +51,7 @@ export function useHostGameCoordinator(
   const {
     addOrUpdatePlayer,
     updatePlayerAvatar,
-    updatePlayerConnectionStatus,
+    // updatePlayerConnectionStatus,
   } = usePlayerManagement(setLiveGameState);
 
   // --- Answer Processing ---
@@ -65,25 +73,40 @@ export function useHostGameCoordinator(
     addOrUpdatePlayer,
     updatePlayerAvatar,
     processPlayerAnswer,
+    notifyPlayerJoined: (cid: string) => {
+      console.log(`[Coordinator] Notified that player ${cid} joined.`);
+      // Call the callback passed from the page, if it exists
+      if (onPlayerJoined) {
+        onPlayerJoined(cid);
+      }
+    },
   });
+  // Update the ref if callbacks change (necessary if they depend on state/props)
   useEffect(() => {
     callbacksRef.current = {
       addOrUpdatePlayer,
       updatePlayerAvatar,
       processPlayerAnswer,
+      notifyPlayerJoined: (cid: string) => {
+        if (onPlayerJoined) onPlayerJoined(cid);
+      },
     };
-  }, [addOrUpdatePlayer, updatePlayerAvatar, processPlayerAnswer]);
+  }, [
+    addOrUpdatePlayer,
+    updatePlayerAvatar,
+    processPlayerAnswer,
+    onPlayerJoined,
+  ]);
 
-  // --- WebSocket Messaging ---
+  // --- WebSocket Messaging Hook (Pass the ref's current value) ---
   const {
     prepareQuestionMessage,
     prepareResultMessage,
-    handleIncomingMessage,
-    // Pass initialQuizData here as well, as prepareResultMessage needs it
+    handleIncomingMessage, // This function from the hook uses the callbacks defined above
   } = useWebSocketMessaging(
     liveGameStateRef,
     initialQuizData,
-    callbacksRef.current
+    callbacksRef.current // Pass the callback implementations
   );
 
   // --- Local State for Coordinator ---

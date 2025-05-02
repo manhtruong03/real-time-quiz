@@ -1,16 +1,18 @@
 // src/components/game/player/PlayerGameScreen.tsx
 import React from 'react';
-import PlayerView from '@/src/components/game/views/PlayerView'; // Import the original view
+import PlayerView from '@/src/components/game/views/PlayerView';
 import DevMockControls, { MockWebSocketMessage } from '@/src/components/game/DevMockControls';
-import { GameBlock, PlayerAnswerPayload, QuestionResultPayload, LivePlayerState } from '@/src/lib/types'; // Adjust imports as needed
+import { GameBlock, PlayerAnswerPayload, QuestionResultPayload, LivePlayerState } from '@/src/lib/types';
 
 interface PlayerGameScreenProps {
     currentBlock: GameBlock | null;
     currentResult: QuestionResultPayload | null;
     isSubmitting: boolean;
-    playerInfo: LivePlayerState; // Use LivePlayerState or a simplified version
+    playerInfo: LivePlayerState;
     onSubmitAnswer: (payload: PlayerAnswerPayload) => void;
-    handleSimulatedMessage?: (message: MockWebSocketMessage) => void; // Optional for dev controls
+    handleSimulatedMessage?: (message: MockWebSocketMessage) => void;
+    // +++ Add prop for background ID +++
+    currentBackgroundId: string | null;
 }
 
 export const PlayerGameScreen: React.FC<PlayerGameScreenProps> = ({
@@ -20,6 +22,7 @@ export const PlayerGameScreen: React.FC<PlayerGameScreenProps> = ({
     playerInfo,
     onSubmitAnswer,
     handleSimulatedMessage,
+    currentBackgroundId, // Destructure the new prop
 }) => {
     const isWaiting = !currentBlock && !currentResult && !isSubmitting;
 
@@ -37,12 +40,14 @@ export const PlayerGameScreen: React.FC<PlayerGameScreenProps> = ({
                     score: playerInfo.totalScore,
                     rank: playerInfo.rank
                 }}
+                // +++ Pass background ID down +++
+                currentBackgroundId={currentBackgroundId}
             />
             {process.env.NODE_ENV === 'development' && handleSimulatedMessage && (
                 <DevMockControls
                     simulateReceiveMessage={handleSimulatedMessage}
-                    loadMockBlock={() => { }} // Host responsibility
-                    setMockResult={() => { }}  // Host responsibility
+                    loadMockBlock={() => { /* Host responsibility */ }}
+                    setMockResult={() => { /* Host responsibility */ }}
                 />
             )}
         </>

@@ -40,46 +40,91 @@ function PlayerPageInternal() { // Renamed inner component
 
   const [joinAttempted, setJoinAttempted] = useState(false); // Track if join was attempted
 
+  const [currentBackgroundId, setCurrentBackgroundId] = useState<string | null>(null);
+
   // Internal state update functions
   const _setCurrentBlock = useCallback((block: GameBlock | null) => {
     setCurrentResult(null);
     setIsSubmitting(false);
     setCurrentBlock(block);
+    // Decide if background resets on new block: Let's keep the host-selected one for now.
+    // setCurrentBackgroundId(null);
   }, []);
+
   const _setCurrentResult = useCallback((result: QuestionResultPayload | null) => {
     setCurrentBlock(null);
     setIsSubmitting(false);
     setCurrentResult(result);
-    // Score/rank updates are handled within PlayerView/PlayerGameScreen via its props now
+    // Decide if background resets after result: Let's keep the host-selected one for now.
+    // setCurrentBackgroundId(null);
   }, []);
+
   const _resetGameState = useCallback(() => {
     setCurrentBlock(null);
     setCurrentResult(null);
     setIsSubmitting(false);
     setJoinAttempted(false);
+    setCurrentBackgroundId(null); // Reset background on full game reset
   }, []);
 
-  // WebSocket Hook message handler
+
+  // Step 2.2: Handle Incoming Background Message (Player)
   const handleReceivedMessageCallback = useCallback((message: IMessage) => {
-    // --- Message handling logic remains the same, using _setCurrentBlock, _setCurrentResult ---
     let parsedBody;
     try {
       parsedBody = JSON.parse(message.body);
+      // Messages are often wrapped in an array
       const messageData = Array.isArray(parsedBody) ? parsedBody[0] : parsedBody;
-      if (!messageData || !messageData.data) return;
+
+      if (!messageData || !messageData.data) {
+        console.warn('[PlayerPage WS Handler] Received message without data field:', messageData);
+        return;
+      }
+
+      // Ignore private messages directed elsewhere for now
+      if (message.headers.destination?.includes('/private')) {
+        // console.log('[PlayerPage WS Handler] Ignoring private message for now.');
+        return;
+      }
+
       const { id: dataTypeId, content } = messageData.data;
-      if (message.headers.destination?.includes('/private')) return; // Ignore private for now
+      console.log(`[PlayerPage WS Handler] Received message with data.id: ${dataTypeId}`);
 
       if (typeof content === 'string') {
         const parsedContent = JSON.parse(content);
-        if (dataTypeId === 1 || dataTypeId === 2) { // Question data
+
+        // --- Message Routing ---
+        if (dataTypeId === 1 || dataTypeId === 2) { // Question data (Get Ready or Show)
+          console.log("[PlayerPage WS Handler] Processing Question Block:", parsedContent.type, `(Index: ${parsedContent.gameBlockIndex})`);
           _setCurrentBlock(parsedContent as GameBlock);
+          // Optional: Reset background here if you want questions to have default background initially
+          // setCurrentBackgroundId(null);
         } else if (dataTypeId === 8 || dataTypeId === 13) { // Result or Podium data
+          console.log("[PlayerPage WS Handler] Processing Result/Podium:", parsedContent.type, `(Index: ${parsedContent.pointsData?.lastGameBlockIndex})`);
           _setCurrentResult(parsedContent as QuestionResultPayload);
+          // Optional: Reset background here
+          // setCurrentBackgroundId(null);
+        } else if (dataTypeId === 35) { // <<<--- Host Background Change Message ID
+          console.log("[PlayerPage WS Handler] Processing Background Change message");
+          const newBackgroundId = parsedContent?.background?.id;
+          if (typeof newBackgroundId === 'string' && newBackgroundId) {
+            console.log(`[PlayerPage WS Handler] Setting background ID to: ${newBackgroundId}`);
+            setCurrentBackgroundId(newBackgroundId); // Update state with the new ID
+          } else {
+            console.warn("[PlayerPage WS Handler] Received background change message but ID was missing or invalid:", parsedContent);
+          }
+        } else {
+          console.log(`[PlayerPage WS Handler] Received unhandled data type ID: ${dataTypeId}`, parsedContent);
         }
+        // --- End Message Routing ---
+
+      } else {
+        console.warn("[PlayerPage WS Handler] Received message content is not a string:", content);
       }
-    } catch (e) { console.error('[PlayerPage] Failed to parse or process message body:', e, message.body); }
-  }, [_setCurrentBlock, _setCurrentResult]);
+    } catch (e) {
+      console.error('[PlayerPage WS Handler] Failed to parse or process message body:', e, message.body);
+    }
+  }, [_setCurrentBlock, _setCurrentResult]); // Dependencies for internal setters
 
   const {
     connect: connectWebSocket, disconnect: disconnectWebSocket, joinGame, sendAnswer,
@@ -156,9 +201,10 @@ function PlayerPageInternal() { // Renamed inner component
     handleReceivedMessageCallback(partialIMessage as IMessage);
   }, [handleReceivedMessageCallback, gamePin]);
 
-  // --- Refactored Rendering Logic ---
+  // Step 2.3 (Part 1): Pass prop in render function
   const renderPageContent = () => {
     switch (uiState) {
+      // ... cases for PIN_INPUT, CONNECTING, NICKNAME_INPUT, DISCONNECTED, ERROR ...
       case 'PIN_INPUT':
         return <PinInputForm
           gamePin={gamePin}
@@ -206,6 +252,7 @@ function PlayerPageInternal() { // Renamed inner component
           playerInfo={livePlayerInfo} // Pass the constructed state
           onSubmitAnswer={handleAnswerSubmitClick}
           handleSimulatedMessage={handleSimulatedMessageFromDevControls}
+          currentBackgroundId={currentBackgroundId}
         />;
       case 'DISCONNECTED':
         return <DisconnectedPlayerView errorMessage={pageError} onJoinNewGame={handleResetAndGoToPinInput} />;
