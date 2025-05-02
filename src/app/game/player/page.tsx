@@ -3,230 +3,150 @@
 
 import React, { useState, useCallback, useEffect } from 'react';
 import { IMessage } from '@stomp/stompjs';
-
-import PlayerView from '@/src/components/game/views/PlayerView';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/src/components/ui/card';
-import { Input } from '@/src/components/ui/input';
-import { Button } from '@/src/components/ui/button';
-import { Loader2, WifiOff, LogIn, UserPlus, AlertCircle } from 'lucide-react';
-import { GameBlock, PlayerAnswerPayload, QuestionResultPayload, isContentBlock } from '@/src/lib/types';
-import { cn } from '@/src/lib/utils';
-import DevMockControls, { MockWebSocketMessage } from '@/src/components/game/DevMockControls';
+// Adjust type imports if paths changed
+import { GameBlock, PlayerAnswerPayload, QuestionResultPayload, LivePlayerState } from '@/src/lib/types';
 import { usePlayerWebSocket, PlayerConnectionStatus } from '@/src/hooks/game/usePlayerWebSocket';
 import { GameAssetsProvider } from '@/src/context/GameAssetsContext';
+import { MockWebSocketMessage } from '@/src/components/game/DevMockControls'; // Keep for Dev mode
 
-interface PlayerInfoState {
+// --- Import NEW UI State Components ---
+import { PinInputForm } from '@/src/components/game/player/PinInputForm';
+import { NicknameInputForm } from '@/src/components/game/player/NicknameInputForm';
+import { ConnectingPlayerView } from '@/src/components/game/player/ConnectingPlayerView';
+import { PlayerGameScreen } from '@/src/components/game/player/PlayerGameScreen';
+import { DisconnectedPlayerView } from '@/src/components/game/player/DisconnectedPlayerView';
+import { ErrorPlayerView } from '@/src/components/game/player/ErrorPlayerView';
+// --- END Import ---
+
+// Minimal player state needed for the page itself (most is in hook or PlayerView)
+interface MinimalPlayerInfo {
+  cid: string | null;
   name: string;
-  avatarUrl?: string;
-  score: number;
-  rank?: number;
-  cid?: string | null;
 }
 
-// Page UI State (Removed JOINING and WAITING_FOR_GAME)
 type PageUiState = 'PIN_INPUT' | 'CONNECTING' | 'NICKNAME_INPUT' | 'PLAYING' | 'DISCONNECTED' | 'ERROR';
 
-export default function PlayerPage() {
+function PlayerPageInternal() { // Renamed inner component
   const [uiState, setUiState] = useState<PageUiState>('PIN_INPUT');
   const [gamePin, setGamePin] = useState<string>('');
   const [nickname, setNickname] = useState<string>('');
   const [pageError, setPageError] = useState<string | null>(null);
+
+  // State managed by the page, passed down to PlayerGameScreen/PlayerView
   const [currentBlock, setCurrentBlock] = useState<GameBlock | null>(null);
   const [currentResult, setCurrentResult] = useState<QuestionResultPayload | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [playerInfo, setPlayerInfo] = useState<PlayerInfoState>({
-    name: '', score: 0, rank: undefined, avatarUrl: undefined, cid: null,
-  });
-  // Track if join was attempted to prevent accidental transitions
-  const [joinAttempted, setJoinAttempted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false); // Track if player submitted an answer
+  const [playerInfo, setPlayerInfo] = useState<MinimalPlayerInfo>({ cid: null, name: '' });
 
-  // Internal state update functions (no change needed)
+  const [joinAttempted, setJoinAttempted] = useState(false); // Track if join was attempted
+
+  // Internal state update functions
   const _setCurrentBlock = useCallback((block: GameBlock | null) => {
-    // console.log("[PlayerPage] Setting block:", block?.type, "Index:", block?.gameBlockIndex);
     setCurrentResult(null);
     setIsSubmitting(false);
     setCurrentBlock(block);
   }, []);
-
   const _setCurrentResult = useCallback((result: QuestionResultPayload | null) => {
-    // console.log("[PlayerPage] Setting result:", result?.type);
     setCurrentBlock(null);
     setIsSubmitting(false);
     setCurrentResult(result);
-    if (result) {
-      setPlayerInfo(prev => ({
-        ...prev,
-        score: result.totalScore,
-        rank: result.rank,
-      }));
-    }
+    // Score/rank updates are handled within PlayerView/PlayerGameScreen via its props now
   }, []);
-
   const _resetGameState = useCallback(() => {
-    // console.log("[PlayerPage] Resetting internal game state.");
     setCurrentBlock(null);
     setCurrentResult(null);
     setIsSubmitting(false);
-    setPlayerInfo(prev => ({ ...prev, score: 0, rank: undefined }));
-    setJoinAttempted(false); // Reset join attempt flag
+    setJoinAttempted(false);
   }, []);
 
-  // WebSocket Hook message handler (no change needed)
+  // WebSocket Hook message handler
   const handleReceivedMessageCallback = useCallback((message: IMessage) => {
-    // ... (message handling logic remains the same as previous version) ...
-    // console.log(`[PlayerPage] <<< Hook delivered message on ${message.headers.destination}:`);
+    // --- Message handling logic remains the same, using _setCurrentBlock, _setCurrentResult ---
     let parsedBody;
     try {
       parsedBody = JSON.parse(message.body);
       const messageData = Array.isArray(parsedBody) ? parsedBody[0] : parsedBody;
-
-      if (!messageData || !messageData.data) {
-        return;
-      }
-
-      const { id: dataTypeId, content, type: messageType } = messageData.data;
-
-      if (message.headers.destination?.includes('/private')) {
-        return;
-      }
+      if (!messageData || !messageData.data) return;
+      const { id: dataTypeId, content } = messageData.data;
+      if (message.headers.destination?.includes('/private')) return; // Ignore private for now
 
       if (typeof content === 'string') {
         const parsedContent = JSON.parse(content);
-        // console.log(`[PlayerPage] Processing data.id=${dataTypeId}, Content Type=${parsedContent?.type}`);
-
         if (dataTypeId === 1 || dataTypeId === 2) { // Question data
-          // console.log(`[PlayerPage] Calling _setCurrentBlock for index: ${parsedContent?.gameBlockIndex}`);
           _setCurrentBlock(parsedContent as GameBlock);
-        } else if (dataTypeId === 8) { // Result data
-          // console.log(`[PlayerPage] Calling _setCurrentResult for index: ${parsedContent?.pointsData?.lastGameBlockIndex}`);
-          _setCurrentResult(parsedContent as QuestionResultPayload);
-        } else if (dataTypeId === 13) { // Game End / Podium
-          console.log('[PlayerPage] Received Game End / Podium signal.');
+        } else if (dataTypeId === 8 || dataTypeId === 13) { // Result or Podium data
           _setCurrentResult(parsedContent as QuestionResultPayload);
         }
       }
-
-    } catch (e) {
-      console.error('[PlayerPage] Failed to parse or process message body:', e, message.body);
-    }
+    } catch (e) { console.error('[PlayerPage] Failed to parse or process message body:', e, message.body); }
   }, [_setCurrentBlock, _setCurrentResult]);
 
   const {
-    connect: connectWebSocket,
-    disconnect: disconnectWebSocket,
-    joinGame,
-    sendAnswer,
-    connectionStatus: wsConnectionStatus,
-    error: wsError,
-    playerClientId,
-  } = usePlayerWebSocket({
-    onMessageReceived: handleReceivedMessageCallback,
-  });
+    connect: connectWebSocket, disconnect: disconnectWebSocket, joinGame, sendAnswer,
+    connectionStatus: wsConnectionStatus, error: wsError, playerClientId,
+  } = usePlayerWebSocket({ onMessageReceived: handleReceivedMessageCallback });
 
-  // Revised UI State Sync Effect
+  // Sync UI state with WebSocket status
   useEffect(() => {
-    setPageError(wsError); // Always reflect WS errors
-
+    setPageError(wsError);
     switch (wsConnectionStatus) {
-      case 'CONNECTING':
-        setUiState('CONNECTING');
-        break;
-      case 'NICKNAME_INPUT':
-        // Only go to nickname input if we haven't already attempted to join and aren't playing
-        if (!joinAttempted && uiState !== 'PLAYING') {
-          setUiState('NICKNAME_INPUT');
-        }
-        break;
-      // Removed JOINING case - managed by action handler
-      case 'CONNECTED':
-        // If WS is connected, but UI isn't PLAYING, stay in NICKNAME_INPUT
-        // The transition to PLAYING happens explicitly after joinGame succeeds.
-        if (uiState !== 'PLAYING' && uiState !== 'NICKNAME_INPUT') {
-          // If we got here unexpectedly (e.g. after error/disconnect), go back to nickname input
-          if (!joinAttempted) { // Make sure join wasn't already done
-            setUiState('NICKNAME_INPUT');
-          }
-        }
-        break;
-      case 'DISCONNECTED':
-        if (uiState !== 'PIN_INPUT' && uiState !== 'ERROR') {
-          setUiState('DISCONNECTED');
-          setJoinAttempted(false); // Allow re-joining
-        }
-        break;
-      case 'ERROR':
-        setUiState('ERROR');
-        setJoinAttempted(false); // Allow retry
-        break;
-      case 'INITIAL':
-        if (uiState !== 'PIN_INPUT') {
-          handleResetAndGoToPinInput();
-        }
-        break;
+      case 'CONNECTING': setUiState('CONNECTING'); break;
+      case 'NICKNAME_INPUT': if (!joinAttempted && uiState !== 'PLAYING') setUiState('NICKNAME_INPUT'); break;
+      case 'CONNECTED': if (uiState !== 'PLAYING' && uiState !== 'NICKNAME_INPUT' && !joinAttempted) setUiState('NICKNAME_INPUT'); break;
+      case 'DISCONNECTED': if (uiState !== 'PIN_INPUT' && uiState !== 'ERROR') { setUiState('DISCONNECTED'); setJoinAttempted(false); } break;
+      case 'ERROR': setUiState('ERROR'); setJoinAttempted(false); break;
+      case 'INITIAL': if (uiState !== 'PIN_INPUT') handleResetAndGoToPinInput(); break;
     }
-  }, [wsConnectionStatus, wsError, uiState, joinAttempted]); // Added joinAttempted
+  }, [wsConnectionStatus, wsError, uiState, joinAttempted]); // Added handleResetAndGoToPinInput to dependencies
 
   // Update playerInfo CID
   useEffect(() => {
-    if (playerClientId) {
-      setPlayerInfo(prev => ({ ...prev, cid: playerClientId }));
-    }
+    if (playerClientId) setPlayerInfo(prev => ({ ...prev, cid: playerClientId }));
   }, [playerClientId]);
 
   // Action Handlers
   const handlePinSubmit = () => {
-    // ... (validation) ...
     const pinRegex = /^\d{6,7}$/;
-    if (!pinRegex.test(gamePin)) {
-      setPageError("Please enter a valid 6 or 7 digit Game PIN.");
-      setUiState('PIN_INPUT'); return;
-    }
+    if (!pinRegex.test(gamePin)) { setPageError("Please enter a valid 6 or 7 digit Game PIN."); setUiState('PIN_INPUT'); return; }
     setPageError(null);
-    setJoinAttempted(false); // Reset join attempt before connecting
+    setJoinAttempted(false);
     connectWebSocket(gamePin);
   };
 
   const handleNicknameSubmitClick = async () => {
     setPageError(null);
-    setJoinAttempted(true); // Mark that join is being attempted
-
-    // *** Show a temporary loading state within the button if desired ***
-    // setUiState('JOINING'); // Or manage a separate loading state for the button
-
-    const success = await joinGame(nickname, gamePin);
-
+    setJoinAttempted(true);
+    const success = await joinGame(nickname, gamePin); // joinGame is now async
     if (success) {
-      console.log("[PlayerPage] Join message sent successfully. Transitioning to PLAYING state.");
       setPlayerInfo(prev => ({ ...prev, name: nickname.trim() }));
-      _resetGameState(); // Reset scores etc.
-      setUiState('PLAYING'); // <<< Directly transition to PLAYING state
+      _resetGameState();
+      setUiState('PLAYING'); // Transition state only on successful send
     } else {
-      // Error should be set by the hook, useEffect handles uiState = 'ERROR'
-      setJoinAttempted(false); // Allow retry on failure
-      // setUiState('NICKNAME_INPUT'); // Optionally revert UI if needed, but ERROR state is better
+      setJoinAttempted(false); // Allow retry if joinGame failed
+      // UI state will likely transition to ERROR via the useEffect hook listening to wsError
     }
+    return success; // Return success status for the form component
   };
 
   const handleAnswerSubmitClick = (answerDetailPayload: PlayerAnswerPayload) => {
-    // ... (validation) ...
-    if (!gamePin) { return; }
-    setIsSubmitting(true);
+    if (!gamePin) return;
+    setIsSubmitting(true); // Set submitting state
     sendAnswer(answerDetailPayload, gamePin);
+    // We don't clear the block here, wait for result message
   };
 
   const handleResetAndGoToPinInput = useCallback(() => {
     disconnectWebSocket();
-    _resetGameState(); // This now also resets joinAttempted
+    _resetGameState();
     setGamePin('');
     setNickname('');
     setPageError(null);
     setUiState('PIN_INPUT');
-  }, [disconnectWebSocket, _resetGameState]);
+  }, [disconnectWebSocket, _resetGameState]); // Add dependencies
 
-
-  // Dev Controls (no change)
+  // Dev Controls simulation handler
   const handleSimulatedMessageFromDevControls = useCallback((mockMessage: MockWebSocketMessage) => {
-    // ... (simulation logic) ...
+    // --- Simulation logic remains the same ---
     console.log("[PlayerPage] Received simulated message from DevControls:", mockMessage);
     const partialIMessage: Partial<IMessage> & { body: string, headers: { destination: string } } = {
       body: JSON.stringify([mockMessage]),
@@ -236,115 +156,76 @@ export default function PlayerPage() {
     handleReceivedMessageCallback(partialIMessage as IMessage);
   }, [handleReceivedMessageCallback, gamePin]);
 
-  // Render Functions (Remove renderJoining, renderWaitingForGame)
-  const renderPinInput = () => ( /* ... */
-    <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-indigo-900 dark:to-purple-900">
-      <Card className="w-full max-w-sm shadow-lg">
-        <CardHeader>
-          <CardTitle className="text-2xl font-bold text-center">Join Game</CardTitle>
-          <CardDescription className="text-center text-muted-foreground">Enter the 6 or 7 digit PIN.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <Input
-            type="number" placeholder="Game PIN" value={gamePin}
-            onChange={(e) => setGamePin(e.target.value.replace(/[^0-9]/g, '').slice(0, 7))}
-            className="text-center text-2xl h-14 tracking-widest" maxLength={7} aria-label="Game PIN"
-          />
-          {pageError && <p className="text-sm text-red-600 dark:text-red-400 text-center">{pageError}</p>}
-          <Button onClick={handlePinSubmit} className="w-full" size="lg" disabled={uiState === 'CONNECTING'}>
-            {uiState === 'CONNECTING' ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <LogIn className="mr-2 h-5 w-5" />}
-            {uiState === 'CONNECTING' ? 'Connecting...' : 'Enter'}
-          </Button>
-        </CardContent>
-      </Card>
-    </div>
-  );
-  const renderNicknameInput = () => ( /* ... */
-    <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-gradient-to-br from-green-100 to-teal-100 dark:from-green-900 dark:to-teal-900">
-      <Card className="w-full max-w-sm shadow-lg">
-        <CardHeader>
-          <CardTitle className="text-2xl font-bold text-center">Enter Nickname</CardTitle>
-          <CardDescription className="text-center text-muted-foreground">Game PIN: {gamePin}</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <Input
-            type="text" placeholder="Your Nickname" value={nickname}
-            onChange={(e) => setNickname(e.target.value)} maxLength={25}
-            className="text-center text-lg h-12" aria-label="Nickname"
-          />
-          {pageError && <p className="text-sm text-red-600 dark:text-red-400 text-center">{pageError}</p>}
-          {/* Consider adding a local loading state for the button itself during the async call */}
-          <Button onClick={handleNicknameSubmitClick} className="w-full" size="lg" >
-            <UserPlus className="mr-2 h-5 w-5" />
-            Join Game
-          </Button>
-        </CardContent>
-      </Card>
-    </div>
-  );
-  const renderConnecting = () => ( /* ... */
-    <div className="flex flex-col items-center justify-center min-h-screen p-4">
-      <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-      <p className="text-muted-foreground text-center">Connecting to game {gamePin}...</p>
-    </div>
-  );
-  // Removed renderJoining
-  // Removed renderWaitingForGame
-  const renderDisconnected = () => ( /* ... */
-    <div className="flex flex-col items-center justify-center min-h-screen p-4 text-center">
-      <WifiOff className="h-12 w-12 text-muted-foreground mb-4" />
-      <h2 className="text-xl font-semibold mb-2">Disconnected</h2>
-      <p className="text-muted-foreground mb-4">{pageError || "Connection lost. Please try joining again."}</p>
-      <Button onClick={handleResetAndGoToPinInput}>Join New Game</Button>
-    </div>
-  );
-  const renderError = () => ( /* ... */
-    <div className="flex flex-col items-center justify-center min-h-screen p-4 text-center">
-      <AlertCircle className="h-12 w-12 text-destructive mb-4" />
-      <h2 className="text-xl font-semibold text-destructive mb-2">Error</h2>
-      <p className="text-muted-foreground mb-4">{pageError || "An unknown error occurred."}</p>
-      <Button onClick={handleResetAndGoToPinInput}>Try Again</Button>
-    </div>
-  );
-
-
-  // --- Define the function that holds the rendering logic ---
+  // --- Refactored Rendering Logic ---
   const renderPageContent = () => {
     switch (uiState) {
-      case 'PIN_INPUT': return renderPinInput();
-      case 'CONNECTING': return renderConnecting();
-      case 'NICKNAME_INPUT': return renderNicknameInput();
+      case 'PIN_INPUT':
+        return <PinInputForm
+          gamePin={gamePin}
+          onGamePinChange={setGamePin}
+          onSubmit={handlePinSubmit}
+          errorMessage={pageError}
+          isConnecting={wsConnectionStatus === 'CONNECTING'}
+        />;
+      case 'CONNECTING':
+        return <ConnectingPlayerView message={`Connecting to game ${gamePin}...`} />;
+      case 'NICKNAME_INPUT':
+        return <NicknameInputForm
+          gamePin={gamePin}
+          nickname={nickname}
+          onNicknameChange={setNickname}
+          onSubmit={handleNicknameSubmitClick} // Pass the async handler
+          errorMessage={pageError}
+        />;
       case 'PLAYING':
-        const derivedIsWaiting = !currentBlock && !currentResult && !isSubmitting;
-        return (
-          <>
-            <PlayerView
-              questionData={currentBlock}
-              feedbackPayload={currentResult}
-              onSubmitAnswer={handleAnswerSubmitClick}
-              isWaiting={derivedIsWaiting}
-              isSubmitting={isSubmitting}
-              playerInfo={playerInfo}
-            />
-            <DevMockControls
-              simulateReceiveMessage={handleSimulatedMessageFromDevControls}
-              loadMockBlock={() => { }}
-              setMockResult={() => { }}
-            />
-          </>
-        );
-      case 'DISCONNECTED': return renderDisconnected();
-      case 'ERROR': return renderError();
+        // Create a minimal LivePlayerState for PlayerGameScreen based on page state
+        const livePlayerInfo: LivePlayerState = {
+          cid: playerInfo.cid || 'temp-id', // Use temporary if null, should be set by hook though
+          nickname: playerInfo.name,
+          avatar: null, // Page doesn't manage avatar details directly
+          isConnected: true, // Assume connected if in PLAYING state
+          joinedAt: Date.now(), // Placeholder, actual join time managed elsewhere
+          lastActivityAt: Date.now(),
+          playerStatus: 'PLAYING',
+          totalScore: 0, // Score/Rank will be displayed via feedbackPayload in PlayerView
+          rank: 0,
+          currentStreak: 0, // Let PlayerView handle display based on feedback
+          maxStreak: 0,
+          lastAnswerTimestamp: null,
+          answers: [], // Page doesn't hold full answer history
+          correctCount: 0,
+          incorrectCount: 0,
+          unansweredCount: 0,
+          answersCount: 0,
+          totalReactionTimeMs: 0
+        };
+        return <PlayerGameScreen
+          currentBlock={currentBlock}
+          currentResult={currentResult}
+          isSubmitting={isSubmitting}
+          playerInfo={livePlayerInfo} // Pass the constructed state
+          onSubmitAnswer={handleAnswerSubmitClick}
+          handleSimulatedMessage={handleSimulatedMessageFromDevControls}
+        />;
+      case 'DISCONNECTED':
+        return <DisconnectedPlayerView errorMessage={pageError} onJoinNewGame={handleResetAndGoToPinInput} />;
+      case 'ERROR':
+        return <ErrorPlayerView errorMessage={pageError} onRetry={handleResetAndGoToPinInput} />;
       default:
-        return renderError(); // Default to error state
+        console.error("Reached default case in renderPageContent, UI state:", uiState);
+        return <ErrorPlayerView errorMessage="An unexpected error occurred." onRetry={handleResetAndGoToPinInput} />;
     }
-  };
-  // --- End function definition ---
+  }; // End of renderPageContent
 
-  // Wrap the call to the rendering function in the provider
+  return renderPageContent();
+
+} // End of PlayerPageInternal
+
+// Wrap the internal component with the context provider
+export default function PlayerPage() {
   return (
     <GameAssetsProvider>
-      {renderPageContent()}
+      <PlayerPageInternal />
     </GameAssetsProvider>
   );
 }

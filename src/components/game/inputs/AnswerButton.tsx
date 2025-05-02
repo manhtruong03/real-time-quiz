@@ -1,5 +1,5 @@
 // src/components/game/inputs/AnswerButton.tsx
-import React from 'react';
+import React, { memo } from 'react';
 import Image from 'next/image';
 import { Button } from '@/src/components/ui/button';
 import { cn } from '@/src/lib/utils';
@@ -29,7 +29,7 @@ const playerButtonMapping = [
 
 const KHOOT_MEDIA_BASE_URL = "https://media.kahoot.it/";
 
-const AnswerButton: React.FC<AnswerButtonProps> = ({
+const AnswerButtonComponent: React.FC<AnswerButtonProps> = ({
   choice,
   index,
   onClick,
@@ -109,4 +109,6 @@ const AnswerButton: React.FC<AnswerButtonProps> = ({
   );
 };
 
+// Wrap the export with memo
+const AnswerButton = memo(AnswerButtonComponent);
 export default AnswerButton;

@@ -1,7 +1,7 @@
 // src/components/game/inputs/AnswerInputArea.tsx
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   DndContext,
   closestCenter,
@@ -103,15 +103,20 @@ const AnswerInputArea: React.FC<AnswerInputAreaProps> = ({
     }
   };
 
-  const handleQuizSurveySelection = (index: number) => {
-    // --- UPDATED: Use type guards and correct type in payload ---
-    if (!currentBlock || isSubmitting || !isInteractive || !(isQuizQuestion(currentBlock) || isSurveyQuestion(currentBlock))) return;
+  // --- Stabilize this handler with useCallback ---
+  const handleQuizSurveySelection = useCallback((index: number) => {
+    // Add checks inside useCallback to ensure it uses the latest state/props
+    if (!currentBlock || isSubmitting || !isInteractive || !(isQuizQuestion(currentBlock) || isSurveyQuestion(currentBlock))) {
+      console.warn("[AnswerInputArea] handleQuizSurveySelection called with invalid state/props. CurrentBlock:", currentBlock, "isSubmitting:", isSubmitting, "isInteractive:", isInteractive);
+      return;
+    }
+    // console.log(`[AnswerInputArea] Submitting answer for index ${index}, QIndex: ${currentBlock.questionIndex}, Type: ${currentBlock.type}`);
     onAnswerSubmit({
-      type: currentBlock.type, // Use the actual type 'quiz' or 'survey'
+      type: currentBlock.type, // 'quiz' or 'survey'
       choice: index,
       questionIndex: currentBlock.questionIndex,
     });
-  };
+  }, [currentBlock, isSubmitting, isInteractive, onAnswerSubmit]); // Add dependencies
 
   const handleJumbleSubmit = () => {
     // --- UPDATED: Use type guard ---
