@@ -35,6 +35,7 @@ interface PlayerWebSocketHookReturn {
   ) => Promise<boolean>;
 
   sendAnswer: (payload: PlayerAnswerPayload, gamePin: string) => void;
+  sendAvatarUpdate: (avatarId: string, gamePin: string) => void;
   connectionStatus: PlayerConnectionStatus;
 
   error: string | null;
@@ -373,6 +374,68 @@ export function usePlayerWebSocket({
     [playerClientId]
   );
 
+  const sendAvatarUpdate = useCallback(
+    (avatarId: string, gamePin: string) => {
+      if (!stompClientRef.current || !stompClientRef.current.active) {
+        console.error(
+          "[PlayerWS Hook] Cannot send avatar update: Client not connected."
+        );
+        setError("Cannot update avatar: Not connected.");
+        return;
+      }
+      if (!playerClientId) {
+        console.error(
+          "[PlayerWS Hook] Cannot send avatar update: Missing Client ID."
+        );
+        setError("Cannot update avatar: Client ID missing.");
+        return;
+      }
+      if (!gamePin) {
+        console.error(
+          "[PlayerWS Hook] Cannot send avatar update: Missing Game PIN."
+        );
+        setError("Cannot update avatar: Game PIN missing.");
+        return;
+      }
+
+      const contentPayload = { avatar: { id: avatarId } };
+      const contentString = JSON.stringify(contentPayload);
+
+      // Structure based on docs/websocket_message_structure.txt example 3.3
+      const messageToSend = {
+        channel: `${APP_PREFIX}/controller/${gamePin}`, // Send to host controller
+        data: {
+          gameid: gamePin,
+          id: 46, // Specific ID for Avatar Change
+          type: "message",
+          content: contentString,
+          cid: playerClientId, // Identify the player making the change
+        },
+        ext: { timetrack: Date.now() },
+      };
+
+      try {
+        stompClientRef.current.publish({
+          destination: messageToSend.channel,
+          body: JSON.stringify([messageToSend]), // Wrap in array
+        });
+        console.log(
+          `[PlayerWS Hook] Avatar update message sent (Avatar ID: ${avatarId}).`
+        );
+      } catch (error: any) {
+        console.error(
+          "[PlayerWS Hook] Failed to send avatar update message:",
+          error
+        );
+        setError(
+          `Failed to update avatar: ${error?.message || "Unknown error"}`
+        );
+      }
+    },
+    [playerClientId]
+  ); // Depends only on playerClientId (and implicitly stompClientRef)
+  // --- END ADDED ---
+
   useEffect(() => {
     return () => {
       disconnect();
@@ -384,6 +447,7 @@ export function usePlayerWebSocket({
     disconnect,
     joinGame,
     sendAnswer,
+    sendAvatarUpdate,
     connectionStatus,
     error,
     playerClientId,

@@ -4,7 +4,7 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { IMessage } from '@stomp/stompjs';
 
-import { GameBlock, PlayerAnswerPayload, QuestionResultPayload, LivePlayerState } from '@/src/lib/types';
+import { GameBlock, PlayerAnswerPayload, QuestionResultPayload, LivePlayerState, Avatar as AvatarType } from '@/src/lib/types';
 
 import { usePlayerWebSocket, PlayerConnectionStatus } from '@/src/hooks/game/usePlayerWebSocket';
 
@@ -147,7 +147,7 @@ function PlayerPageInternal() {
   }, [_setCurrentBlock, _setCurrentResult]);
 
   const {
-    connect: connectWebSocket, disconnect: disconnectWebSocket, joinGame, sendAnswer,
+    connect: connectWebSocket, disconnect: disconnectWebSocket, joinGame, sendAnswer, sendAvatarUpdate,
     connectionStatus: wsConnectionStatus, error: wsError, playerClientId,
   } = usePlayerWebSocket({ onMessageReceived: handleReceivedMessageCallback });
 
@@ -195,9 +195,16 @@ function PlayerPageInternal() {
 
   // *** Define the handler function for avatar selection ***
   const handleAvatarSelected = useCallback((avatarId: string | null) => {
-    console.log("[PlayerPage] Avatar selected with ID:", avatarId);
     setPlayerInfo(prev => ({ ...prev, avatarId: avatarId }));
-  }, []); // No dependencies needed if setPlayerInfo is stable
+
+    // Send update ONLY if an avatarId exists, we are connected, and already in the 'PLAYING' state (lobby or later)
+    if (avatarId && gamePin && playerClientId && uiState === 'PLAYING') {
+      console.log(`[PlayerPage] Sending avatar update to host. AvatarID: ${avatarId}`);
+      sendAvatarUpdate(avatarId, gamePin);
+    } else {
+      // console.log("[PlayerPage] Avatar selected, but not sending update (State:", uiState, "Pin:", !!gamePin, "CID:", !!playerClientId, ")");
+    }
+  }, [gamePin, playerClientId, uiState, sendAvatarUpdate]); // No dependencies needed if setPlayerInfo is stable
 
   const handleNicknameSubmitClick = async () => {
     setPageError(null);
@@ -288,6 +295,7 @@ function PlayerPageInternal() {
         const playerInfoForStatusBar = {
           name: playerInfo.name,
           avatarUrl: selectedAvatarUrl,
+          avatarId: playerInfo.avatarId,
           score: playerInfo.totalScore, // Use state value
           rank: playerInfo.rank,        // Use state value
         };
@@ -296,11 +304,13 @@ function PlayerPageInternal() {
           currentBlock={currentBlock}
           currentResult={currentResult}
           isSubmitting={isSubmitting}
-          // playerInfo={livePlayerInfo}
           playerInfoForStatusBar={playerInfoForStatusBar}
           onSubmitAnswer={handleAnswerSubmitClick}
           handleSimulatedMessage={handleSimulatedMessageFromDevControls}
           currentBackgroundId={currentBackgroundId}
+          // --- Pass avatars and handler down ---
+          avatars={avatars} // Pass the full list
+          onAvatarChange={handleAvatarSelected} // Pass the callback
 
         />;
 

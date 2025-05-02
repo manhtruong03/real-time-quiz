@@ -3,7 +3,7 @@ import React from 'react';
 import PlayerView from '@/src/components/game/views/PlayerView';
 import DevMockControls, { MockWebSocketMessage } from '@/src/components/game/DevMockControls';
 
-import { GameBlock, PlayerAnswerPayload, QuestionResultPayload } from '@/src/lib/types'; // Removed LivePlayerState import
+import { GameBlock, PlayerAnswerPayload, QuestionResultPayload, Avatar as AvatarType } from '@/src/lib/types'; // Import AvatarType
 
 interface PlayerGameScreenProps {
     currentBlock: GameBlock | null;
@@ -11,29 +11,34 @@ interface PlayerGameScreenProps {
     currentResult: QuestionResultPayload | null;
 
     isSubmitting: boolean;
-    // --- MODIFIED: Receive specific info needed for status bar ---
-    playerInfoForStatusBar: {
+    playerInfoForStatusBar: { // Keep this structure for status bar
         name: string;
         avatarUrl: string | null;
+        avatarId: string | null; // *** Add avatarId here ***
         score: number;
         rank?: number;
     };
-    // --- END MODIFIED ---
     onSubmitAnswer: (payload: PlayerAnswerPayload) => void;
     handleSimulatedMessage?: (message: MockWebSocketMessage) => void;
 
     currentBackgroundId: string | null;
 
+    // --- Add new props ---
+    avatars: AvatarType[];
+    onAvatarChange: (avatarId: string | null) => void;
+    // --- End new props ---
 }
 
 export const PlayerGameScreen: React.FC<PlayerGameScreenProps> = ({
     currentBlock,
     currentResult,
     isSubmitting,
-    playerInfoForStatusBar, // Destructure new prop
+    playerInfoForStatusBar,
     onSubmitAnswer,
     handleSimulatedMessage,
     currentBackgroundId,
+    avatars, // Destructure new props
+    onAvatarChange, // Destructure new props
 }) => {
     const isWaiting = !currentBlock && !currentResult && !isSubmitting;
 
@@ -43,19 +48,23 @@ export const PlayerGameScreen: React.FC<PlayerGameScreenProps> = ({
                 questionData={currentBlock}
                 feedbackPayload={currentResult}
                 onSubmitAnswer={onSubmitAnswer}
-                isWaiting={isWaiting}
-
+                // isWaiting prop removed, PlayerView determines state internally
                 isSubmitting={isSubmitting}
-                // --- MODIFIED: Pass the received status bar info directly ---
-                playerInfo={{
+
+                playerInfo={{ // Pass info needed by PlayerView and its children
                     name: playerInfoForStatusBar.name,
-                    avatarUrl: playerInfoForStatusBar.avatarUrl ?? undefined, // Pass URL or undefined
+                    avatarUrl: playerInfoForStatusBar.avatarUrl ?? undefined,
+                    avatarId: playerInfoForStatusBar.avatarId ?? null, // Pass avatarId
                     score: playerInfoForStatusBar.score,
                     rank: playerInfoForStatusBar.rank
                 }}
 
                 currentBackgroundId={currentBackgroundId}
+                // --- Pass new props down ---
+                avatars={avatars}
+                onAvatarChange={onAvatarChange}
 
+            // --- End pass new props ---
             />
             {process.env.NODE_ENV === 'development' && handleSimulatedMessage && (
 
