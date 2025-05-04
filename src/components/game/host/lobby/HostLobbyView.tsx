@@ -18,6 +18,7 @@ interface HostLobbyViewProps {
     onEndGame: () => void;
     onKickPlayer: (playerId: string) => void;
     // Add Mute/Fullscreen state and handlers
+    onSettingsClick: () => void;
     isMuted: boolean;
     onToggleMute: () => void;
     isFullScreen: boolean;
@@ -39,7 +40,8 @@ export const HostLobbyView: React.FC<HostLobbyViewProps> = ({
     onStartGame,
     onEndGame,
     onKickPlayer,
-    // Destructure Mute/Fullscreen
+    // Destructure Setting/Fullscreen
+    onSettingsClick,
     isMuted,
     onToggleMute,
     isFullScreen,
@@ -74,6 +76,7 @@ export const HostLobbyView: React.FC<HostLobbyViewProps> = ({
                 quizTitle={quizTitle}
                 onEndGame={onEndGame}
                 // Pass Mute/Fullscreen state and handlers
+                onSettingsClick={onSettingsClick}
                 isMuted={isMuted}
                 onToggleMute={onToggleMute}
                 isFullScreen={isFullScreen}

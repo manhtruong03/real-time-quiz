@@ -12,9 +12,10 @@ import { cn } from '@/src/lib/utils';
 interface LobbyHeaderProps {
     quizTitle: string;
     participantCount: number;
-    isMuted?: boolean;
+    onSettingsClick: () => void;
+    isMuted: boolean;
+    onToggleMute: () => void;
     isFullScreen?: boolean;
-    onToggleMute?: () => void;
     onToggleFullScreen?: () => void;
     onEndGame: () => void;
     onStartGame: () => void;
@@ -32,9 +33,10 @@ const AUTO_START_OPTIONS = [10, 20, 30, 60];
 export const LobbyHeader: React.FC<LobbyHeaderProps> = ({
     quizTitle,
     participantCount,
-    isMuted = false,
-    isFullScreen = false,
+    onSettingsClick,
+    isMuted,
     onToggleMute,
+    isFullScreen = false,
     onToggleFullScreen,
     onEndGame,
     onStartGame,
@@ -122,7 +124,7 @@ export const LobbyHeader: React.FC<LobbyHeaderProps> = ({
             <div className="flex items-center gap-1 md:gap-2 flex-shrink-0">
                 {/* ... (TooltipProvider and icon buttons remain the same) ... */}
                 <TooltipProvider delayDuration={100}>
-                    {/* Sound Toggle */}
+                    {/* Mute/Unmute Button (RE-ADDED) */}
                     <Tooltip>
                         <TooltipTrigger asChild>
                             <Button variant="ghost" size="icon" onClick={onToggleMute} aria-label={isMuted ? "Unmute" : "Mute"} className="h-8 w-8 md:h-9 md:w-9">
@@ -130,6 +132,16 @@ export const LobbyHeader: React.FC<LobbyHeaderProps> = ({
                             </Button>
                         </TooltipTrigger>
                         <TooltipContent><p>{isMuted ? "Unmute" : "Mute"}</p></TooltipContent>
+                    </Tooltip>
+
+                    {/* Settings Button */}
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Button variant="ghost" size="icon" onClick={() => { console.log("[LobbyHeader] Settings button clicked!"); onSettingsClick(); }} aria-label="Game Settings" className="h-8 w-8 md:h-9 md:w-9">
+                                <Settings2 className="h-4 w-4" />
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent><p>Game Settings</p></TooltipContent>
                     </Tooltip>
 
                     {/* Fullscreen Toggle */}

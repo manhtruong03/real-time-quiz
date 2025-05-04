@@ -17,6 +17,7 @@ import { ErrorHostView } from '@/src/components/game/host/ErrorHostView';
 import { DisconnectedHostView } from '@/src/components/game/host/DisconnectedHostView';
 import { HostLobbyView } from '@/src/components/game/host/lobby/HostLobbyView';
 import { useToast } from "@/src/components/ui/use-toast"; // Import useToast
+import { useHostAudioManager } from '@/src/hooks/game/useHostAudioManager';
 
 // Constants
 const API_BASE_URL = 'http://localhost:8080/api/session';
@@ -50,6 +51,10 @@ const HostPageContent = () => {
   // --- Hooks ---
 
   const { backgrounds, sounds, isLoading: assetsLoading, error: assetsError } = useGameAssets();
+
+  // Instantiate Audio Manager HERE
+  const { isMuted, toggleMute } = useHostAudioManager({ selectedSoundId });
+
   const liveGameStateRef = useRef<LiveGameState | null>(null);
 
   const {
@@ -332,7 +337,11 @@ const HostPageContent = () => {
     }
   };
 
-  const handleOpenSettings = () => { setIsSettingsOpen(true); };
+  const handleOpenSettings = () => {
+    console.log("[HostPageContent] handleOpenSettings triggered!"); // <-- ADD LOG
+    setIsSettingsOpen(true);
+  };
+
   const handleSoundSelect = (soundId: string) => { setSelectedSoundId(soundId); setIsSettingsOpen(false); };
   const handleBackgroundSelect = (backgroundId: string) => {
     // ... (keep existing background select logic) ...
@@ -443,30 +452,50 @@ const HostPageContent = () => {
         if (assetsLoading) return <ConnectingHostView message="Loading assets..." />;
         if (assetsError) return <ErrorHostView errorMessage={assetsError} onRetry={handleResetAndGoToInitial} />;
 
+        // --- RENDER DIALOG OUTSIDE THE IF/ELSE ---
+        // Ensure the dialog is always available to be opened when connected
+        const renderDialog = () => (
+          <GameSettingsDialog
+            open={isSettingsOpen}
+            onOpenChange={setIsSettingsOpen}
+            selectedBackgroundId={selectedBackgroundId}
+            onBackgroundSelect={handleBackgroundSelect}
+            selectedSoundId={selectedSoundId}
+            onSoundSelect={handleSoundSelect} // [cite: 2385]
+          />
+        );
+        // --- END DIALOG RENDER ---
+
         if (liveGameState) {
           if (liveGameState.status === 'LOBBY') {
             const participantsArray = Object.values(liveGameState.players ?? {});
             return (
-              <HostLobbyView
-                quizTitle={quizData?.title ?? 'Quiz'}
-                gamePin={liveGameState.gamePin}
-                accessUrl={"VuiQuiz.com"}
-                participants={participantsArray}
-                selectedBackgroundId={selectedBackgroundId}
-                // Pass ALL necessary state and handlers down
-                isAutoStartEnabled={isAutoStartEnabled}
-                onAutoStartToggle={handleAutoStartToggle}
-                autoStartTimeSeconds={autoStartTimeSeconds}
-                onAutoStartTimeChange={handleAutoStartTimeChange}
-                autoStartCountdown={autoStartCountdown}
-                onStartGame={handleNext}
-                onEndGame={handleResetAndGoToInitial}
-                onKickPlayer={handleKickPlayer} // Pass kick handler
-                isMuted={false}               // Pass mute state
-                onToggleMute={() => { }} // Pass mute handler
-                isFullScreen={isFullScreen}         // Pass fullscreen state
-                onToggleFullScreen={handleToggleFullScreen} // Pass fullscreen handler
-              />
+              <>
+                <HostLobbyView
+                  quizTitle={quizData?.title ?? 'Quiz'}
+                  gamePin={liveGameState.gamePin}
+                  accessUrl={"VuiQuiz.com"}
+                  participants={participantsArray}
+                  selectedBackgroundId={selectedBackgroundId}
+                  onStartGame={handleNext}
+                  onEndGame={handleResetAndGoToInitial}
+                  onKickPlayer={handleKickPlayer}
+                  isAutoStartEnabled={isAutoStartEnabled}
+                  onAutoStartToggle={handleAutoStartToggle}
+                  autoStartTimeSeconds={autoStartTimeSeconds}
+                  onAutoStartTimeChange={handleAutoStartTimeChange}
+                  autoStartCountdown={autoStartCountdown}
+                  // Pass the settings handler
+                  onSettingsClick={handleOpenSettings}
+                  // Mute/Fullscreen now passed from HostPage state
+                  isMuted={isMuted}
+                  onToggleMute={toggleMute}
+                  isFullScreen={isFullScreen}
+                  onToggleFullScreen={handleToggleFullScreen}
+                // NOTE: Removed isMuted/onToggleMute as they are handled by settings dialog now
+                />
+                {renderDialog()}
+              </>
             );
           }
 
@@ -493,6 +522,8 @@ const HostPageContent = () => {
                 onSettingsClick={handleOpenSettings}
                 selectedBackgroundId={selectedBackgroundId}
                 selectedSoundId={selectedSoundId}
+                isMuted={isMuted}
+                onToggleMute={toggleMute}
                 isLoading={showLoadingOverlay}
               />
               {process.env.NODE_ENV === 'development' && (
@@ -512,10 +543,14 @@ const HostPageContent = () => {
                 selectedSoundId={selectedSoundId}
                 onSoundSelect={handleSoundSelect}
               />
+              {/* {renderDialog()} */}
             </>
           );
         }
-        return <ConnectingHostView message="Initializing game state..." />;
+        return <>
+          <ConnectingHostView message="Initializing game state..." />;
+          {renderDialog()}
+        </>
       default:
         return <ErrorHostView errorMessage="Invalid UI state." onRetry={handleResetAndGoToInitial} />;
     }

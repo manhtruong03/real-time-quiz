@@ -32,6 +32,8 @@ interface HostViewProps {
   selectedSoundId: string | null;
   selectedBackgroundId: string | null;
   onSettingsClick?: () => void;
+  isMuted: boolean;
+  onToggleMute: () => void;
 }
 
 const HostViewComponent: React.FC<HostViewProps> = ({
@@ -49,12 +51,13 @@ const HostViewComponent: React.FC<HostViewProps> = ({
   selectedSoundId,
   selectedBackgroundId,
   onSettingsClick,
+  isMuted,
+  onToggleMute,
 }) => {
   // --- Use Assets Context (might still be needed for error/loading checks) ---
   const { isLoading: assetsLoading, error: assetsError } = useGameAssets();
 
   // --- Use the new Hooks ---
-  const { isMuted, toggleMute } = useHostAudioManager({ selectedSoundId });
   const { style: finalBackgroundStyle, hasCustomBackground: hasFinalCustomBackground } = useGameViewBackground({
     selectedBackgroundId, // Pass the prop from HostPage
     currentBlock,
@@ -108,15 +111,6 @@ const HostViewComponent: React.FC<HostViewProps> = ({
         <div className="absolute inset-0 bg-black/40 z-0"></div>
       )}
 
-      {/* Mute Button */}
-      <Button
-        variant="ghost" size="icon" onClick={toggleMute}
-        className="absolute top-4 right-4 z-20 text-white bg-black/30 hover:bg-black/50"
-        title={isMuted ? "Unmute Lobby Music" : "Mute Lobby Music"}
-      >
-        {isMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
-      </Button>
-
       <main className="flex-grow flex flex-col justify-center items-stretch p-4 md:p-6 relative z-10 overflow-y-auto">
         {mainContent()}
       </main>
@@ -129,6 +123,8 @@ const HostViewComponent: React.FC<HostViewProps> = ({
         onSkip={onSkip}
         onNext={onNext}
         onSettingsClick={onSettingsClick}
+        isMuted={isMuted}
+        onToggleMute={onToggleMute}
         className="relative z-10"
       />
     </div>
