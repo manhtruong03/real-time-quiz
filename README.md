@@ -11,6 +11,8 @@ pnpm add @stomp/stompjs
 # or npm install @stomp/stompjs
 # or yarn add @stomp/stompjs
 
+pnpm add qrcode.react @types/qrcode.react
+
 pnpm install
 
 pnpm run dev
