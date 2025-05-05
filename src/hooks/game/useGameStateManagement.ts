@@ -4,6 +4,7 @@ import {
   LiveGameState,
   QuizStructureHost,
   LivePlayerState,
+  QuestionAnswerStats, // Import the stats type
 } from "@/src/lib/types";
 
 const initialGamePin = "PENDING_PIN"; // Use a distinct initial value
@@ -22,6 +23,7 @@ const createInitialGameState = (quizId: string | undefined): LiveGameState => ({
   sessionStartTime: Date.now(),
   allowLateJoin: true,
   powerUpsEnabled: false,
+  currentQuestionStats: null, // Initialize stats as null
 });
 
 export function useGameStateManagement(
@@ -75,6 +77,7 @@ export function useGameStateManagement(
           status: "LOBBY", // Ensure status is LOBBY on init
           currentQuestionIndex: -1, // Ensure index is reset
           players: {}, // Clear players on new session init
+          currentQuestionStats: null, // Reset stats on new session
         };
       });
       setTimerKey("lobby"); // Set timer key for lobby phase
@@ -103,33 +106,57 @@ export function useGameStateManagement(
         // console.log(`[GameStateHook] Setting state to QUESTION_SHOW for index ${index}`);
         return {
           ...prev,
-          status: "QUESTION_SHOW" as const,
+          status: "QUESTION_SHOW",
           currentQuestionIndex: index,
           currentQuestionStartTime: Date.now(), // Set start time immediately
-          // End time calculation might depend on formatted block, handle in coordinator? Or estimate here?
-          // Let's estimate here based on host data, coordinator can refine if needed
-          currentQuestionEndTime:
-            Date.now() + (initialQuizData.questions[index]?.time ?? 0) + 5000, // Add default getReady time estimate
+          currentQuestionEndTime: null, // Reset end time
+          currentQuestionStats: null, // <-- Reset stats when advancing
         };
       });
     },
     [initialQuizData]
   ); // Depends on initialQuizData to check index bounds
 
-  const showResults = useCallback(() => {
-    // console.log("[GameStateHook] Setting state to QUESTION_RESULT");
-    setLiveGameState((prev) => {
-      if (!prev || prev.status !== "QUESTION_SHOW") return prev; // Only transition from Q_SHOW
-      return {
-        ...prev,
-        status: "QUESTION_RESULT" as const,
-        currentQuestionEndTime: Date.now(), // Mark end time when results are shown
-      };
-    });
-  }, []);
+  // const showResults = useCallback(() => {
+  //   // console.log("[GameStateHook] Setting state to QUESTION_RESULT");
+  //   setLiveGameState((prev) => {
+  //     if (!prev || prev.status !== "QUESTION_SHOW") return prev; // Only transition from Q_SHOW
+  //     return {
+  //       ...prev,
+  //       status: "QUESTION_RESULT" as const,
+  //       currentQuestionEndTime: Date.now(), // Mark end time when results are shown
+  //     };
+  //   });
+  // }, []);
+  // Renamed from showResults and updated logic
+  const transitionToStatsView = useCallback(
+    (calculatedStats: QuestionAnswerStats | null) => {
+      console.log("[GameStateHook] Transitioning state to SHOWING_STATS");
+      setLiveGameState((prev) => {
+        // Only transition if we were showing the question or maybe get_ready
+        if (
+          !prev ||
+          (prev.status !== "QUESTION_SHOW" &&
+            prev.status !== "QUESTION_GET_READY")
+        ) {
+          console.warn(
+            `[GameStateHook] Attempted to transition to SHOWING_STATS from invalid state: ${prev?.status}`
+          );
+          return prev;
+        }
+        return {
+          ...prev,
+          status: "SHOWING_STATS", // <-- Set new status
+          currentQuestionEndTime: Date.now(), // Mark end time when stats are shown
+          currentQuestionStats: calculatedStats, // <-- Store calculated stats
+        };
+      });
+    },
+    [] // No dependency needed for setLiveGameState
+  );
 
   const showPodium = useCallback(() => {
-    // console.log("[GameStateHook] Setting state to PODIUM");
+    console.log("[GameStateHook] Setting state to PODIUM");
     setLiveGameState((prev) => {
       if (!prev) return null;
       return { ...prev, status: "PODIUM" as const };
@@ -137,7 +164,7 @@ export function useGameStateManagement(
   }, []);
 
   const endGame = useCallback(() => {
-    //  console.log("[GameStateHook] Setting state to ENDED");
+    console.log("[GameStateHook] Setting state to ENDED");
     setLiveGameState((prev) => {
       if (!prev) return null;
       return {
@@ -149,7 +176,7 @@ export function useGameStateManagement(
   }, []);
 
   const resetGameState = useCallback(() => {
-    //  console.log("[GameStateHook] Resetting state completely");
+    console.log("[GameStateHook] Resetting state completely");
     setLiveGameState(null);
     setTimerKey("initial");
   }, []);
@@ -171,7 +198,7 @@ export function useGameStateManagement(
     timerKey,
     initializeSession,
     advanceToQuestion,
-    showResults,
+    transitionToStatsView,
     showPodium,
     endGame,
     resetGameState,

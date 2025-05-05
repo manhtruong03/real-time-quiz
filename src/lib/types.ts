@@ -57,6 +57,7 @@ export * from "./types/quiz-structure";
 export * from "./types/assets"; // If index file is used
 
 // Add DTO export
+export * from "./types/stats";
 export * from "./dto/session-finalization.dto";
 
 // --- Remove the definitions that were moved ---

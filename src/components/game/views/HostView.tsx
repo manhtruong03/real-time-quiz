@@ -1,24 +1,30 @@
 // src/components/game/views/HostView.tsx
 "use client";
 
-import React, { memo, useMemo, useRef, useEffect, useState } from "react";
-// Import specific block types if needed
-import { GameBlock, isContentBlock } from "@/src/lib/types"; // Adjust path
+import React, { memo, useMemo, useEffect } from "react";
+// Import specific block types and state types
+import {
+  GameBlock,
+  isContentBlock,
+  LiveGameState, // Import LiveGameState
+  QuizStructureHost, // Import QuizStructureHost
+} from "@/src/lib/types";
 import FooterBar from "../status/FooterBar";
 import { cn } from "@/src/lib/utils";
-import { Volume2, VolumeX } from "lucide-react"; // Keep Volume icons
-import { useGameAssets } from "@/src/context/GameAssetsContext"; // Adjust path
+import { useGameAssets } from "@/src/context/GameAssetsContext";
 import { Button } from "@/src/components/ui/button";
-
-import { useGameViewBackground } from '@/src/hooks/game/useGameViewBackground';
-import { useHostAudioManager } from '@/src/hooks/game/useHostAudioManager';
-import { HostLoadingView } from '../host/views/HostLoadingView';
-import { HostContentBlockView } from '../host/views/HostContentBlockView';
-import { HostInteractiveQuestionView } from '../host/views/HostInteractiveQuestionView';
-// ---
+import { useGameViewBackground } from "@/src/hooks/game/useGameViewBackground";
+// Import the specific view components
+import { HostLoadingView } from "../host/views/HostLoadingView";
+import { HostContentBlockView } from "../host/views/HostContentBlockView";
+import { HostInteractiveQuestionView } from "../host/views/HostInteractiveQuestionView";
+import { HostAnswerStatsView } from "../host/views/HostAnswerStatsView"; // Import the stats view
 
 interface HostViewProps {
-  questionData: GameBlock | null; // This is the formatted block for players/display
+  // Replace questionData with liveGameState and quizData
+  liveGameState: LiveGameState | null;
+  quizData: QuizStructureHost | null; // Needed for HostAnswerStatsView
+  currentBlock: GameBlock | null; // The player-formatted block for display
   timerKey: string | number;
   currentAnswerCount: number;
   totalPlayers: number;
@@ -27,9 +33,9 @@ interface HostViewProps {
   onTimeUp?: () => void;
   onSkip?: () => void;
   onNext?: () => void;
-  isLoading?: boolean; // Keep isLoading prop
+  isLoading?: boolean; // For overall loading state if needed
   className?: string;
-  selectedSoundId: string | null;
+  selectedSoundId: string | null; // Keep sound/bg props
   selectedBackgroundId: string | null;
   onSettingsClick?: () => void;
   isMuted: boolean;
@@ -37,7 +43,9 @@ interface HostViewProps {
 }
 
 const HostViewComponent: React.FC<HostViewProps> = ({
-  questionData: currentBlock, // Rename internally for clarity
+  liveGameState,
+  quizData, // Receive quizData
+  currentBlock, // Use the passed formatted block
   timerKey,
   currentAnswerCount,
   totalPlayers,
@@ -46,7 +54,7 @@ const HostViewComponent: React.FC<HostViewProps> = ({
   onTimeUp,
   onSkip,
   onNext,
-  isLoading = false, // Default isLoading to false
+  isLoading = false,
   className,
   selectedSoundId,
   selectedBackgroundId,
@@ -54,70 +62,118 @@ const HostViewComponent: React.FC<HostViewProps> = ({
   isMuted,
   onToggleMute,
 }) => {
-  // --- Use Assets Context (might still be needed for error/loading checks) ---
   const { isLoading: assetsLoading, error: assetsError } = useGameAssets();
-
-  // --- Use the new Hooks ---
-  const { style: finalBackgroundStyle, hasCustomBackground: hasFinalCustomBackground } = useGameViewBackground({
-    selectedBackgroundId, // Pass the prop from HostPage
+  const {
+    style: finalBackgroundStyle,
+    hasCustomBackground: hasFinalCustomBackground,
+  } = useGameViewBackground({
+    selectedBackgroundId,
     currentBlock,
   });
 
-  // --- Define Classes ---
   const hostViewClasses = cn(
-    "min-h-screen h-screen flex flex-col text-foreground relative",
+    "min-h-screen h-screen flex flex-col text-foreground relative overflow-hidden", // Added overflow-hidden
     !hasFinalCustomBackground && "default-quiz-background",
     className
   );
 
+  // --- Internal Rendering Logic based on Game State ---
+  const mainContent = useMemo(() => {
+    const status = liveGameState?.status;
 
-  // --- Simplified mainContent Rendering Logic ---
-  const mainContent = () => {
-    if (isLoading || assetsLoading) { // Also check assets loading
-      return <HostLoadingView message={assetsLoading ? "Loading Assets..." : "Loading..."} />;
+    if (isLoading || assetsLoading) {
+      return (
+        <HostLoadingView
+          message={assetsLoading ? "Loading Assets..." : "Loading..."}
+        />
+      );
     }
     if (assetsError) {
-      return <HostLoadingView message={`Error loading assets: ${assetsError}`} /> // Show error
+      return (
+        <HostLoadingView message={`Error loading assets: ${assetsError}`} />
+      );
     }
-    if (!currentBlock && !isLoading) { // Check !isLoading here too
-      return <HostLoadingView message="Waiting for game..." />;
-    }
-    if (!currentBlock) { // Should be caught by isLoading or !currentBlock above, but safe check
-      return <HostLoadingView message="Loading..." />;
+    if (!liveGameState || !currentBlock) {
+      // Show loading or specific message if state/block isn't ready during an active game phase
+      if (status && status !== "LOBBY") {
+        return <HostLoadingView message="Loading question data..." />;
+      }
+      return <HostLoadingView message="Waiting..." />; // Fallback
     }
 
-    if (isContentBlock(currentBlock)) {
-      return <HostContentBlockView block={currentBlock} />;
-    } else {
-      return <HostInteractiveQuestionView
-        block={currentBlock}
-        timerKey={timerKey}
-        currentAnswerCount={currentAnswerCount}
-        totalPlayers={totalPlayers}
-        onTimeUp={onTimeUp}
-      />;
+    switch (status) {
+      case "QUESTION_GET_READY": // Combine with QUESTION_SHOW or add specific Get Ready overlay
+      case "QUESTION_SHOW":
+        if (isContentBlock(currentBlock)) {
+          return <HostContentBlockView block={currentBlock} />;
+        } else {
+          // Pass only necessary props to HostInteractiveQuestionView
+          return (
+            <HostInteractiveQuestionView
+              block={currentBlock} // Already checked it's not ContentBlock
+              timerKey={timerKey}
+              currentAnswerCount={currentAnswerCount}
+              totalPlayers={totalPlayers}
+              onTimeUp={onTimeUp}
+            />
+          );
+        }
+      case "SHOWING_STATS":
+        // Render the stats view
+        return (
+          <HostAnswerStatsView
+            currentBlock={currentBlock}
+            quizData={quizData} // Pass full quiz data
+            answerStats={liveGameState.currentQuestionStats} // Pass calculated stats
+          />
+        );
+      case "PODIUM":
+        return (
+          <div className="flex items-center justify-center h-full">
+            <p className="text-2xl">Podium Screen (TODO)</p>
+          </div>
+        );
+      case "ENDED":
+        return (
+          <div className="flex items-center justify-center h-full">
+            <p className="text-2xl">Game Ended Screen (TODO)</p>
+          </div>
+        );
+      // LOBBY is handled by HostPage directly
+      default:
+        console.warn("HostView encountered unexpected state:", status);
+        return <HostLoadingView message="Waiting for game state..." />;
     }
-  };
-  // --- End Simplified mainContent ---
+  }, [
+    liveGameState,
+    quizData,
+    currentBlock,
+    isLoading,
+    assetsLoading,
+    assetsError,
+    timerKey,
+    currentAnswerCount,
+    totalPlayers,
+    onTimeUp,
+  ]);
+  // --- End Internal Rendering Logic ---
 
-  // --- Main Return Structure (Largely unchanged) ---
   return (
-    // Use style and boolean from the hook
     <div className={hostViewClasses} style={finalBackgroundStyle}>
-      {/* Background layers - Use boolean from hook */}
       {!hasFinalCustomBackground && <div className="stars-layer"></div>}
-      {hasFinalCustomBackground && finalBackgroundStyle.backgroundColor === undefined && (
-        // Only add overlay if it's an image BG
+      {hasFinalCustomBackground && finalBackgroundStyle.backgroundImage && (
         <div className="absolute inset-0 bg-black/40 z-0"></div>
       )}
 
+      {/* Main area renders the selected view */}
       <main className="flex-grow flex flex-col justify-center items-stretch p-4 md:p-6 relative z-10 overflow-y-auto">
-        {mainContent()}
+        {mainContent}
       </main>
 
+      {/* Footer is always present in HostView */}
       <FooterBar
-        currentQuestionIndex={currentBlock?.gameBlockIndex ?? -1}
-        totalQuestions={currentBlock?.totalGameBlockCount ?? 0}
+        currentQuestionIndex={liveGameState?.currentQuestionIndex ?? -1}
+        totalQuestions={quizData?.questions?.length ?? 0} // Get total from quizData
         gamePin={gamePin}
         accessUrl={accessUrl}
         onSkip={onSkip}
@@ -125,7 +181,7 @@ const HostViewComponent: React.FC<HostViewProps> = ({
         onSettingsClick={onSettingsClick}
         isMuted={isMuted}
         onToggleMute={onToggleMute}
-        className="relative z-10"
+        className="relative z-10 flex-shrink-0" // Ensure footer doesn't grow
       />
     </div>
   );

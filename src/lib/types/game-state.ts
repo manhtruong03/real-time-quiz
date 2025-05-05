@@ -1,5 +1,6 @@
 // src/lib/types/game-state.ts
 import type { GameBlock, PointsData } from "./websocket-protocol";
+import type { QuestionAnswerStats } from "./stats";
 
 export interface PlayerAnswerRecord {
   questionIndex: number;
@@ -56,7 +57,8 @@ export interface LiveGameState {
     | "LOBBY"
     | "QUESTION_GET_READY"
     | "QUESTION_SHOW"
-    | "QUESTION_RESULT"
+    // | "QUESTION_RESULT" // This state might be replaced by SHOWING_STATS
+    | "SHOWING_STATS" // <-- NEW STATE
     | "PODIUM"
     | "ENDED";
 
@@ -69,4 +71,6 @@ export interface LiveGameState {
   allowLateJoin: boolean;
 
   powerUpsEnabled: boolean;
+
+  currentQuestionStats: QuestionAnswerStats | null;
 }
