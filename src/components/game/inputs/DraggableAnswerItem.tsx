@@ -4,32 +4,30 @@
 import React from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { GripVertical, Triangle, Diamond, Circle, Square } from 'lucide-react'; // Import shape icons
+import { GripVertical, Triangle, Diamond, Circle, Square } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
-// Remove Card imports
 
-// --- Button Mapping (copied/adapted from AnswerButton) ---
+// --- Button Mapping (remains the same) ---
 const playerButtonMapping = [
-  { Icon: Triangle, colorClasses: 'bg-red-500 hover:bg-red-600 border-red-700', iconColor: 'text-red-200' },
-  { Icon: Diamond, colorClasses: 'bg-blue-500 hover:bg-blue-600 border-blue-700', iconColor: 'text-blue-200' },
-  { Icon: Circle, colorClasses: 'bg-yellow-500 hover:bg-yellow-600 border-yellow-700', iconColor: 'text-yellow-200' },
-  { Icon: Square, colorClasses: 'bg-green-500 hover:bg-green-600 border-green-700', iconColor: 'text-green-200' },
+  { Icon: Triangle, colorClasses: 'bg-red-500 hover:bg-red-600 border-red-700', iconColor: 'text-red-200' }, // Index 0 = Red
+  { Icon: Diamond, colorClasses: 'bg-blue-500 hover:bg-blue-600 border-blue-700', iconColor: 'text-blue-200' }, // Index 1 = Blue
+  { Icon: Circle, colorClasses: 'bg-yellow-500 hover:bg-yellow-600 border-yellow-700', iconColor: 'text-yellow-200' }, // Index 2 = Yellow
+  { Icon: Square, colorClasses: 'bg-green-500 hover:bg-green-600 border-green-700', iconColor: 'text-green-200' }, // Index 3 = Green
 ];
-// --- End Button Mapping ---
 
 interface DraggableAnswerItemProps {
   id: string | number;
   content: string;
-  originalIndex: number; // Used for submission logic
-  indexInList: number; // <-- NEW PROP: Current index (0-3) in the displayed list for styling
+  originalIndex: number; // Original index from when the question was received
+  indexInList: number; // Current index in the displayed (potentially reordered) list
   isDisabled?: boolean;
 }
 
 const DraggableAnswerItem: React.FC<DraggableAnswerItemProps> = ({
   id,
   content,
-  originalIndex,
-  indexInList, // Use this for styling
+  originalIndex, // Use this for color/icon
+  indexInList, // Keep for potential other uses if needed, but not for primary styling
   isDisabled = false,
 }) => {
   const {
@@ -48,8 +46,10 @@ const DraggableAnswerItem: React.FC<DraggableAnswerItemProps> = ({
     opacity: isDragging ? 0.8 : 1,
   };
 
-  // Get color and icon based on current position in the list
-  const { Icon, colorClasses, iconColor } = playerButtonMapping[indexInList % playerButtonMapping.length] || playerButtonMapping[0];
+  // --- MODIFIED LINE: Use originalIndex for styling ---
+  // Get color and icon based on the ORIGINAL index, not the current list position
+  const { Icon, colorClasses, iconColor } = playerButtonMapping[originalIndex % playerButtonMapping.length] || playerButtonMapping[0];
+  // --- END MODIFICATION ---
 
   return (
     // Use a div with button-like styling instead of Card
@@ -59,7 +59,7 @@ const DraggableAnswerItem: React.FC<DraggableAnswerItemProps> = ({
       className={cn(
         // Base styles copied from AnswerButton
         "relative flex items-center justify-start text-left w-full h-auto min-h-[60px] p-3 border-b-4 shadow-md text-white font-bold text-base whitespace-normal break-words",
-        // Apply color based on indexInList
+        // Apply color based on originalIndex
         colorClasses,
         // Dragging state styles
         isDragging ? 'shadow-lg scale-105 ring-2 ring-white' : '',
@@ -88,6 +88,7 @@ const DraggableAnswerItem: React.FC<DraggableAnswerItemProps> = ({
           "flex-shrink-0 flex items-center justify-center w-8 h-8 mr-3 rounded bg-white/20"
         )}
       >
+        {/* Use the Icon derived from originalIndex */}
         <Icon className={cn("h-4 w-4", iconColor)} />
       </div>
 

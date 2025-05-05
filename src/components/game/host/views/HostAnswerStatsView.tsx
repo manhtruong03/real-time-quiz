@@ -23,6 +23,7 @@ import {
 } from "@/src/components/ui/dialog";
 import { Image as ImageIcon, X, CheckCircle, XCircle, Triangle, Diamond, Circle, Square } from 'lucide-react';
 import AnswerButton from '../../inputs/AnswerButton';
+import StaticAnswerItem from '../../inputs/StaticAnswerItem';
 import { AnswerStatsChart, ChartBarData } from '../../display/AnswerStatsChart';
 
 // --- Props Definition ---
@@ -154,24 +155,22 @@ export const HostAnswerStatsView: React.FC<HostAnswerStatsViewProps> = ({
                 <div
                     className={cn(
                         'flex-grow flex min-h-0 gap-4 md:gap-6',
-                        isJumble ? 'flex-row items-stretch' : 'flex-col items-center'
+                        // Apply row layout for jumble on stats view as well
+                        currentBlock.type === 'jumble' ? 'flex-row items-stretch' : 'flex-col items-center'
                     )}
                 >
-                    {/* Middle Area / Left Column (Chart + Media Button) */}
+                    {/* Middle Area / Left Column (Chart + Media Button) (unchanged) */}
                     <div
                         className={cn(
                             'flex flex-col items-center justify-center gap-3',
-                            isJumble ? 'flex-1 min-w-0 h-full' : 'flex-grow min-h-0 w-full max-w-3xl'
+                            currentBlock.type === 'jumble' ? 'flex-1 min-w-0 h-full' : 'flex-grow min-h-0 w-full max-w-3xl'
                         )}
                     >
-                        {/* Render the Chart with calculated data */}
                         <AnswerStatsChart
-                            statsData={chartData} // Use the processed chartData
+                            statsData={chartData}
                             questionType={currentBlock.type}
                             className="w-full h-full"
                         />
-
-                        {/* Show Media Button */}
                         {currentBlock.image && (
                             <DialogTrigger asChild>
                                 <Button variant="outline" size="sm" className="flex-shrink-0 mt-2">
@@ -186,8 +185,8 @@ export const HostAnswerStatsView: React.FC<HostAnswerStatsViewProps> = ({
                     <div
                         className={cn(
                             'flex flex-col',
-                            isJumble
-                                ? 'flex-1 min-w-0 h-full overflow-y-auto pt-1 pr-1'
+                            currentBlock.type === 'jumble'
+                                ? 'flex-1 min-w-0 h-full overflow-y-auto pt-1 pr-1 space-y-2 md:space-y-3' // Added space-y for static items
                                 : 'flex-shrink-0 w-full max-w-4xl mx-auto mt-auto'
                         )}
                     >
@@ -216,17 +215,22 @@ export const HostAnswerStatsView: React.FC<HostAnswerStatsViewProps> = ({
                                 })}
                             </div>
                         )}
-                        {/* Render JumbleInput via AnswerInputArea */}
-                        {isJumble && (
-                            <AnswerInputArea
-                                questionData={currentBlock}
-                                onAnswerSubmit={() => { }}
-                                isSubmitting={false}
-                                isInteractive={false}
-                                className="p-2 bg-transparent rounded-md"
-                            // Jumble buttons don't show individual stats/correctness
-                            />
+                        {/* --- NEW: Render Jumble Correct Order Statically --- */}
+                        {currentBlock.type === 'jumble' && hostQuestion?.choices && (
+                            // Use a simple div container for the static list
+                            <div className={cn("flex flex-col gap-2 md:gap-3", "p-1 bg-transparent rounded-md")}>
+                                {/* Map over the choices in the CORRECT order from hostQuestion */}
+                                {hostQuestion.choices.map((hostChoice, index) => (
+                                    <StaticAnswerItem
+                                        key={`correct-jumble-${index}`} // Use index from the map
+                                        content={hostChoice.answer || ''} // Get text from correct choice
+                                        originalIndex={index} // The index *is* the original index here
+                                        showCorrectIndicator={true} // Show checkmark
+                                    />
+                                ))}
+                            </div>
                         )}
+                        {/* --- END NEW Jumble Rendering --- */}
                         {/* --- UPDATED Open-Ended Display --- */}
                         {currentBlock.type === 'open_ended' && hostQuestion?.choices && hostQuestion.choices.length > 0 && (
                             <Card className="mt-4 bg-background/80 backdrop-blur-sm border-primary/50 shadow-md max-w-md w-full mx-auto">
