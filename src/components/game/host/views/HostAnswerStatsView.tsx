@@ -73,29 +73,35 @@ export const HostAnswerStatsView: React.FC<HostAnswerStatsViewProps> = ({
     };
 
     // --- Data Transformation for Chart (Uses real answerStats prop) ---
+    // --- Data Transformation for Chart (Uses real answerStats prop) ---
     const chartData = useMemo((): ChartBarData[] | null => {
-        // Guard clauses
+        // Guard clauses (unchanged)
         if (!currentBlock || !answerStats || !hostQuestion || currentBlock.type === 'content') {
-            // console.log("[ChartData] Returning null. Block:", !!currentBlock, "Stats:", !!answerStats, "HostQ:", !!hostQuestion);
             return null;
         }
-
 
         const colors = playerButtonMapping.map(b => b.colorHex);
         const icons = playerButtonMapping.map(b => b.Icon);
 
-        try { // Add try-catch for robustness during data transformation
-            if ((currentBlock.type === 'quiz' || currentBlock.type === 'survey') && currentBlock.choices) {
+        try {
+            if ((currentBlock.type === 'quiz' || currentBlock.type === 'survey') && currentBlock.choices && hostQuestion.choices) {
                 const indexedStats = answerStats as IndexedAnswerStats;
                 return currentBlock.choices.map((choice, index) => {
-                    const stats = indexedStats?.[index.toString()]; // Safely access stats
+                    const stats = indexedStats?.[index.toString()];
                     const count = stats?.count ?? 0;
                     const percentage = stats?.percentage ?? 0;
                     const choiceText = isImageChoice(choice) ? `Option ${index + 1}` : choice.answer;
+                    // --- ADD isCorrect ---
+                    const isCorrectForOption = hostQuestion.type === 'survey' ? null : (hostQuestion.choices[index]?.correct ?? false);
+                    // --- END ADD ---
                     return {
-                        label: String(count), value: count, percentage: percentage,
+                        label: String(count),
+                        value: count,
+                        percentage: percentage,
                         color: colors[index % colors.length] || '#8884d8',
-                        icon: icons[index % icons.length], tooltipLabel: choiceText ?? `Option ${index + 1}`
+                        // icon: icons[index % icons.length], // Can remove if replaced by correctness icon
+                        tooltipLabel: choiceText ?? `Option ${index + 1}`,
+                        isCorrect: isCorrectForOption, // <-- PASS isCorrect
                     };
                 });
             } else if (currentBlock.type === 'jumble') {
@@ -105,34 +111,75 @@ export const HostAnswerStatsView: React.FC<HostAnswerStatsViewProps> = ({
                 const correctPerc = jumbleStats.correct?.percentage ?? 0;
                 const incorrectPerc = jumbleStats.incorrect?.percentage ?? 0;
                 return [
-                    { label: String(correctCount), value: correctCount, percentage: correctPerc, color: '#22C55E', icon: CheckCircle, tooltipLabel: 'Correct' },
-                    { label: String(incorrectCount), value: incorrectCount, percentage: incorrectPerc, color: '#EF4444', icon: XCircle, tooltipLabel: 'Incorrect' },
+                    // --- ADD isCorrect ---
+                    { label: String(correctCount), value: correctCount, percentage: correctPerc, color: '#22C55E', icon: CheckCircle, tooltipLabel: 'Correct', isCorrect: true },
+                    { label: String(incorrectCount), value: incorrectCount, percentage: incorrectPerc, color: '#EF4444', icon: XCircle, tooltipLabel: 'Incorrect', isCorrect: false },
+                    // --- END ADD ---
                 ];
             } else if (currentBlock.type === 'open_ended' && hostQuestion.choices) {
                 const openEndedStats = answerStats as IndexedAnswerStats;
                 const bars: ChartBarData[] = [];
-
-                hostQuestion.choices.forEach((hChoice: ChoiceHost, index: number) => {
-                    const key = index.toString();
-                    const stats = openEndedStats?.[key];
-                    if (stats) {
-                        bars.push({ label: String(stats.count), value: stats.count, percentage: stats.percentage, color: colors[index % colors.length] || '#8884d8', tooltipLabel: `Correct: "${hChoice.answer}"` });
+                const correctChoiceIndices: Record<string, number> = {}; // Map correct text to original index
+                hostQuestion.choices.forEach((hChoice, index) => {
+                    if (hChoice.correct && hChoice.answer) {
+                        correctChoiceIndices[hChoice.answer.trim().toLowerCase()] = index;
                     }
                 });
 
+                // Process correct answers grouped by the definition in hostQuestion
+                hostQuestion.choices.forEach((hChoice: ChoiceHost, index: number) => {
+                    if (!hChoice.correct || !hChoice.answer) return; // Skip incorrect/empty definitions
+
+                    const key = index.toString(); // Key used in stats calculation
+                    const stats = openEndedStats?.[key];
+                    if (stats) {
+                        // --- ADD isCorrect ---
+                        bars.push({
+                            label: String(stats.count),
+                            value: stats.count,
+                            percentage: stats.percentage,
+                            color: colors[index % colors.length] || '#8884d8', // Use index for color consistency
+                            tooltipLabel: `Correct: "${hChoice.answer}"`,
+                            isCorrect: true // This bar represents a correct answer group
+                        });
+                        // --- END ADD ---
+                    } else {
+                        // Add bar with 0 count if defined but no one answered it
+                        bars.push({
+                            label: "0",
+                            value: 0,
+                            percentage: 0,
+                            color: colors[index % colors.length] || '#8884d8',
+                            tooltipLabel: `Correct: "${hChoice.answer}"`,
+                            isCorrect: true
+                        });
+                    }
+                });
+
+                // Process incorrect answers
                 const incorrectStats = openEndedStats?.['incorrect'];
-                if (incorrectStats) {
-                    bars.push({ label: String(incorrectStats.count), value: incorrectStats.count, percentage: incorrectStats.percentage, color: '#EF4444', icon: XCircle, tooltipLabel: 'Incorrect / Other' });
+                if (incorrectStats && incorrectStats.count > 0) { // Only add if there were incorrect answers
+                    // --- ADD isCorrect ---
+                    bars.push({
+                        label: String(incorrectStats.count),
+                        value: incorrectStats.count,
+                        percentage: incorrectStats.percentage,
+                        color: '#EF4444', // Use a distinct color for incorrect
+                        icon: XCircle,
+                        tooltipLabel: 'Incorrect / Other',
+                        isCorrect: false // This bar represents incorrect answers
+                    });
+                    // --- END ADD ---
                 }
-                return bars.length > 0 ? bars : null; // Return null if no bars generated
+                return bars.length > 0 ? bars : null;
             }
         } catch (error) {
             console.error("[ChartData] Error transforming stats data:", error, { answerStats, currentBlockType: currentBlock.type });
-            return null; // Return null on error
+            return null;
         }
 
-        return null; // Fallback for unhandled types
-    }, [currentBlock, answerStats, hostQuestion]); // Dependencies
+        return null;
+    }, [currentBlock, answerStats, hostQuestion]); // Dependencies (unchanged)
 
 
     return (

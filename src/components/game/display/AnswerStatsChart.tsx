@@ -7,15 +7,17 @@ import {
 } from 'recharts';
 import { GameBlock } from '@/src/lib/types';
 import { cn } from '@/src/lib/utils';
-import { Icon } from 'lucide-react';
+import { CheckCircle, XCircle, Minus } from 'lucide-react'; // Import icons
 
+// Updated Interface
 export interface ChartBarData {
-    label: string; // Count as a string
-    value: number; // Original count value (can be used by tooltip or logic)
-    percentage: number; // Percentage (0-100) - THIS WILL DRIVE BAR HEIGHT
+    label: string; // Count as string
+    value: number; // Original count value
+    percentage: number; // Percentage (0-100)
     color: string;
-    icon?: React.ElementType;
+    icon?: React.ElementType; // Can likely remove this now
     tooltipLabel?: string;
+    isCorrect?: boolean | null; // Added correctness flag
 }
 
 interface AnswerStatsChartProps {
@@ -23,6 +25,81 @@ interface AnswerStatsChartProps {
     questionType: GameBlock['type'] | null;
     className?: string;
 }
+
+// --- Custom Label Component for Bottom Section ---
+const CustomBottomLabel = (props: any) => {
+    const { x, y, width, height, index, data } = props;
+    const entry: ChartBarData | undefined = data?.[index];
+
+    if (!entry) {
+        return null;
+    }
+
+    const barCenterX = x + width / 2;
+    const iconSize = 20; // Icon height/width
+    const countFontSize = 20; // Approx height for calculation, adjust based on actual CSS
+    const verticalPadding = 4; // Padding above icon and below count
+    const spacing = 6; // Space between icon and count
+
+    const backgroundHeight = iconSize + spacing + countFontSize + (verticalPadding * 2);
+    const backgroundWidth = 36; // Fixed width for the background box
+
+    // Position the background box below the bar
+    const backgroundY = y + height + 8; // Start 8px below the bar
+
+    // Position icon centered horizontally, near the top of the background box
+    const iconY = backgroundY + verticalPadding + (iconSize / 2);
+
+    // Position count centered horizontally, below the icon
+    const countY = iconY + (iconSize / 2) + spacing + (countFontSize / 2);
+
+    let CorrectnessIcon = null;
+    let iconColor = 'text-muted-foreground';
+
+    if (entry.isCorrect === true) {
+        CorrectnessIcon = CheckCircle;
+        iconColor = 'text-green-300'; // Brighter green for visibility on dark bg
+    } else if (entry.isCorrect === false) {
+        CorrectnessIcon = XCircle;
+        iconColor = 'text-red-400'; // Brighter red
+    }
+
+    return (
+        <g transform={`translate(${barCenterX}, 0)`}>
+            {/* Background Rectangle */}
+            <rect
+                x={-(backgroundWidth / 2)} // Center the background
+                y={backgroundY}
+                width={backgroundWidth}
+                height={backgroundHeight}
+                rx={4} // Rounded corners
+                ry={4}
+                fill="hsl(var(--card) / 0.6)" // Semi-transparent card background
+                className="backdrop-blur-sm" // Optional blur
+            />
+
+            {/* Correctness Icon (now above count) */}
+            {CorrectnessIcon && (
+                <foreignObject x={-(iconSize / 2)} y={iconY - (iconSize / 2)} width={iconSize} height={iconSize} style={{ overflow: 'visible' }}>
+                    <CorrectnessIcon className={cn(`h-${iconSize / 4} w-${iconSize / 4}`, iconColor)} />
+                </foreignObject>
+            )}
+
+            {/* Count Label (Larger Font, below icon) */}
+            <text
+                x={0}
+                y={countY}
+                textAnchor="middle"
+                dominantBaseline="middle"
+                className="text-base font-bold fill-foreground" // Use text-base for larger size
+            >
+                {entry.label} {/* Display the count */}
+            </text>
+        </g>
+    );
+};
+// --- End Custom Label Component ---
+
 
 export const AnswerStatsChart: React.FC<AnswerStatsChartProps> = ({
     statsData,
@@ -37,87 +114,64 @@ export const AnswerStatsChart: React.FC<AnswerStatsChartProps> = ({
         );
     }
 
-    // --- FIX: Set Y-axis domain for percentage ---
-    const yDomainMax = 105; // Fixed domain for percentage (0-100 + 5 padding)
+    const yDomainMax = 105;
 
     return (
         <div className={cn("w-full h-full min-h-[150px] md:min-h-[200px]", className)}>
             <ResponsiveContainer width="100%" height="100%">
                 <BarChart
                     data={statsData}
-                    margin={{ top: 10, right: 5, left: 5, bottom: 40 }}
-                    barCategoryGap="20%"
+                    margin={{ top: 20, right: 5, left: 5, bottom: 30 }} // Increased bottom margin further
+                    barCategoryGap="25%"
                 >
-                    {/* --- FIX: Use fixed domain for percentage --- */}
-                    <YAxis
-                        hide={true}
-                        axisLine={false}
-                        tickLine={false}
-                        domain={[0, yDomainMax]} // Domain from 0% to 100% (+ padding)
-                    />
-                    <XAxis
-                        dataKey="index"
-                        axisLine={false}
-                        tickLine={false}
-                        tick={false}
-                    />
+                    <YAxis hide={true} domain={[0, yDomainMax]} />
+                    <XAxis dataKey="index" axisLine={false} tickLine={false} tick={false} />
                     <Tooltip
-                        cursor={{ fill: 'hsl(var(--muted) / 0.3)' }}
+                        cursor={false} // Keep hover effect disabled
                         content={({ active, payload }) => {
                             if (active && payload && payload.length) {
                                 const data: ChartBarData = payload[0].payload;
                                 const label = data.tooltipLabel || `Answer ${payload[0].payload.index + 1}`;
                                 return (
                                     <div className="rounded-md border bg-popover px-3 py-1.5 text-sm text-popover-foreground shadow-md">
-                                        {/* --- FIX: Show count clearly in tooltip --- */}
                                         <p className="font-medium">{label} ({data.percentage.toFixed(0)}%)</p>
                                         <p className="text-muted-foreground">{`${data.value} vote(s)`}</p>
-                                        {/* --- End FIX --- */}
+                                        {data.isCorrect === true && <p className="text-green-600">Correct</p>}
+                                        {data.isCorrect === false && <p className="text-red-600">Incorrect</p>}
                                     </div>
                                 );
                             }
                             return null;
                         }}
                     />
-                    {/* --- FIX: Use 'percentage' for dataKey to determine height --- */}
                     <Bar
-                        dataKey="percentage" // Bar height based on percentage
+                        dataKey="percentage"
                         radius={[4, 4, 0, 0]}
                         isAnimationActive={false}
-                        minPointSize={1} // Show a tiny stub even for 0%
+                        minPointSize={1} // Ensure even 0% bars have a small visual stub
                     >
                         {statsData.map((entry, index) => (
                             <Cell key={`cell-${index}`} fill={entry.color} />
                         ))}
-                        {/* Label below bar still shows the count (label property) */}
+
+                        {/* Percentage Label Inside Bar */}
                         <LabelList
-                            dataKey="label" // This should contain the COUNT string
-                            position="bottom"
-                            offset={8}
-                            fontSize={12}
-                            fontWeight="bold"
-                            fill="hsl(var(--foreground))"
+                            dataKey="percentage"
+                            position="center" // Center vertically
+                            // Remove angle prop to keep horizontal
+                            formatter={(value: number) => `${value.toFixed(0)}%`}
+                            className="fill-white text-xs md:text-sm font-semibold drop-shadow-sm pointer-events-none" // Added pointer-events-none
+                        // Conditionally render based on value to avoid 0% clutter if desired,
+                        // Or always render by removing the filter. Let's always render for consistency.
+                        // filter={(item: any) => item.value > 0} // Optional: hide 0% labels
                         />
-                        {/* Icon rendering (unchanged) */}
-                        {statsData.some(d => d.icon) && (
-                            <LabelList /* ... icon rendering logic ... */
-                                dataKey="icon"
-                                position="bottom"
-                                offset={22}
-                                content={(props: any) => { /* ... icon renderer ... */
-                                    const { x, y, width, height, index } = props;
-                                    const entry = statsData?.[index];
-                                    const IconComponent = entry?.icon;
-                                    if (IconComponent && entry.percentage > 0) { // Only show icon if percentage > 0
-                                        const iconX = x + width / 2;
-                                        const iconY = y + height + 15;
-                                        return (<g transform={`translate(${iconX},${iconY})`}> <foreignObject x={-8} y={-16} width={16} height={16} style={{ overflow: 'visible' }}> <IconComponent className="h-4 w-4" style={{ color: 'hsl(var(--foreground) / 0.8)' }} /> </foreignObject> </g>);
-                                    } return null;
-                                }}
-                            />
-                        )}
+
+                        {/* Custom Bottom Label (Icon + Count) */}
+                        <LabelList
+                            content={<CustomBottomLabel data={statsData} />}
+                            dataKey="label" // Still need a dataKey
+                        />
                     </Bar>
-                    {/* --- End FIX --- */}
                 </BarChart>
             </ResponsiveContainer>
         </div>
