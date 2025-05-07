@@ -1,16 +1,20 @@
 // src/lib/game-utils/quiz-creation.ts
-import type { QuestionHost, ChoiceHost } from "@/src/lib/types/quiz-structure"; // Import types
+import type { QuestionHost, ChoiceHost } from "@/src/lib/types/quiz-structure";
+import type {
+  VideoSchemaType,
+  MediaItemSchemaType,
+} from "@/src/lib/schemas/quiz-question.schema";
 
 // Default time limit for new questions (in milliseconds)
-const DEFAULT_TIME_LIMIT = 20000; // 20 seconds
+export const DEFAULT_TIME_LIMIT = 20000; // <<< Add export
 
 // Helper to create a default choice structure
-const createDefaultChoice = (
+export const createDefaultChoice = (
   isCorrect: boolean = false,
   answer: string = ""
 ): ChoiceHost => ({
   answer: answer,
-  image: undefined, // Default to no image
+  image: undefined,
   correct: isCorrect,
 });
 
@@ -22,9 +26,12 @@ const createDefaultChoice = (
  */
 export const createDefaultQuestion = (
   type: QuestionHost["type"],
-  isTrueFalse: boolean = false // Flag for True/False variant
+  isTrueFalse: boolean = false
 ): QuestionHost => {
-  const baseQuestion: Partial<QuestionHost> = {
+  const baseQuestion: Partial<QuestionHost> & {
+    video?: VideoSchemaType | null;
+    media?: MediaItemSchemaType[];
+  } = {
     type: type,
     question: "",
     time: DEFAULT_TIME_LIMIT,
@@ -32,13 +39,14 @@ export const createDefaultQuestion = (
     choices: [],
     image: null,
     video: {
-      // Default empty video object
+      // Default video object structure
+      id: undefined,
       startTime: 0.0,
       endTime: 0.0,
       service: "youtube",
       fullUrl: "",
     },
-    media: [],
+    media: [], // Default to empty array
   };
 
   switch (type) {
@@ -46,14 +54,13 @@ export const createDefaultQuestion = (
       if (isTrueFalse) {
         baseQuestion.question = "True or False: ...";
         baseQuestion.choices = [
-          createDefaultChoice(true, "True"), // Default True as correct
+          createDefaultChoice(true, "True"),
           createDefaultChoice(false, "False"),
         ];
       } else {
-        // Default 4-choice quiz
         baseQuestion.question = "Enter your question...";
         baseQuestion.choices = [
-          createDefaultChoice(true), // Default first option as correct
+          createDefaultChoice(true),
           createDefaultChoice(false),
           createDefaultChoice(false),
           createDefaultChoice(false),
@@ -63,20 +70,18 @@ export const createDefaultQuestion = (
 
     case "jumble":
       baseQuestion.question = "Place these items in the correct order...";
-      // Jumble requires 4 options, all marked 'correct' structurally
       baseQuestion.choices = [
         createDefaultChoice(true, "Option 1"),
         createDefaultChoice(true, "Option 2"),
         createDefaultChoice(true, "Option 3"),
         createDefaultChoice(true, "Option 4"),
       ];
-      baseQuestion.time = 60000; // Jumble often has longer time
+      baseQuestion.time = 60000;
       break;
 
     case "survey":
       baseQuestion.question = "Ask an opinion question...";
-      baseQuestion.pointsMultiplier = 0; // Surveys don't award points
-      // Default 2 options, all 'correct' structurally
+      baseQuestion.pointsMultiplier = 0;
       baseQuestion.choices = [
         createDefaultChoice(true, "Option A"),
         createDefaultChoice(true, "Option B"),
@@ -85,17 +90,16 @@ export const createDefaultQuestion = (
 
     case "open_ended":
       baseQuestion.question = "Ask an open-ended question...";
-      // Defines the acceptable answer(s)
       baseQuestion.choices = [createDefaultChoice(true, "Correct Answer")];
       break;
 
     case "content":
       baseQuestion.title = "Informational Slide Title";
       baseQuestion.description = "Add your content here...";
-      baseQuestion.time = 0; // Content slides are not timed
+      baseQuestion.time = 0;
       baseQuestion.pointsMultiplier = 0;
-      baseQuestion.choices = []; // No choices for content
-      delete baseQuestion.question; // Remove question field for content
+      baseQuestion.choices = [];
+      delete baseQuestion.question;
       break;
 
     default:
@@ -108,6 +112,5 @@ export const createDefaultQuestion = (
       break;
   }
 
-  // Ensure all required fields for QuestionHost are present
-  return baseQuestion as QuestionHost; // Cast needed as we build it partially
+  return baseQuestion as QuestionHost;
 };

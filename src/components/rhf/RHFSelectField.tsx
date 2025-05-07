@@ -27,7 +27,7 @@ interface SelectOption {
 
 // Extend props from the Radix primitive Root component
 interface RHFSelectFieldProps<TFieldValues extends FieldValues>
-    extends Omit<React.ComponentPropsWithoutRef<typeof SelectPrimitive.Root>, 'name' | 'defaultValue' | 'onValueChange' | 'value'> { // <-- EXTEND PRIMITIVE PROPS
+    extends Omit<React.ComponentPropsWithoutRef<typeof SelectPrimitive.Root>, 'name' | 'defaultValue' | 'onValueChange' | 'value'> {
     name: Path<TFieldValues>;
     label?: string;
     description?: string;
@@ -36,6 +36,7 @@ interface RHFSelectFieldProps<TFieldValues extends FieldValues>
     className?: string;
     triggerClassName?: string;
     contentClassName?: string;
+    onValueChange?: (value: string) => void; // <-- Add this prop
 }
 
 // ... rest of the component remains the same ...
@@ -49,10 +50,10 @@ export function RHFSelectField<TFieldValues extends FieldValues>({
     className,
     triggerClassName,
     contentClassName,
+    onValueChange: customOnValueChange, // <-- Destructure the custom handler
     ...props // Pass remaining SelectPrimitive.Root props
 }: RHFSelectFieldProps<TFieldValues>) {
     const { control } = useFormContext<TFieldValues>();
-
     return (
         <FormField
             control={control}
@@ -60,10 +61,11 @@ export function RHFSelectField<TFieldValues extends FieldValues>({
             render={({ field }) => (
                 <FormItem className={className}>
                     {label && <FormLabel>{label}</FormLabel>}
-                    {/* Pass RHF's value and onValueChange to the Select component */}
+                    {/* Pass RHF's value and handle change */}
                     <Select
-                        onValueChange={field.onChange}
-                        value={field.value} // Control the value via RHF
+                        // Use custom handler if provided, otherwise use RHF's default
+                        onValueChange={customOnValueChange ? customOnValueChange : field.onChange}
+                        value={String(field.value ?? "")} // Ensure value is a string for Select
                         {...props} // Pass other SelectPrimitive.Root props
                     >
                         <FormControl>

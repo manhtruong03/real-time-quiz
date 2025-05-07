@@ -10,11 +10,17 @@ import {
 import type {
   QuestionHost,
   QuizStructureHost,
+  ChoiceHost, // Import ChoiceHost if needed for types
 } from "@/src/lib/types/quiz-structure";
+import type {
+  QuestionFormContextType,
+  ChoiceHostSchemaType,
+} from "@/src/lib/schemas/quiz-question.schema"; // Import types
 import { createDefaultQuestion } from "@/src/lib/game-utils/quiz-creation";
 
-// Helper to create a default QuizStructureHost shell
+// ... createDefaultQuizShell ...
 const createDefaultQuizShell = (): QuizStructureHost => ({
+  // ... (contents remain the same) ...
   uuid: "", // Will be generated on actual save
   creator: "", // Will be set based on logged-in user
   creator_username: "",
@@ -40,24 +46,14 @@ const createDefaultQuizShell = (): QuizStructureHost => ({
   modified: Date.now(),
 });
 
-/**
- * Custom hook to manage the state and logic for the quiz creation/editing process.
- * Encapsulates the main quiz data (`QuizStructureHost`), the currently selected slide/view index,
- * and the React Hook Form instance for quiz metadata settings.
- */
 export function useQuizCreator() {
-  // State for the entire quiz structure being built/edited
   const [quizData, setQuizData] = useState<QuizStructureHost>(
     createDefaultQuizShell()
   );
-  // State to track the currently selected slide index (-1 represents the main Quiz Settings view)
   const [currentSlideIndex, setCurrentSlideIndex] = useState<number>(-1);
-
-  // --- RHF Form Management specifically for Quiz Metadata ---
   const formMethods = useForm<QuizMetadataSchemaType>({
     resolver: zodResolver(QuizMetadataSchema),
     defaultValues: {
-      // Initial form values match the default shell
       title: quizData.title,
       description: quizData.description,
       visibility:
@@ -67,14 +63,11 @@ export function useQuizCreator() {
       tags: [],
       cover: quizData.cover || null,
     },
-    mode: "onChange", // Validate on change for better UX
+    mode: "onChange",
   });
   const { reset: resetForm, handleSubmit: handleMetadataSubmit } = formMethods;
 
-  // Effect to sync the RHF form if the core quizData metadata changes externally
-  // (e.g., loading an existing quiz, although load logic isn't implemented yet)
   useEffect(() => {
-    console.log("useQuizCreator: Syncing form with quizData metadata");
     resetForm({
       title: quizData.title,
       description: quizData.description,
@@ -82,7 +75,7 @@ export function useQuizCreator() {
         quizData.visibility === 1
           ? QuizVisibilityEnum.enum.PUBLIC
           : QuizVisibilityEnum.enum.PRIVATE,
-      // tags: quizData.tags || [], // Assuming tags are part of quizData eventually
+      // tags: quizData.tags || [], // Uncomment if/when tags are added to QuizStructureHost
       cover: quizData.cover || null,
     });
   }, [
@@ -90,75 +83,107 @@ export function useQuizCreator() {
     quizData.description,
     quizData.visibility,
     quizData.cover,
+    // quizData.tags, // Uncomment if/when tags are added
     resetForm,
   ]);
 
-  /**
-   * Updates the core quizData state with validated data from the metadata form.
-   * Intended to be called by the form's onSubmit handler.
-   */
   const updateQuizMetadata = useCallback(
     (data: QuizMetadataSchemaType) => {
-      console.log(
-        "useQuizCreator: Updating Quiz Metadata state from form data"
-      );
       setQuizData((prevData) => ({
         ...prevData,
         title: data.title,
         description: data.description ?? "",
         visibility: data.visibility === QuizVisibilityEnum.enum.PUBLIC ? 1 : 0,
-        // tags: data.tags, // Update tags if/when managed here
+        // tags: data.tags, // Uncomment if/when tags are added
         cover: data.cover ?? "",
-        modified: Date.now(), // Update modification timestamp
+        modified: Date.now(),
       }));
     },
     [setQuizData]
-  ); // Dependency: only the state setter function reference
+  );
 
-  /**
-   * Adds a new default question of the specified type to the quiz.
-   * Updates the quizData state and sets the currentSlideIndex to the new question.
-   * @param type - The type of question/slide to add.
-   * @param isTrueFalse - Flag to specify the True/False quiz variant.
-   * @returns The index of the newly added question.
-   */
   const addQuestion = useCallback(
     (type: QuestionHost["type"], isTrueFalse: boolean = false): number => {
-      console.log(
-        `useQuizCreator: Adding question - Type: ${type}, Is T/F: ${isTrueFalse}`
-      );
       const newQuestion = createDefaultQuestion(type, isTrueFalse);
       let newIndex = 0;
       setQuizData((prevData) => {
-        // Ensure questions array exists
         const currentQuestions = prevData.questions || [];
         const updatedQuestions = [...currentQuestions, newQuestion];
-        newIndex = updatedQuestions.length - 1; // Index of the newly added question
-        console.log(
-          `useQuizCreator: New question created at index ${newIndex}`,
-          newQuestion
-        );
+        newIndex = updatedQuestions.length - 1;
         return {
           ...prevData,
           questions: updatedQuestions,
           modified: Date.now(),
         };
       });
-      // Set index *after* state update is queued
-      setCurrentSlideIndex(newIndex);
       return newIndex;
     },
-    [setQuizData, setCurrentSlideIndex]
-  ); // Dependencies
+    [setQuizData]
+  );
 
-  /**
-   * Resets the entire creator state back to a default empty quiz shell.
-   */
+  const updateQuestion = useCallback(
+    // --- FIX: Expect QuestionHost | null, NOT QuestionFormContextType ---
+    (index: number, finalQuestionData: QuestionHost | null) => {
+      console.log(
+        `[useQuizCreator updateQuestion] Called for index ${index}. Incoming type: ${
+          finalQuestionData?.type ?? "null"
+        }` // Log incoming
+      );
+
+      if (finalQuestionData === null) {
+        console.error(
+          `[useQuizCreator] Update failed for index ${index} because incoming data was null (likely validation error upstream).`
+        );
+        // Optionally show a toast or handle error state
+        return; // Stop update
+      }
+
+      // --- REMOVE Transformation logic - Data is already transformed ---
+      // No need to check correctChoiceIndex or map choices here.
+      // The data received *is* the final QuestionHost structure.
+      // -------------------------------------------------------------
+
+      setQuizData((prevData) => {
+        if (index < 0 || index >= prevData.questions.length) {
+          console.error(
+            `[useQuizCreator] Invalid index ${index} for updateQuestion.`
+          );
+          return prevData;
+        }
+        // Directly use the finalQuestionData received
+        console.log(
+          `[useQuizCreator] Successfully updating question at index ${index} with:`,
+          JSON.stringify(finalQuestionData, null, 2)
+        );
+        const updatedQuestions = [...prevData.questions];
+        // *** ADD Log BEFORE update ***
+        console.log(
+          `[useQuizCreator updateQuestion] Question type at index ${index} BEFORE update: ${updatedQuestions[index]?.type}`
+        );
+        updatedQuestions[index] = finalQuestionData;
+        // *** ADD Log AFTER update ***
+        console.log(
+          `[useQuizCreator updateQuestion] Question type at index ${index} AFTER update: ${updatedQuestions[index]?.type}`
+        );
+
+        console.log(
+          `[useQuizCreator updateQuestion] Setting new state. Modified timestamp: ${Date.now()}`
+        ); // Log state set time
+
+        return {
+          ...prevData,
+          questions: updatedQuestions,
+          modified: Date.now(),
+        };
+      });
+    },
+    [setQuizData]
+  );
+
   const resetCreatorState = useCallback(() => {
     const initialQuiz = createDefaultQuizShell();
     setQuizData(initialQuiz);
     resetForm({
-      // Reset form to match the new shell
       title: initialQuiz.title,
       description: initialQuiz.description,
       visibility:
@@ -168,20 +193,20 @@ export function useQuizCreator() {
       tags: [],
       cover: initialQuiz.cover || null,
     });
-    setCurrentSlideIndex(-1); // Go back to settings view index
+    setCurrentSlideIndex(-1);
     console.log("useQuizCreator: State reset to default shell");
   }, [setQuizData, setCurrentSlideIndex, resetForm]);
 
-  // Return state and functions to be used by the page component
   return {
     quizData,
-    setQuizData, // Expose setter for potential advanced use cases (like loading)
+    setQuizData,
     currentSlideIndex,
     setCurrentSlideIndex,
-    formMethods, // RHF methods for the metadata form
-    updateQuizMetadata, // Function to apply form data to state
-    handleMetadataSubmit, // RHF's submit handler trigger
+    formMethods,
+    updateQuizMetadata,
+    handleMetadataSubmit,
     addQuestion,
+    updateQuestion,
     resetCreatorState,
   };
 }
