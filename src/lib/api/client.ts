@@ -12,7 +12,7 @@ const getTokenFromStorage = (): string | null => {
 };
 
 // Interface for fetch options, extending standard RequestInit
-interface FetchOptions extends RequestInit {
+export interface FetchOptions extends RequestInit {
   includeAuthHeader?: boolean; // Flag to control adding the auth header
 }
 

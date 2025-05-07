@@ -7,11 +7,11 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/src/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/src/components/ui/card';
 import { Badge } from '@/src/components/ui/badge';
-import { Brain, User, BarChart3, Trophy, Calendar, ArrowUpRight, LogOut } from 'lucide-react';
+import { Brain, User, BarChart3, Trophy, Calendar, ArrowUpRight, LogOut, List } from 'lucide-react'; // Added List icon
 import { useAuth } from '@/src/context/AuthContext';
 import type { User as AuthUser } from '@/src/lib/types/auth';
-import ProtectedRoute from '@/src/components/auth/ProtectedRoute'; // Import ProtectedRoute
-import { Loader2 } from 'lucide-react'; // Import Loader
+import ProtectedRoute from '@/src/components/auth/ProtectedRoute';
+import { Loader2 } from 'lucide-react';
 
 // Mock data (keep if needed for placeholders)
 const mockProfileStats = {
@@ -21,30 +21,24 @@ const mockProfileStats = {
   // ... other stats
 };
 
-
 export default function ProfilePage() {
   const router = useRouter();
-  // Removed direct redirect logic from here, ProtectedRoute handles it
-  const { user, logout } = useAuth(); // Removed isAuthenticated, isLoading checks here
+  const { user, logout } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
-
 
   const handleLogout = () => {
     logout();
     router.push('/login'); // Redirect after logout
   };
 
-  // --- Wrap the main content with ProtectedRoute ---
   return (
     <ProtectedRoute>
-      {/* Loading/Guard moved to ProtectedRoute, user is guaranteed here */}
       {/* Render the actual profile content only if authenticated */}
       {user && (
         <div className="min-h-screen flex flex-col">
-          {/* Header (will be refactored) */}
+          {/* Header (Ideally use AppHeader component here) */}
           <header className="border-b">
             <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-              {/* ... (header content - temporary, will be replaced) ... */}
               <div className="flex items-center gap-2">
                 <Link href="/">
                   <div className="flex items-center gap-2">
@@ -53,12 +47,7 @@ export default function ProfilePage() {
                   </div>
                 </Link>
               </div>
-              <nav className="hidden md:flex gap-6">
-                <Link href="/" className="font-medium hover:text-primary">Home</Link>
-                <Link href="/categories" className="font-medium hover:text-primary">Categories</Link>
-                <Link href="/leaderboard" className="font-medium hover:text-primary">Leaderboard</Link>
-                <Link href="/profile" className="font-medium text-primary">Profile</Link>
-              </nav>
+              {/* ... (Rest of header, ideally replaced by AppHeader) ... */}
               <div className="flex gap-2">
                 <Button variant="outline" onClick={handleLogout}>
                   <LogOut className="mr-2 h-4 w-4" /> Logout
@@ -73,22 +62,28 @@ export default function ProfilePage() {
               <div className="max-w-5xl mx-auto">
                 {/* Profile Header */}
                 <div className="bg-card rounded-xl p-6 shadow-sm mb-8 flex flex-col md:flex-row gap-6 items-center md:items-start">
-                  {/* ... (profile header content using 'user') ... */}
                   <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center">
                     <User className="h-12 w-12 text-primary" />
                   </div>
                   <div className="flex-1 text-center md:text-left">
                     <h1 className="text-3xl font-bold">{user.username}</h1>
                     <p className="text-muted-foreground">{user.email}</p>
-                    {/* Use mockProfileStats for placeholders */}
                     <div className="flex flex-wrap gap-2 mt-4 justify-center md:justify-start">
                       <Badge variant="outline" className="gap-1"><Calendar className="h-3 w-3" /> Joined {mockProfileStats.joinDate}</Badge>
                       {/* Add other stats */}
                     </div>
                   </div>
-                  <div className="flex gap-2">
-                    <Link href="/creator/quiz"><Button>My Quizzes</Button></Link>
-                    <Link href="/quiz/create"><Button>Create Quiz</Button></Link>
+                  <div className="flex flex-col sm:flex-row gap-2 mt-4 md:mt-0">
+                    {/* === ADDED My Quizzes Button === */}
+                    <Link href="/my-quizzes" passHref>
+                      <Button variant="outline">
+                        <List className="mr-2 h-4 w-4" /> My Quizzes
+                      </Button>
+                    </Link>
+                    {/* ============================== */}
+                    <Link href="/creator/quiz" passHref>
+                      <Button><Trophy className="mr-2 h-4 w-4" /> Create Quiz</Button>
+                    </Link>
                   </div>
                 </div>
 

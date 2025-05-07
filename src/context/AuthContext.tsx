@@ -11,11 +11,10 @@ import React, {
 } from 'react';
 import { Loader2 } from 'lucide-react';
 import type { User, JwtResponse } from '@/src/lib/types/auth';
-import { jwtDecode } from 'jwt-decode'; // Import jwt-decode
+import { jwtDecode } from 'jwt-decode';
 
 const AUTH_TOKEN_KEY = 'authToken';
 
-// Define a type for the decoded token payload (adjust based on your backend's JWT structure)
 interface DecodedToken {
     sub: string; // Subject (usually username)
     userId: string; // Custom claim for user ID (adjust name if different)
@@ -23,7 +22,6 @@ interface DecodedToken {
     roles: string[]; // Custom claim for roles
     iat: number; // Issued at (timestamp)
     exp: number; // Expiration time (timestamp)
-    // Add other relevant claims your backend includes
 }
 
 
@@ -31,13 +29,13 @@ interface AuthState {
     isAuthenticated: boolean;
     user: User | null;
     token: string | null;
-    isLoading: boolean;
+    isLoading: boolean; // Keep isLoading state
 }
 
 interface AuthContextValue extends AuthState {
     login: (jwtResponse: JwtResponse) => void;
     logout: () => void;
-    getToken: () => string | null; // Add function to get token
+    getToken: () => string | null;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -47,89 +45,77 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         isAuthenticated: false,
         user: null,
         token: null,
-        isLoading: true,
+        isLoading: true, // Start as loading
     });
 
-    // --- Function to validate token and set state ---
-    // NOTE: This is currently a basic client-side check (expiry)
-    // A real implementation should ideally call a backend /validate endpoint
     const initializeAuthFromToken = useCallback((storedToken: string) => {
+        // ... (validation logic remains the same)
         try {
             const decoded = jwtDecode<DecodedToken>(storedToken);
-            const currentTime = Date.now() / 1000; // Current time in seconds
+            const currentTime = Date.now() / 1000;
 
-            // Check expiry
             if (decoded.exp < currentTime) {
                 console.log('[AuthContext] Token expired. Logging out.');
                 localStorage.removeItem(AUTH_TOKEN_KEY);
                 setAuthState({ isAuthenticated: false, user: null, token: null, isLoading: false });
-                return; // Stop initialization
+                return;
             }
 
-            // Token exists and is not expired (client-side check)
             console.log('[AuthContext] Token found and appears valid (client-side check). Setting auth state.');
             const userData: User = {
-                id: decoded.userId, // Make sure 'userId' matches the claim name in your JWT
-                username: decoded.sub, // Assuming 'sub' claim is username
-                email: decoded.email, // Make sure 'email' matches the claim name
-                roles: decoded.roles || [], // Make sure 'roles' matches the claim name
+                id: decoded.userId,
+                username: decoded.sub,
+                email: decoded.email,
+                roles: decoded.roles || [],
             };
-
             setAuthState({
                 isAuthenticated: true,
                 user: userData,
                 token: storedToken,
-                isLoading: false,
+                isLoading: false, // Finish loading
             });
-
-            // TODO (Optional but Recommended): Make an API call here to '/api/auth/validate' or '/api/users/me'
-            // using the storedToken to *truly* validate the session with the backend and get fresh user data.
-            // If the API call fails (e.g., 401), call logout().
-
         } catch (error) {
             console.error('[AuthContext] Error decoding token or invalid token:', error);
-            localStorage.removeItem(AUTH_TOKEN_KEY); // Remove invalid token
-            setAuthState({ isAuthenticated: false, user: null, token: null, isLoading: false });
+            localStorage.removeItem(AUTH_TOKEN_KEY);
+            setAuthState({ isAuthenticated: false, user: null, token: null, isLoading: false }); // Finish loading
         }
-    }, []); // No dependencies needed here
+    }, []);
 
 
-    // Load token from localStorage on initial mount
     useEffect(() => {
         console.log('[AuthContext] Initializing Auth Provider...');
-        setAuthState(prev => ({ ...prev, isLoading: true })); // Ensure loading is true initially
+        // No need to set isLoading: true here again, default state handles it.
         try {
             const storedToken = localStorage.getItem(AUTH_TOKEN_KEY);
             if (storedToken) {
-                initializeAuthFromToken(storedToken); // Validate and set state
+                initializeAuthFromToken(storedToken);
             } else {
                 console.log('[AuthContext] No token found in storage.');
-                setAuthState({ isAuthenticated: false, user: null, token: null, isLoading: false }); // Finish loading
+                setAuthState(prev => ({ ...prev, isLoading: false })); // Finish loading if no token
             }
         } catch (error) {
             console.error("[AuthContext] Error reading from localStorage:", error);
-            setAuthState({ isAuthenticated: false, user: null, token: null, isLoading: false });
+            setAuthState(prev => ({ ...prev, isLoading: false })); // Finish loading on error
         }
-    }, [initializeAuthFromToken]); // Add dependency
-
+    }, [initializeAuthFromToken]);
 
     const login = useCallback((jwtResponse: JwtResponse) => {
+        // ... (login logic remains the same)
         console.log('[AuthContext] Login executing...');
         const token = jwtResponse.token;
-
         try {
             localStorage.setItem(AUTH_TOKEN_KEY, token);
             console.log('[AuthContext] Token stored in localStorage.');
-            initializeAuthFromToken(token); // Validate and set state immediately after login
+            initializeAuthFromToken(token); // Validate and set state immediately
         } catch (error) {
             console.error("[AuthContext] Failed to store token in localStorage:", error);
-            // Update state to reflect login failure?
             setAuthState({ isAuthenticated: false, user: null, token: null, isLoading: false });
         }
-    }, [initializeAuthFromToken]); // Depend on initializer
+    }, [initializeAuthFromToken]);
 
 
     const logout = useCallback(() => {
+        // ... (logout logic remains the same)
         console.log('[AuthContext] Logout executing...');
         try {
             localStorage.removeItem(AUTH_TOKEN_KEY);
@@ -141,13 +127,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             isAuthenticated: false,
             user: null,
             token: null,
-            isLoading: false,
+            isLoading: false, // Finish loading on logout
         });
-        // Consider redirecting here or letting ProtectedRoute handle it
-        // window.location.href = '/login'; // Or useRouter if available
     }, []);
 
-    // Function to easily retrieve the current token (needed for API calls)
     const getToken = useCallback(() => {
         return authState.token;
     }, [authState.token]);
@@ -156,20 +139,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         ...authState,
         login,
         logout,
-        getToken, // Expose getToken
+        getToken,
     };
 
-    // Prevent rendering children until initial loading is complete
-    if (authState.isLoading && typeof window !== 'undefined') {
-        return (
-            <div className="flex items-center justify-center min-h-screen">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                <span className="ml-2">Initializing App...</span>
-            </div>
-        ); // Or a proper loading component
-    }
-
+    // --- REMOVED CONDITIONAL LOADING RETURN ---
+    // Always render the provider and let consumers handle loading state
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+    // --- END REMOVAL ---
 };
 
 export const useAuth = (): AuthContextValue => {

@@ -66,15 +66,15 @@ export const PlayerGameScreen: React.FC<PlayerGameScreenProps> = ({
 
             // --- End pass new props ---
             />
-            {process.env.NODE_ENV === 'development' && handleSimulatedMessage && (
-
-                <DevMockControls
-                    simulateReceiveMessage={handleSimulatedMessage}
-                    loadMockBlock={() => { /* Host responsibility */ }}
-                    setMockResult={() => { /* Host responsibility */ }}
-
-                />
-            )}
+            {process.env.NODE_ENV === 'development' && handleSimulatedMessage && false
+                && (
+                    <DevMockControls
+                        simulateReceiveMessage={handleSimulatedMessage}
+                        loadMockBlock={() => { /* Host responsibility */ }}
+                        setMockResult={() => { /* Host responsibility */ }}
+                    />
+                )
+            }
         </>
     );
 
