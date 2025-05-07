@@ -140,7 +140,7 @@ export const QuestionConfigurationSidebar: React.FC<QuestionConfigurationSidebar
                 )}
 
                 {/* Answer Options */}
-                {watchedType === 'quiz' && !isLikelyTrueFalse && (
+                {/* {watchedType === 'quiz' && !isLikelyTrueFalse && (
                     <div>
                         <RHFSelectField<any>
                             name="answerOptionsConfig"
@@ -151,7 +151,7 @@ export const QuestionConfigurationSidebar: React.FC<QuestionConfigurationSidebar
                         />
                         <p className="text-xs text-muted-foreground mt-1 italic">(Multi-select coming soon)</p>
                     </div>
-                )}
+                )} */}
 
                 {/* Slide Actions */}
                 <div className="mt-auto border-t pt-4">

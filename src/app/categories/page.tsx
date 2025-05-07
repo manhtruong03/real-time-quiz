@@ -3,6 +3,7 @@ import { Button } from "@/src/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/src/components/ui/card"
 import { Badge } from "@/src/components/ui/badge"
 import { Brain, Code, Globe, Atom, Music, Film, BookOpen, Dumbbell } from "lucide-react"
+import { AppHeader } from "@/src/components/layout/AppHeader";
 
 const categories = [
   {
@@ -82,69 +83,25 @@ const categories = [
 export default function CategoriesPage() {
   return (
     <div className="min-h-screen flex flex-col">
-      <header className="border-b">
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <Link href="/">
-              <div className="flex items-center gap-2">
-                <Brain className="h-8 w-8 text-primary" />
-                <h1 className="text-2xl font-bold">VUI QUIZ</h1>
-              </div>
-            </Link>
-          </div>
-          <nav className="hidden md:flex gap-6">
-            <Link href="/" className="font-medium hover:text-primary">
-              Home
-            </Link>
-            <Link href="/categories" className="font-medium text-primary">
-              Categories
-            </Link>
-            <Link href="/leaderboard" className="font-medium hover:text-primary">
-              Leaderboard
-            </Link>
-            <Link href="/profile" className="font-medium hover:text-primary">
-              Profile
-            </Link>
-          </nav>
-          <div className="flex gap-2">
-            <Link href="/login">
-              <Button variant="outline">Login</Button>
-            </Link>
-            <Link href="/signup">
-              <Button>Sign Up</Button>
-            </Link>
-          </div>
-        </div>
-      </header>
+      {/* === Use AppHeader === */}
+      <AppHeader currentPage="categories" />
+      {/* ===================== */}
 
       <main className="flex-1 py-12">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
             <h1 className="text-4xl font-bold mb-4">Quiz Categories</h1>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Choose from a variety of categories to test your knowledge and challenge yourself with AI-generated
-              questions
+              Choose from a variety of categories to test your knowledge and challenge yourself {/* ... */}
             </p>
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {categories.map((category) => (
               <Card key={category.id} className="overflow-hidden hover:shadow-md transition-shadow">
-                <CardHeader className={`${category.color}`}>
-                  <div className="flex justify-between items-start">
-                    <category.icon className={`h-8 w-8 ${category.iconColor}`} />
-                    <Badge variant="secondary">{category.questionCount}+ Questions</Badge>
-                  </div>
-                  <CardTitle className="mt-4">{category.name}</CardTitle>
-                  <CardDescription className="text-foreground/70">{category.description}</CardDescription>
-                </CardHeader>
-                <CardContent className="pt-6">
-                  <div className="flex flex-wrap gap-2">
-                    <Badge variant="outline">Easy</Badge>
-                    <Badge variant="outline">Medium</Badge>
-                    <Badge variant="outline">Hard</Badge>
-                  </div>
-                </CardContent>
+                {/* ... card content ... */}
+                <CardHeader className={`${category.color}`}> {/* ... */} </CardHeader>
+                <CardContent className="pt-6"> {/* ... */} </CardContent>
                 <CardFooter>
                   <Link href={`/quiz/new?category=${category.id}`} className="w-full">
                     <Button className="w-full">Start Quiz</Button>
@@ -156,17 +113,17 @@ export default function CategoriesPage() {
         </div>
       </main>
 
+      {/* Footer */}
       <footer className="bg-muted/30 border-t py-8">
+        {/* ... rest of footer ... */}
         <div className="container mx-auto px-4 text-center">
           <div className="flex items-center justify-center gap-2 mb-4">
             <Brain className="h-6 w-6 text-primary" />
             <span className="text-xl font-bold">VUI QUIZ</span>
           </div>
-          <p className="text-muted-foreground text-sm">
-            &copy; {new Date().getFullYear()} VUI QUIZ. All rights reserved.
-          </p>
+          <p className="text-muted-foreground text-sm"> &copy; {new Date().getFullYear()} VUI QUIZ. All rights reserved. </p>
         </div>
       </footer>
     </div>
-  )
+  );
 }

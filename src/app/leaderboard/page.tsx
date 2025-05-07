@@ -2,6 +2,7 @@ import Link from "next/link"
 import { Button } from "@/src/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui/card"
 import { Brain, Trophy, Medal, Award } from "lucide-react"
+import { AppHeader } from "@/src/components/layout/AppHeader";
 
 // Mock data for leaderboard
 const leaderboardData = [
@@ -28,40 +29,9 @@ const categoryLeaders = [
 export default function LeaderboardPage() {
   return (
     <div className="min-h-screen flex flex-col">
-      <header className="border-b">
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <Link href="/">
-              <div className="flex items-center gap-2">
-                <Brain className="h-8 w-8 text-primary" />
-                <h1 className="text-2xl font-bold">VUI QUIZ</h1>
-              </div>
-            </Link>
-          </div>
-          <nav className="hidden md:flex gap-6">
-            <Link href="/" className="font-medium hover:text-primary">
-              Home
-            </Link>
-            <Link href="/categories" className="font-medium hover:text-primary">
-              Categories
-            </Link>
-            <Link href="/leaderboard" className="font-medium text-primary">
-              Leaderboard
-            </Link>
-            <Link href="/profile" className="font-medium hover:text-primary">
-              Profile
-            </Link>
-          </nav>
-          <div className="flex gap-2">
-            <Link href="/login">
-              <Button variant="outline">Login</Button>
-            </Link>
-            <Link href="/signup">
-              <Button>Sign Up</Button>
-            </Link>
-          </div>
-        </div>
-      </header>
+      {/* === Use AppHeader === */}
+      <AppHeader currentPage="leaderboard" />
+      {/* ===================== */}
 
       <main className="flex-1 py-12">
         <div className="container mx-auto px-4">
@@ -202,9 +172,7 @@ export default function LeaderboardPage() {
             <Brain className="h-6 w-6 text-primary" />
             <span className="text-xl font-bold">VUI QUIZ</span>
           </div>
-          <p className="text-muted-foreground text-sm">
-            &copy; {new Date().getFullYear()} VUI QUIZ. All rights reserved.
-          </p>
+          <p className="text-muted-foreground text-sm"> &copy; {new Date().getFullYear()} VUI QUIZ. All rights reserved. </p>
         </div>
       </footer>
     </div>

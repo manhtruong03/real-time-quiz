@@ -26,7 +26,7 @@ CREATE TABLE "user_account" (
     "account_password" VARCHAR(30) NOT NULL,
     -- Nên lưu trữ dưới dạng hash
     "role" VARCHAR(50) NOT NULL DEFAULT 'USER',
-    -- Ví dụ: 'USER', 'ADMIN', 'TEACHER', 'STUDENT'
+    -- Ví dụ: 'ADMIN', 'TEACHER', 'STUDENT'
     "storage_used" BIGINT NOT NULL DEFAULT 0,
     -- Tổng dung lượng đã sử dụng (bytes)
     "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),

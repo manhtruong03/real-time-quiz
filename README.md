@@ -15,6 +15,10 @@ pnpm add @stomp/stompjs
 
 pnpm add qrcode.react @types/qrcode.react
 
+pnpm add jwt-decode
+# or npm install jwt-decode
+# or yarn add jwt-decode
+
 pnpm install
 
 pnpm run dev
