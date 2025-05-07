@@ -111,8 +111,14 @@ export function transformQuestionDataForType(
       newFormData.question = newFormData.question || "Quiz Question...";
       if (newFormData.choices.length < 2) {
         newFormData.choices = [
-          createDefaultChoice(true, newFormData.choices[0]?.answer || ""),
-          createDefaultChoice(false, newFormData.choices[1]?.answer || ""),
+          createDefaultChoice(
+            true,
+            newFormData.choices[0]?.answer || "Answer 1"
+          ),
+          createDefaultChoice(
+            false,
+            newFormData.choices[1]?.answer || "Answer 2"
+          ),
         ];
         // Add more if needed to reach a certain default (e.g., 2 or 4)
         while (newFormData.choices.length < 2)

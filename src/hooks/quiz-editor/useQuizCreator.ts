@@ -10,17 +10,15 @@ import {
 import type {
   QuestionHost,
   QuizStructureHost,
-  ChoiceHost, // Import ChoiceHost if needed for types
+  ChoiceHost,
 } from "@/src/lib/types/quiz-structure";
 import type {
   QuestionFormContextType,
   ChoiceHostSchemaType,
-} from "@/src/lib/schemas/quiz-question.schema"; // Import types
+} from "@/src/lib/schemas/quiz-question.schema";
 import { createDefaultQuestion } from "@/src/lib/game-utils/quiz-creation";
 
-// ... createDefaultQuizShell ...
 const createDefaultQuizShell = (): QuizStructureHost => ({
-  // ... (contents remain the same) ...
   uuid: "", // Will be generated on actual save
   creator: "", // Will be set based on logged-in user
   creator_username: "",
@@ -50,7 +48,8 @@ export function useQuizCreator() {
   const [quizData, setQuizData] = useState<QuizStructureHost>(
     createDefaultQuizShell()
   );
-  const [currentSlideIndex, setCurrentSlideIndex] = useState<number>(-1);
+  const [currentSlideIndex, setCurrentSlideIndex] = useState<number>(-1); // -1 means settings or no slide selected
+
   const formMethods = useForm<QuizMetadataSchemaType>({
     resolver: zodResolver(QuizMetadataSchema),
     defaultValues: {
@@ -60,11 +59,12 @@ export function useQuizCreator() {
         quizData.visibility === 1
           ? QuizVisibilityEnum.enum.PUBLIC
           : QuizVisibilityEnum.enum.PRIVATE,
-      tags: [],
+      tags: [], // quizData.tags || [], // Assuming tags might be added to QuizStructureHost later
       cover: quizData.cover || null,
     },
-    mode: "onChange",
+    mode: "onChange", // Or "onBlur"
   });
+
   const { reset: resetForm, handleSubmit: handleMetadataSubmit } = formMethods;
 
   useEffect(() => {
@@ -75,7 +75,7 @@ export function useQuizCreator() {
         quizData.visibility === 1
           ? QuizVisibilityEnum.enum.PUBLIC
           : QuizVisibilityEnum.enum.PRIVATE,
-      // tags: quizData.tags || [], // Uncomment if/when tags are added to QuizStructureHost
+      tags: (quizData as any).tags || [], // Assuming tags might be added later
       cover: quizData.cover || null,
     });
   }, [
@@ -83,7 +83,7 @@ export function useQuizCreator() {
     quizData.description,
     quizData.visibility,
     quizData.cover,
-    // quizData.tags, // Uncomment if/when tags are added
+    // (quizData as any).tags,
     resetForm,
   ]);
 
@@ -94,7 +94,7 @@ export function useQuizCreator() {
         title: data.title,
         description: data.description ?? "",
         visibility: data.visibility === QuizVisibilityEnum.enum.PUBLIC ? 1 : 0,
-        // tags: data.tags, // Uncomment if/when tags are added
+        tags: data.tags,
         cover: data.cover ?? "",
         modified: Date.now(),
       }));
@@ -116,33 +116,24 @@ export function useQuizCreator() {
           modified: Date.now(),
         };
       });
-      return newIndex;
+      return newIndex; // Return the index of the newly added question
     },
     [setQuizData]
   );
 
   const updateQuestion = useCallback(
-    // --- FIX: Expect QuestionHost | null, NOT QuestionFormContextType ---
     (index: number, finalQuestionData: QuestionHost | null) => {
       console.log(
         `[useQuizCreator updateQuestion] Called for index ${index}. Incoming type: ${
           finalQuestionData?.type ?? "null"
-        }` // Log incoming
+        }`
       );
-
       if (finalQuestionData === null) {
         console.error(
-          `[useQuizCreator] Update failed for index ${index} because incoming data was null (likely validation error upstream).`
+          `[useQuizCreator] Update failed for index ${index} because incoming data was null.`
         );
-        // Optionally show a toast or handle error state
-        return; // Stop update
+        return;
       }
-
-      // --- REMOVE Transformation logic - Data is already transformed ---
-      // No need to check correctChoiceIndex or map choices here.
-      // The data received *is* the final QuestionHost structure.
-      // -------------------------------------------------------------
-
       setQuizData((prevData) => {
         if (index < 0 || index >= prevData.questions.length) {
           console.error(
@@ -150,26 +141,11 @@ export function useQuizCreator() {
           );
           return prevData;
         }
-        // Directly use the finalQuestionData received
         console.log(
-          `[useQuizCreator] Successfully updating question at index ${index} with:`,
-          JSON.stringify(finalQuestionData, null, 2)
+          `[useQuizCreator] Successfully updating question at index ${index}`
         );
         const updatedQuestions = [...prevData.questions];
-        // *** ADD Log BEFORE update ***
-        console.log(
-          `[useQuizCreator updateQuestion] Question type at index ${index} BEFORE update: ${updatedQuestions[index]?.type}`
-        );
         updatedQuestions[index] = finalQuestionData;
-        // *** ADD Log AFTER update ***
-        console.log(
-          `[useQuizCreator updateQuestion] Question type at index ${index} AFTER update: ${updatedQuestions[index]?.type}`
-        );
-
-        console.log(
-          `[useQuizCreator updateQuestion] Setting new state. Modified timestamp: ${Date.now()}`
-        ); // Log state set time
-
         return {
           ...prevData,
           questions: updatedQuestions,
@@ -179,6 +155,113 @@ export function useQuizCreator() {
     },
     [setQuizData]
   );
+
+  const deleteQuestion = useCallback(
+    // ... (same as before, ensure setCurrentSlideIndex is called correctly)
+    (indexToDelete: number) => {
+      console.log(
+        `[useQuizCreator] Attempting to delete question at index: ${indexToDelete}`
+      );
+      let newCurrentSlideIndexValue = currentSlideIndex;
+
+      setQuizData((prevData) => {
+        if (indexToDelete < 0 || indexToDelete >= prevData.questions.length) {
+          console.warn(
+            `[useQuizCreator] Invalid index ${indexToDelete} for deletion. No changes made.`
+          );
+          newCurrentSlideIndexValue = prevData.questions.length > 0 ? 0 : -1; // Fallback if index was bad
+          return prevData;
+        }
+
+        const updatedQuestions = prevData.questions.filter(
+          (_, index) => index !== indexToDelete
+        );
+
+        if (updatedQuestions.length === 0) {
+          newCurrentSlideIndexValue = -1;
+        } else if (indexToDelete < currentSlideIndex) {
+          newCurrentSlideIndexValue = currentSlideIndex - 1;
+        } else if (indexToDelete === currentSlideIndex) {
+          newCurrentSlideIndexValue = Math.min(
+            indexToDelete,
+            updatedQuestions.length - 1
+          );
+          if (newCurrentSlideIndexValue < 0 && updatedQuestions.length > 0)
+            newCurrentSlideIndexValue = 0;
+          else if (updatedQuestions.length === 0)
+            newCurrentSlideIndexValue = -1;
+        } else {
+          newCurrentSlideIndexValue = currentSlideIndex;
+        }
+        console.log(
+          `[useQuizCreator internal] Intended new currentSlideIndex after deletion: ${newCurrentSlideIndexValue}`
+        );
+        return {
+          ...prevData,
+          questions: updatedQuestions,
+          modified: Date.now(),
+        };
+      });
+      setCurrentSlideIndex(newCurrentSlideIndexValue);
+    },
+    [setQuizData, currentSlideIndex, setCurrentSlideIndex]
+  );
+
+  // --- Phase Dup1: Add duplicateQuestion function ---
+  const duplicateQuestion = useCallback(
+    (indexToDuplicate: number): number => {
+      console.log(
+        `[useQuizCreator] Attempting to duplicate question at index: ${indexToDuplicate}`
+      );
+      let newSlideIndex = -1;
+
+      setQuizData((prevData) => {
+        if (
+          indexToDuplicate < 0 ||
+          indexToDuplicate >= prevData.questions.length
+        ) {
+          console.warn(
+            `[useQuizCreator] Invalid index ${indexToDuplicate} for duplication. No changes made.`
+          );
+          return prevData;
+        }
+
+        const originalQuestion = prevData.questions[indexToDuplicate];
+        // Deep copy the question object
+        // For plain JSON-like data, JSON.parse(JSON.stringify()) is a common way.
+        // If QuestionHost contained Dates, Functions, or undefined values that need preservation,
+        // a more robust deep cloning method would be needed. For now, this should suffice.
+        const duplicatedQuestion = JSON.parse(
+          JSON.stringify(originalQuestion)
+        ) as QuestionHost;
+
+        // Optional: Modify any properties of the duplicatedQuestion if needed,
+        // e.g., if questions had unique IDs, generate a new one here.
+        // For now, it's a true structural copy.
+
+        const updatedQuestions = [...prevData.questions];
+        const insertionPoint = indexToDuplicate + 1;
+        updatedQuestions.splice(insertionPoint, 0, duplicatedQuestion);
+
+        newSlideIndex = insertionPoint; // The index of the new duplicated slide
+
+        console.log(
+          `[useQuizCreator] Duplicated question inserted at index: ${newSlideIndex}`
+        );
+        return {
+          ...prevData,
+          questions: updatedQuestions,
+          modified: Date.now(),
+        };
+      });
+
+      // Set the current slide index to the newly duplicated slide
+      setCurrentSlideIndex(newSlideIndex);
+      return newSlideIndex; // Return the index for the calling component
+    },
+    [setQuizData, setCurrentSlideIndex]
+  );
+  // --- End Phase Dup1 ---
 
   const resetCreatorState = useCallback(() => {
     const initialQuiz = createDefaultQuizShell();
@@ -199,14 +282,16 @@ export function useQuizCreator() {
 
   return {
     quizData,
-    setQuizData,
+    setQuizData, // Keep exposing this for direct manipulation if absolutely needed
     currentSlideIndex,
     setCurrentSlideIndex,
     formMethods,
     updateQuizMetadata,
-    handleMetadataSubmit,
+    handleMetadataSubmit, // RHF's handleSubmit wrapped
     addQuestion,
     updateQuestion,
+    deleteQuestion, // Expose the new function
+    duplicateQuestion,
     resetCreatorState,
   };
 }

@@ -58,6 +58,8 @@ interface QuestionEditorViewProps {
         index: number,
         updatedQuestion: QuestionHost | null
     ) => void;
+    onConfirmDeleteSlide: () => void;
+    onConfirmDuplicateSlide: () => void;
     triggerSaveRef?: React.MutableRefObject<(() => Promise<boolean>) | null>;
     className?: string;
 }
@@ -161,6 +163,8 @@ export const QuestionEditorView: React.FC<QuestionEditorViewProps> = ({
     currentSlideIndex,
     onSlideSelect,
     onQuestionChange,
+    onConfirmDeleteSlide,
+    onConfirmDuplicateSlide,
     triggerSaveRef,
     className,
 }) => {
@@ -572,6 +576,8 @@ export const QuestionEditorView: React.FC<QuestionEditorViewProps> = ({
                 <div className="w-72 flex-shrink-0 border-l bg-background overflow-y-auto p-4">
                     <QuestionConfigurationSidebar
                         key={`config-${currentSlideIndex}-${watchedType}`}
+                        onConfirmDelete={onConfirmDeleteSlide}
+                        onConfirmDuplicate={onConfirmDuplicateSlide}
                     />
                 </div>
             </div>
