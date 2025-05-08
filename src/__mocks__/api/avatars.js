@@ -40,6 +40,26 @@ const mockAvatars = [
         updated_at: new Date('2024-02-03T12:00:00Z').toISOString(),
         deleted_at: null,
     },
+    {
+        avatar_id: 'avatar-dog-2-uuid-5m4n',
+        name: 'Happy Dog',
+        description: 'A smiling golden retriever.',
+        image_file_path: 'https://cdn.quiz.com/avatar/cache/3d621a14236d3691ce06d03b3abee8e26bf0d616.svg',
+        is_active: true,
+        created_at: new Date('2024-02-03T12:00:00Z').toISOString(),
+        updated_at: new Date('2024-02-03T12:00:00Z').toISOString(),
+        deleted_at: null,
+    },
+    {
+        avatar_id: 'avatar-dog-2-uuid-5m4n',
+        name: 'Avatar 04',
+        description: 'A smiling golden retriever.',
+        image_file_path: 'https://cdn.quiz.com/avatar/cache/addb79d8a2fa77284ecef5f44915c94f680a50e6.svg',
+        is_active: true,
+        created_at: new Date('2024-02-03T12:00:00Z').toISOString(),
+        updated_at: new Date('2024-02-03T12:00:00Z').toISOString(),
+        deleted_at: null,
+    },
     // Add more mock avatars
 ];
 
