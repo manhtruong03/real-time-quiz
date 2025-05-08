@@ -49,6 +49,12 @@ export interface LivePlayerState {
   totalReactionTimeMs: number;
 }
 
+// Define the structure for the snapshot
+export interface PlayerScoreRankSnapshot {
+  score: number;
+  rank: number;
+}
+
 export interface LiveGameState {
   gamePin: string;
   quizId: string;
@@ -73,4 +79,10 @@ export interface LiveGameState {
   powerUpsEnabled: boolean;
 
   currentQuestionStats: QuestionAnswerStats | null;
+
+  /** Stores a snapshot of player scores and ranks just BEFORE the results of the last question were finalized. Used for scoreboard animations. */
+  previousPlayerStateForScoreboard: Record<
+    string,
+    PlayerScoreRankSnapshot
+  > | null;
 }

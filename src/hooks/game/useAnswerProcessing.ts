@@ -23,6 +23,7 @@ import {
   applyPointsMultiplier,
   checkAnswerCorrectness,
 } from "@/src/lib/game-utils/quiz-scoring";
+import { calculateUpdatedRankings } from "@/src/lib/game-utils/quiz-ranking";
 import { getCurrentHostQuestion } from "@/src/lib/game-utils/question-formatter";
 
 // --- NEW: Statistics Calculation Function ---
@@ -137,12 +138,12 @@ export function useAnswerProcessing(
   setLiveGameState: React.Dispatch<React.SetStateAction<LiveGameState | null>>
 ) {
   const processPlayerAnswer = useCallback(
-    // ... (existing processPlayerAnswer logic remains unchanged) ...
     (
       playerId: string,
       submittedPayload: PlayerAnswerPayload,
-      answerTimestamp: number | undefined
+      answerTimestamp: number | undefined // Timestamp from WS message or Date.now()
     ) => {
+      // Use timestamp from message or generate host-side timestamp
       const timestamp = answerTimestamp || Date.now();
 
       setLiveGameState((prev) => {
@@ -164,56 +165,45 @@ export function useAnswerProcessing(
           hostQuestion.type === "content" ||
           submittedPayload.questionIndex !== prev.currentQuestionIndex
         ) {
-          // console.log(`[AnswerProcHook] Answer rejected inside setter - Invalid state, hostQuestion, or index.`);
-          return prev;
+          console.log(
+            `[AnswerProcHook] Answer rejected for player ${playerId} - Invalid state (${prev.status}), missing host question, content block, or mismatched index (${submittedPayload.questionIndex} vs ${prev.currentQuestionIndex}).`
+          );
+          return prev; // Ignore answer if game state is wrong or question doesn't match
         }
 
         const currentPlayerState = prev.players[playerId];
+        // Check if player exists and hasn't already answered this question
         if (
           !currentPlayerState ||
           currentPlayerState.answers.some(
             (a) => a.questionIndex === prev.currentQuestionIndex
           )
         ) {
-          // console.log(`[AnswerProcHook] Answer rejected inside setter - Duplicate or invalid player: ${playerId}`);
-          return prev;
+          console.log(
+            `[AnswerProcHook] Answer rejected for player ${playerId} - Duplicate or invalid player.`
+          );
+          return prev; // Ignore answer if player doesn't exist or already answered
         }
 
+        // --- Start Score Calculation ---
         const isCorrect = checkAnswerCorrectness(
           hostQuestion,
           submittedPayload
         );
         let basePoints = 0;
         let finalPointsEarned = 0;
-        let currentStatus: PlayerAnswerRecord["status"] = "SUBMITTED";
-        let pointsDataResult: PointsData | null = null;
-        let playerChoice: PlayerAnswerRecord["choice"] = null;
-        let playerText: PlayerAnswerRecord["text"] = null;
+        let currentStatus: PlayerAnswerRecord["status"] = "SUBMITTED"; // Default status
+
+        // Calculate reaction time
         const reactionTimeMs = prev.currentQuestionStartTime
-          ? timestamp - prev.currentQuestionStartTime
-          : hostQuestion.time ?? 0;
+          ? Math.max(0, timestamp - prev.currentQuestionStartTime) // Ensure non-negative
+          : hostQuestion.time ?? 0; // Fallback if start time is missing
 
-        switch (submittedPayload.type) {
-          case "quiz":
-          case "survey":
-            playerChoice = submittedPayload.choice;
-            // Set text based on chosen option for quiz/survey for easier display later
-            playerText =
-              hostQuestion.choices[playerChoice as number]?.answer ?? null;
-            if (hostQuestion.type === "survey") currentStatus = "SUBMITTED"; // Surveys are just submitted
-            break;
-          case "jumble":
-            playerChoice = submittedPayload.choice;
-            // Construct text representation of player's jumble order? Optional.
-            break;
-          case "open_ended":
-            playerText = submittedPayload.text;
-            playerChoice = null; // No single 'choice' index
-            break;
-        }
-
+        // *** CORRECTED CONDITION ***
+        // We already know hostQuestion.type is NOT 'content' due to the earlier guard clause.
+        // We only need to check if it's NOT 'survey' to apply scoring.
         if (hostQuestion.type !== "survey") {
-          // Scoring only applies to non-survey
+          // Scoring applies to 'quiz', 'jumble', 'open_ended'
           if (isCorrect) {
             currentStatus = "CORRECT";
             basePoints = calculateBasePoints(
@@ -224,32 +214,62 @@ export function useAnswerProcessing(
               basePoints,
               hostQuestion.pointsMultiplier
             );
+            console.log(
+              `[AnswerProcHook] Correct Answer | Player: ${playerId}, QIdx: ${prev.currentQuestionIndex}, ReactTime: ${reactionTimeMs}ms, BasePts: ${basePoints}, FinalPts: ${finalPointsEarned}`
+            );
           } else {
             currentStatus = "WRONG";
             finalPointsEarned = 0;
             basePoints = 0;
+            console.log(
+              `[AnswerProcHook] Incorrect Answer | Player: ${playerId}, QIdx: ${prev.currentQuestionIndex}`
+            );
           }
-
-          pointsDataResult = {
-            totalPointsWithBonuses: finalPointsEarned, // Simplification: Assume no streak bonus calculation here yet
-            questionPoints: finalPointsEarned,
-            answerStreakPoints: {
-              streakLevel: isCorrect ? currentPlayerState.currentStreak + 1 : 0,
-              previousStreakLevel: currentPlayerState.currentStreak,
-            },
-            lastGameBlockIndex: prev.currentQuestionIndex,
-          };
         } else {
-          // Ensure pointsDataResult is null for surveys or provide a zeroed-out version if needed downstream
-          pointsDataResult = {
-            totalPointsWithBonuses: 0,
-            questionPoints: 0,
-            answerStreakPoints: {
-              streakLevel: currentPlayerState.currentStreak,
-              previousStreakLevel: currentPlayerState.currentStreak,
-            }, // Streak unchanged
-            lastGameBlockIndex: prev.currentQuestionIndex,
-          };
+          // This block now ONLY handles 'survey' type
+          currentStatus = "SUBMITTED";
+          finalPointsEarned = 0;
+          basePoints = 0;
+          console.log(
+            `[AnswerProcHook] Survey Answer | Player: ${playerId}, QIdx: ${prev.currentQuestionIndex}`
+          );
+        }
+        // --- End Score Calculation ---
+
+        // --- Prepare PointsData ---
+        // (Streak logic remains, but score calculation now uses finalPointsEarned)
+        const currentStreak = currentPlayerState.currentStreak ?? 0;
+        const newStreak =
+          isCorrect && hostQuestion.type !== "survey" ? currentStreak + 1 : 0;
+        const pointsDataResult: PointsData = {
+          totalPointsWithBonuses: finalPointsEarned, // For Stage 1, bonus = 0
+          questionPoints: finalPointsEarned, // Points for this question
+          answerStreakPoints: {
+            streakLevel: newStreak,
+            previousStreakLevel: currentStreak,
+          },
+          lastGameBlockIndex: prev.currentQuestionIndex,
+        };
+        // --- End Prepare PointsData ---
+
+        // --- Prepare Answer Record ---
+        let playerChoice: PlayerAnswerRecord["choice"] = null;
+        let playerText: PlayerAnswerRecord["text"] = null;
+        switch (submittedPayload.type) {
+          case "quiz":
+          case "survey":
+            playerChoice = submittedPayload.choice;
+            playerText =
+              hostQuestion.choices[playerChoice as number]?.answer ?? null;
+            break;
+          case "jumble":
+            playerChoice = submittedPayload.choice;
+            // Text could be constructed here if needed, e.g., pipe-separated
+            break;
+          case "open_ended":
+            playerText = submittedPayload.text;
+            playerChoice = null;
+            break;
         }
 
         const newAnswerRecord: PlayerAnswerRecord = {
@@ -259,23 +279,20 @@ export function useAnswerProcessing(
           text: playerText,
           reactionTimeMs: reactionTimeMs,
           answerTimestamp: timestamp,
-          isCorrect: hostQuestion.type === "survey" ? false : isCorrect, // Surveys are never 'correct'
+          isCorrect: hostQuestion.type === "survey" ? false : isCorrect,
           status: currentStatus,
-          basePoints: basePoints,
-          finalPointsEarned: finalPointsEarned,
+          basePoints: basePoints, // Store calculated base points
+          finalPointsEarned: finalPointsEarned, // Store final points
           pointsData: pointsDataResult,
         };
+        // --- End Prepare Answer Record ---
 
+        // --- Update Player State ---
         const updatedPlayer: LivePlayerState = {
           ...currentPlayerState,
-          totalScore: currentPlayerState.totalScore + finalPointsEarned,
+          totalScore: currentPlayerState.totalScore + finalPointsEarned, // Score updated here
           lastActivityAt: timestamp,
-          currentStreak:
-            hostQuestion.type === "survey"
-              ? currentPlayerState.currentStreak // Streak doesn't change for survey
-              : isCorrect
-              ? currentPlayerState.currentStreak + 1
-              : 0,
+          currentStreak: newStreak,
           answers: [...currentPlayerState.answers, newAnswerRecord],
           correctCount:
             currentPlayerState.correctCount +
@@ -292,15 +309,36 @@ export function useAnswerProcessing(
           updatedPlayer.maxStreak,
           updatedPlayer.currentStreak
         );
+        // --- End Update Answering Player State ---
 
-        const newState = {
-          ...prev,
-          players: { ...prev.players, [playerId]: updatedPlayer },
+        // --- Create intermediate state with the updated player ---
+        const intermediatePlayersMap = {
+          ...prev.players,
+          [playerId]: updatedPlayer,
         };
-        return newState;
-      });
+
+        // *** === NEW: Calculate and Apply Ranks === ***
+        // Calculate ranks based on the state *including* the latest score update
+        const playersWithUpdatedRanks = calculateUpdatedRankings(
+          intermediatePlayersMap
+        );
+        // *** === END NEW === ***
+
+        // --- Update Game State with updated player and ranks ---
+        const newState: LiveGameState = {
+          ...prev,
+          players: playersWithUpdatedRanks, // Use the map with updated ranks
+        };
+        // --- End Update Game State ---
+
+        console.log(
+          `[AnswerProcHook] Player state updated for ${playerId} and ranks recalculated.`
+        );
+
+        return newState; // Return the final new game state with updated ranks
+      }); // End setLiveGameState
     },
-    [quizData, setLiveGameState]
+    [quizData, setLiveGameState] // Dependencies remain the same
   );
 
   const processTimeUpForPlayer = useCallback(
@@ -321,7 +359,11 @@ export function useAnswerProcessing(
           !player.isConnected ||
           player.answers.some((a) => a.questionIndex === currentIdx)
         )
-          return prev;
+          return prev; // Don't process timeout if already answered or disconnected
+
+        console.log(
+          `[AnswerProcHook] Processing timeout for player ${playerId} on question ${currentIdx}`
+        );
 
         const questionTime = hostQuestion.time ?? 0;
         const timeoutAnswer: PlayerAnswerRecord = {
@@ -332,26 +374,26 @@ export function useAnswerProcessing(
           reactionTimeMs: questionTime, // Timeout means full time elapsed
           answerTimestamp: Date.now(),
           isCorrect: false,
-          status: "TIMEOUT",
+          status: "TIMEOUT", // Set status to TIMEOUT
           basePoints: 0,
           finalPointsEarned: 0,
           pointsData: {
+            // Ensure pointsData is not null
             totalPointsWithBonuses: 0,
             questionPoints: 0,
             answerStreakPoints: {
-              streakLevel: 0,
+              streakLevel: 0, // Timeout breaks streak
               previousStreakLevel: player.currentStreak,
             },
             lastGameBlockIndex: currentIdx,
           },
         };
-
         const updatedPlayer: LivePlayerState = {
           ...player,
           answers: [...player.answers, timeoutAnswer],
           currentStreak: 0, // Timeout breaks streak
           unansweredCount: player.unansweredCount + 1,
-          lastActivityAt: Date.now(),
+          lastActivityAt: Date.now(), // Update activity time
         };
         return {
           ...prev,
@@ -365,6 +407,6 @@ export function useAnswerProcessing(
   return {
     processPlayerAnswer,
     processTimeUpForPlayer,
-    calculateAnswerStats, // <-- EXPORT the new function
+    calculateAnswerStats, // Keep this exported for later stages
   };
 }

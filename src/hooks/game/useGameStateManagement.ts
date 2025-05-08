@@ -5,6 +5,7 @@ import {
   QuizStructureHost,
   LivePlayerState,
   QuestionAnswerStats, // Import the stats type
+  PlayerScoreRankSnapshot, // <-- IMPORT SNAPSHOT TYPE
 } from "@/src/lib/types";
 
 const initialGamePin = "PENDING_PIN"; // Use a distinct initial value
@@ -24,6 +25,7 @@ const createInitialGameState = (quizId: string | undefined): LiveGameState => ({
   allowLateJoin: true,
   powerUpsEnabled: false,
   currentQuestionStats: null, // Initialize stats as null
+  previousPlayerStateForScoreboard: null,
 });
 
 export function useGameStateManagement(
@@ -78,6 +80,7 @@ export function useGameStateManagement(
           currentQuestionIndex: -1, // Ensure index is reset
           players: {}, // Clear players on new session init
           currentQuestionStats: null, // Reset stats on new session
+          previousPlayerStateForScoreboard: null, // Reset previous state on new session
         };
       });
       setTimerKey("lobby"); // Set timer key for lobby phase
@@ -111,6 +114,8 @@ export function useGameStateManagement(
           currentQuestionStartTime: Date.now(), // Set start time immediately
           currentQuestionEndTime: null, // Reset end time
           currentQuestionStats: null, // <-- Reset stats when advancing
+          // ** IMPORTANT: Reset previousPlayerState when advancing to a NEW question **
+          previousPlayerStateForScoreboard: null,
         };
       });
     },
@@ -137,18 +142,37 @@ export function useGameStateManagement(
         if (
           !prev ||
           (prev.status !== "QUESTION_SHOW" &&
-            prev.status !== "QUESTION_GET_READY")
+            prev.status !== "QUESTION_GET_READY") // Allow transition from GET_READY if needed? Unlikely but safe.
         ) {
           console.warn(
             `[GameStateHook] Attempted to transition to SHOWING_STATS from invalid state: ${prev?.status}`
           );
           return prev;
         }
+
+        // *** CAPTURE PREVIOUS STATE ***
+        const previousStateMap: Record<string, PlayerScoreRankSnapshot> = {};
+        Object.entries(prev.players).forEach(([cid, player]) => {
+          // Capture the score and rank *before* the latest updates applied in processAnswer
+          // Note: Since ranking is done *within* the same processAnswer update,
+          // 'prev' here ALREADY contains the ranks calculated *after* the last answer,
+          // but *before* this transitionToStatsView is fully committed.
+          // This is suitable for showing the rank change animation UP TO this point.
+          // If you need the rank *before* the last answer was processed, the snapshot
+          // needs to be taken *inside* processAnswer before ranks are recalculated.
+          // For now, we capture the state as it is *just before* moving to SHOWING_STATS.
+          previousStateMap[cid] = {
+            score: player.totalScore,
+            rank: player.rank,
+          };
+        });
+
         return {
           ...prev,
           status: "SHOWING_STATS", // <-- Set new status
           currentQuestionEndTime: Date.now(), // Mark end time when stats are shown
           currentQuestionStats: calculatedStats, // <-- Store calculated stats
+          previousPlayerStateForScoreboard: previousStateMap, // <-- STORED
         };
       });
     },

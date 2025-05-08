@@ -51,7 +51,7 @@ const mockAvatars = [
         deleted_at: null,
     },
     {
-        avatar_id: 'avatar-dog-2-uuid-5m4n',
+        avatar_id: 'avatar-dog-3-uuid-5m4n',
         name: 'Avatar 04',
         description: 'A smiling golden retriever.',
         image_file_path: 'https://cdn.quiz.com/avatar/cache/addb79d8a2fa77284ecef5f44915c94f680a50e6.svg',

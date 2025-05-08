@@ -3,27 +3,32 @@ import { QuestionHost, PlayerAnswerPayload } from "@/src/lib/types"; // Import n
 
 /**
  * Calculates the base points awarded for a correct answer based on time.
+ * Score decreases linearly from basePointsMax to 0 as reaction time increases.
  * @param reactionTimeMs - Time taken by the player in milliseconds.
  * @param timeAvailableMs - Total time available for the question in milliseconds.
  * @param basePointsMax - Maximum base points possible (typically 1000).
- * @returns The calculated base points (rounded).
+ * @returns The calculated base points (rounded, non-negative).
  */
 export const calculateBasePoints = (
   reactionTimeMs: number,
   timeAvailableMs: number,
   basePointsMax: number = 1000
 ): number => {
-  if (timeAvailableMs <= 0) return 0; // Avoid division by zero for untimed questions
+  // If question isn't timed or reaction time is invalid, return 0 points.
+  if (timeAvailableMs <= 0 || reactionTimeMs < 0) return 0;
 
-  // Calculate the time factor (ranges roughly from 1 down to 0.5)
-  // Player gets half points even if answering at the last moment.
-  const timeFactor = Math.max(0, 1 - reactionTimeMs / timeAvailableMs / 2);
+  // Ensure reaction time doesn't exceed available time for calculation
+  const clampedReactionTime = Math.min(reactionTimeMs, timeAvailableMs);
+
+  // Calculate the time factor (ranges from 1 down to 0)
+  // Points decrease linearly based on how much time was used.
+  const timeFactor = 1 - clampedReactionTime / timeAvailableMs;
 
   // Calculate points
   const points = basePointsMax * timeFactor;
 
-  // Round to nearest integer
-  return Math.round(points);
+  // Return rounded, non-negative points
+  return Math.max(0, Math.round(points)); // Ensure points aren't negative
 };
 
 /**
@@ -89,7 +94,8 @@ export const checkAnswerCorrectness = (
       const playerText = submittedPayload.text;
       const correctTexts = hostQuestion.choices
         .map((c) => c.answer?.trim().toLowerCase())
-        .filter(Boolean) as string[]; // Get defined, trimmed, lowercase correct answers
+        .filter(Boolean) as string[];
+      // Get defined, trimmed, lowercase correct answers
       // Check if the player's trimmed, lowercase answer is included in the list of correct texts
       return correctTexts.includes(playerText?.trim().toLowerCase() ?? "");
     }
