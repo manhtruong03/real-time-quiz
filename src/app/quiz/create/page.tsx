@@ -3,18 +3,30 @@
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { FormProvider } from 'react-hook-form';
+import { useRouter } from 'next/navigation';
+
+// Layout & UI
 import QuizEditorLayout from '@/src/components/quiz-editor/layout/QuizEditorLayout';
 import QuizEditorHeader from '@/src/components/quiz-editor/layout/QuizEditorHeader';
 import QuizEditorFooter from '@/src/components/quiz-editor/layout/QuizEditorFooter';
-import type { QuestionHost } from '@/src/lib/types/quiz-structure';
-// View Components
+import { Button } from '@/src/components/ui/button';
+import { useToast } from '@/src/components/ui/use-toast';
+
+// Views
 import QuizSettingsView from '@/src/components/quiz-editor/views/QuizSettingsView';
 import AddSlideView from '@/src/components/quiz-editor/views/AddSlideView';
 import QuestionEditorView from '@/src/components/quiz-editor/views/QuestionEditorView';
-import { Button } from '@/src/components/ui/button';
-// Custom Hook for State Management
+
+// Types & Hooks
+import type { QuestionHost } from '@/src/lib/types/quiz-structure';
 import { useQuizCreator } from '@/src/hooks/quiz-editor/useQuizCreator';
-import { useToast } from '@/src/components/ui/use-toast';
+import type { QuizDTO } from '@/src/lib/types/api'; // <-- Import API DTO type
+import { AuthApiError } from '@/src/lib/types/auth'; // <-- Import custom error type
+
+// API Utils
+import { createQuiz } from '@/src/lib/api/quizzes'; // <-- Import createQuiz function
+import { transformQuizStateToDTO } from '@/src/lib/api-utils/quiz-transformer'; // <-- Import transformer
+import { QuizVisibilityEnum } from '@/src/lib/schemas/quiz-settings.schema';
 
 type QuizEditorViewMode = 'settings' | 'add-slide' | 'editor';
 
@@ -22,27 +34,71 @@ export default function CreateQuizPage() {
     const [viewMode, setViewMode] = useState<QuizEditorViewMode>('settings');
     const triggerQuestionSaveRef = useRef<(() => Promise<boolean>) | null>(null);
     const { toast } = useToast();
+    const router = useRouter(); // <-- Initialize router
+
+    // Add saving state
+    const [isSaving, setIsSaving] = useState(false);
 
     const {
         quizData,
-        // setQuizData, // Prefer update functions from hook
         currentSlideIndex,
         setCurrentSlideIndex,
         formMethods, // RHF methods for Settings form
         updateQuizMetadata,
         handleMetadataSubmit,
-        addQuestion, // Use this to add the question structure
+        addQuestion,
         updateQuestion,
         deleteQuestion,
         duplicateQuestion,
-        resetCreatorState, // If needed
+        resetCreatorState,
     } = useQuizCreator();
+    // Destructure for easier access, especially formState
+    const { reset: resetForm, formState: settingsFormState } = formMethods;
 
-    // Ref for latest data (useful for callbacks that might close over stale state)
     const latestQuizDataRef = useRef(quizData);
     useEffect(() => {
         latestQuizDataRef.current = quizData;
     }, [quizData]);
+
+    // --- REVISED useEffect Hook for Settings Form Reset ---
+    useEffect(() => {
+        // Only reset the form values IF THE FORM IS NOT DIRTY.
+        // This prevents overwriting the user's unsaved changes in the settings form
+        // when the underlying quizData changes due to other actions (e.g., saving a question).
+        if (!settingsFormState.isDirty) {
+            console.log("[CreatePage useEffect] Settings form NOT dirty, resetting form to match central quizData state.");
+            resetForm({
+                // Explicitly provide values, defaulting if needed
+                title: quizData.title ?? "",
+                description: quizData.description ?? "",
+                visibility:
+                    quizData.visibility === 1
+                        ? QuizVisibilityEnum.enum.PUBLIC
+                        : QuizVisibilityEnum.enum.PRIVATE,
+                tags: (quizData as any).tags ?? [], // Use default empty array if tags don't exist
+                cover: quizData.cover ?? null,     // Use null if cover doesn't exist
+            }, {
+                keepDefaultValues: false, // Use these values as the new "default" for isDirty comparison
+                keepDirty: false,        // Ensure isDirty is reset to false after this programmatic reset
+                keepErrors: false,       // Clear any previous errors
+            });
+        } else {
+            console.log("[CreatePage useEffect] Settings form IS dirty, skipping form reset to preserve user edits.");
+        }
+
+        // Dependencies that should trigger this check.
+        // Note: We depend on the *values* from quizData, not the object reference itself,
+        // to avoid re-running unnecessarily if only e.g. questions changed.
+        // We *also* need settingsFormState.isDirty to decide *whether* to reset.
+    }, [
+        quizData.title,
+        quizData.description,
+        quizData.visibility,
+        quizData.cover,
+        // quizData.tags, // Uncomment if/when tags are added to QuizStructureHost
+        resetForm,
+        settingsFormState.isDirty // Add isDirty here
+    ]);
 
     // Function to save the currently edited question (if in editor view)
     const saveCurrentQuestionIfNeeded = useCallback(async (): Promise<boolean> => {
@@ -66,40 +122,114 @@ export default function CreateQuizPage() {
         return true; // Indicate success if no save was needed (e.g., not in editor mode)
     }, [viewMode, currentSlideIndex, triggerQuestionSaveRef, toast]); // Removed formMethods.formState.isDirty
 
-    // Function to save the overall quiz (placeholder for API call)
+    // --- REVISED: handleSaveQuiz - Consolidate state updates before API call ---
     const handleSaveQuiz = useCallback(async () => {
         console.log('[CreatePage] handleSaveQuiz FINAL triggered.');
-        let canProceed = true;
+        setIsSaving(true); // Start saving indicator
 
-        // Save current view's state first
-        if (viewMode === 'settings') {
-            // Trigger RHF validation and update hook state
-            const isValid = await formMethods.trigger();
-            if (isValid) {
-                handleMetadataSubmit(updateQuizMetadata)(); // Call the submit handler from the hook
+        try {
+            // Step 1: Check and save Settings Form if dirty and valid
+            if (formMethods.formState.isDirty) {
+                console.log("[CreatePage handleSaveQuiz] Settings form is dirty. Validating and saving settings...");
+                const settingsAreValid = await formMethods.trigger();
+                if (settingsAreValid) {
+                    handleMetadataSubmit(updateQuizMetadata)(); // Update central state
+                    // Allow state update to propagate AFTER settings save
+                    await new Promise(resolve => setTimeout(resolve, 50));
+                    console.log("[CreatePage handleSaveQuiz] Settings state updated.");
+                } else {
+                    toast({ title: "Validation Error", description: "Please fix errors in Quiz Settings before saving.", variant: "destructive" });
+                    throw new Error("Settings validation failed."); // Stop save process
+                }
             } else {
-                canProceed = false;
-                toast({ title: "Validation Error", description: "Please fix errors in settings.", variant: "destructive" });
+                console.log("[CreatePage handleSaveQuiz] Settings form not dirty. Skipping settings save.");
             }
 
-        } else if (viewMode === 'editor') {
-            canProceed = await saveCurrentQuestionIfNeeded();
-        }
+            // Step 2: Check and save current Question if in editor view
+            // Note: saveCurrentQuestionIfNeeded already includes a delay on success
+            if (viewMode === 'editor') {
+                console.log("[CreatePage handleSaveQuiz] In editor view. Saving current question if needed...");
+                const questionSaveSuccess = await saveCurrentQuestionIfNeeded();
+                if (!questionSaveSuccess) {
+                    throw new Error("Failed to save current question. Please fix errors."); // Stop save process
+                }
+                console.log("[CreatePage handleSaveQuiz] Current question saved (or no save needed).");
+            }
 
-        if (canProceed) {
-            // --- Read the LATEST state from the ref ---
-            const dataToSave = latestQuizDataRef.current;
-            console.log("Current Quiz Data to Save (from Ref):", JSON.stringify(dataToSave, null, 2));
-            // TODO: Send `dataToSave` to your backend API.
+            // Step 3: Get latest state and transform
+            // State should now be up-to-date with any committed changes from steps 1 & 2
+            const currentQuizState = latestQuizDataRef.current;
+            if (!currentQuizState) {
+                throw new Error("Quiz data is not available after updates.");
+            }
+
+            console.log("Current Quiz Data before transformation:", JSON.stringify(currentQuizState, null, 2));
+            const quizPayload = transformQuizStateToDTO(currentQuizState);
+            console.log("Transformed Quiz DTO for API:", JSON.stringify(quizPayload, null, 2));
+
+            // Step 4: Frontend Payload Validation
+            if (!quizPayload.title || quizPayload.title.trim().length < 3) {
+                toast({ title: "Validation Error", description: "Quiz title must be at least 3 characters.", variant: "destructive" });
+                throw new Error("Quiz title validation failed");
+            }
+            if (!quizPayload.questions || quizPayload.questions.length === 0) {
+                toast({ title: "Validation Error", description: "Quiz must have at least one slide.", variant: "destructive" });
+                throw new Error("Quiz questions validation failed");
+            }
+            // ... (add more checks if needed)
+
+            // Step 5: Call API
+            // TODO: Add update logic check based on currentQuizState.uuid
+            console.log("[CreatePage handleSaveQuiz] Calling createQuiz API...");
+            const savedQuiz = await createQuiz(quizPayload);
+
+            // Step 6: Handle Success
             toast({
-                title: "Save Quiz (Mock)",
-                description: "Quiz data logged to console. Backend integration needed.",
+                title: "Quiz Saved!",
+                description: `Quiz "${savedQuiz.title}" saved successfully.`,
             });
-        } else {
-            console.error("[CreatePage] Cannot save quiz due to errors in the current view.");
-            // Error toast is shown within saveCurrentQuestionIfNeeded or settings validation
+            router.push(`/my-quizzes`); // Redirect
+
+        } catch (error: unknown) {
+            // Step 7: Handle Errors
+            console.error("[CreatePage] Error during save process:", error);
+            let errorMessage = "An unexpected error occurred. Please try again.";
+            let errorTitle = "Save Failed";
+
+            // ... (refined error handling logic from previous step) ...
+            if (error instanceof AuthApiError) {
+                errorTitle = `API Error (${error.status})`;
+                errorMessage = error.message || errorMessage;
+                if (error.status === 401) errorMessage = "Authentication error. Please log in again.";
+                else if (error.status === 400) {
+                    errorTitle = "Validation Error";
+                    errorMessage = `Invalid data: ${error.message}`;
+                }
+            } else if (error instanceof Error) {
+                errorMessage = error.message;
+                // Check specific error messages if needed
+                if (errorMessage.includes("validation failed")) errorTitle = "Validation Error";
+                else if (errorMessage.includes("Failed to save current question")) errorTitle = "Unsaved Changes";
+            }
+
+            toast({
+                title: errorTitle,
+                description: errorMessage,
+                variant: "destructive",
+            });
+        } finally {
+            setIsSaving(false); // Stop saving indicator
         }
-    }, [viewMode, saveCurrentQuestionIfNeeded, formMethods, handleMetadataSubmit, updateQuizMetadata, toast]); // Added formMethods and handlers
+    }, [
+        viewMode, // Need viewMode to know if we should save the question
+        currentSlideIndex, // Needed by saveCurrentQuestionIfNeeded indirectly
+        saveCurrentQuestionIfNeeded,
+        formMethods, // Need formMethods for settings form state
+        handleMetadataSubmit,
+        updateQuizMetadata,
+        toast,
+        router,
+    ]);
 
 
     // --- Combined handler for the main save button in the header ---
@@ -111,15 +241,15 @@ export default function CreateQuizPage() {
     // --- Navigation Handlers ---
     const handleAddSlideClick = useCallback(async () => {
         console.log('[CreatePage] Add Slide button clicked.');
-        // If currently editing a slide, attempt to save it.
-        // No need to save if not in editor mode (e.g., on settings or add-slide view already)
+        // Only save current question if in editor mode
         if (viewMode === 'editor') {
-            let canProceed = await saveCurrentQuestionIfNeeded();
+            const canProceed = await saveCurrentQuestionIfNeeded();
             if (!canProceed) {
-                console.log("[CreatePage] Add slide blocked by save failure of current slide.");
+                console.log("[CreatePage] Navigation to Add Slide blocked by question save failure.");
                 return; // Stop if save failed
             }
         }
+        // No longer save settings here
         setCurrentSlideIndex(-1); // Deselect current slide
         setViewMode('add-slide');
     }, [viewMode, saveCurrentQuestionIfNeeded, setCurrentSlideIndex, setViewMode]);
@@ -138,17 +268,10 @@ export default function CreateQuizPage() {
     }, [viewMode, saveCurrentQuestionIfNeeded, setCurrentSlideIndex, setViewMode]);
 
     const handleSlideSelect = useCallback(async (index: number) => {
-        console.log(`[CreatePage] Slide ${index} selected.`);
-        if (index === currentSlideIndex && viewMode === 'editor') return; // Already on this slide
-
+        if (index === currentSlideIndex && viewMode === 'editor') return;
         if (viewMode === 'editor') {
-            let canProceed = await saveCurrentQuestionIfNeeded();
-            if (!canProceed) {
-                console.log("[CreatePage] Slide selection blocked by save failure.");
-                // Optionally, revert the visual selection in SlideNavigationSidebar if possible,
-                // or simply block navigation and rely on the toast.
-                return;
-            }
+            const canProceed = await saveCurrentQuestionIfNeeded();
+            if (!canProceed) return;
         }
         setCurrentSlideIndex(index);
         setViewMode('editor');
@@ -303,6 +426,7 @@ export default function CreateQuizPage() {
                     onSave={handleSave}
                     onPreview={handlePreview}
                     saveButtonLabel={viewMode === 'settings' ? 'Done' : (quizData?.questions.length === 0 ? 'Add Slide' : 'Save Quiz')}
+                    isSaving={isSaving}
                 />
                 <main className="flex-grow flex flex-col overflow-hidden">
                     {renderMainContent()}
@@ -316,6 +440,7 @@ export default function CreateQuizPage() {
                 >
                     {viewMode !== 'add-slide' && latestQuizDataRef.current && (
                         <div className="text-sm text-muted-foreground truncate px-2">
+                            { /* ... footer text logic ... */}
                             {currentSlideIndex === -1 && viewMode === 'settings'
                                 ? "Quiz Settings"
                                 : currentSlideIndex === -1 && latestQuizDataRef.current?.questions.length === 0

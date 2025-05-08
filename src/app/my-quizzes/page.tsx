@@ -71,7 +71,7 @@ const MyQuizzesPageContent: React.FC = () => {
                 <div className="container mx-auto px-4">
                     <div className="flex justify-between items-center mb-6 md:mb-8">
                         <h1 className="text-2xl md:text-3xl font-bold">My Quizzes</h1>
-                        <Link href="/creator/quiz" passHref>
+                        <Link href="/quiz/create" passHref>
                             <Button>
                                 <PlusCircle className="mr-2 h-4 w-4" /> Create New Quiz
                             </Button>
@@ -114,7 +114,7 @@ const MyQuizzesPageContent: React.FC = () => {
                             <ListChecks className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
                             <h3 className="text-xl font-semibold mb-2">No Quizzes Yet</h3>
                             <p className="text-muted-foreground mb-6">You haven't created any quizzes. Start creating one now!</p>
-                            <Link href="/creator/quiz" passHref>
+                            <Link href="/quiz/create" passHref>
                                 <Button>
                                     <PlusCircle className="mr-2 h-4 w-4" /> Create Your First Quiz
                                 </Button>
@@ -156,7 +156,7 @@ const MyQuizzesPageContent: React.FC = () => {
                                     </CardContent>
                                     <CardFooter className="flex justify-end gap-2 border-t pt-4 mt-auto">
                                         {/* Add Link to Edit Page */}
-                                        <Link href={`/creator/quiz/${quiz.uuid}`} passHref>
+                                        <Link href={`/quiz/create/${quiz.uuid}`} passHref>
                                             <Button variant="outline" size="sm" title="Edit Quiz">
                                                 <Pencil className="h-4 w-4" />
                                                 <span className="sr-only">Edit</span>

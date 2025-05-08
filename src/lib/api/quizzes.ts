@@ -1,23 +1,19 @@
-// src/lib/api/quizzes.ts (Create this file or add to existing API file)
-import type { QuizDTO, Page } from "@/src/lib/types/api"; // Assuming QuizDTO is defined in types based on openapi.json
-import { fetchWithAuth, FetchOptions } from "./client"; // Assuming client.ts exists
+// src/lib/api/quizzes.ts
+import type { QuizDTO, Page } from "@/src/lib/types/api";
+import { fetchWithAuth, FetchOptions } from "./client";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080";
 
-// Define Pageable parameters structure if needed, or pass as query string
+// Interface for pagination parameters (keep existing functions if they are there)
 interface PageableParams {
   page?: number;
   size?: number;
-  sort?: string; // e.g., "modifiedAt,desc"
+  sort?: string;
 }
 
-/**
- * Fetches the quizzes created by the currently authenticated user.
- * @param params - Optional pagination and sorting parameters.
- * @returns A promise that resolves with a Page object containing QuizDTOs.
- * @throws {AuthApiError} If the request fails.
- */
+// --- KEEP existing fetchMyQuizzes, fetchPublicQuizzes, fetchQuizDetails ---
+// ... (previous functions like fetchMyQuizzes, fetchPublicQuizzes, fetchQuizDetails) ...
 export async function fetchMyQuizzes(
   params?: PageableParams
 ): Promise<Page<QuizDTO>> {
@@ -33,14 +29,9 @@ export async function fetchMyQuizzes(
     method: "GET",
     includeAuthHeader: true, // This endpoint requires authentication
   };
-
-  // Assuming QuizDTO matches the structure returned by the backend
-  // and Page is a generic structure like { content: T[], totalPages: number, ... }
   return fetchWithAuth<Page<QuizDTO>>(endpoint, options);
 }
 
-// Add other quiz-related API functions here (create, update, delete, getById) as needed
-// Example for getting public quizzes (based on openapi.json)
 export async function fetchPublicQuizzes(
   params?: PageableParams
 ): Promise<Page<QuizDTO>> {
@@ -56,30 +47,103 @@ export async function fetchPublicQuizzes(
     method: "GET",
     includeAuthHeader: false, // Public endpoint might not need auth
   };
-
   return fetchWithAuth<Page<QuizDTO>>(endpoint, options);
 }
 
-/**
- * Fetches the full details of a specific quiz by its ID.
- * @param quizId - The UUID of the quiz to fetch.
- * @returns A promise that resolves with the QuizDTO.
- * @throws {AuthApiError} If the request fails (e.g., not found, network error).
- */
 export async function fetchQuizDetails(quizId: string): Promise<QuizDTO> {
   if (!quizId) {
     throw new Error("Quiz ID is required to fetch details.");
   }
   const endpoint = `${API_BASE_URL}/api/quizzes/${quizId}`;
   console.log(`[API Quizzes] Fetching quiz details from ${endpoint}`);
-
   const options: FetchOptions = {
     method: "GET",
-    // Assuming fetching a specific quiz might require auth,
-    // set to false if it's truly public access based on your backend rules
-    includeAuthHeader: true,
+    includeAuthHeader: true, // Assuming auth needed
   };
-
-  // The backend should return a single QuizDTO based on openapi.json definition for this path
   return fetchWithAuth<QuizDTO>(endpoint, options);
 }
+
+/**
+ * Creates a new quiz via the backend API.
+ * @param quizData - The QuizDTO object representing the quiz to create.
+ * @returns A promise that resolves with the created QuizDTO (as returned by the backend).
+ * @throws {AuthApiError} If the request fails.
+ */
+export async function createQuiz(quizData: QuizDTO): Promise<QuizDTO> {
+  const endpoint = `${API_BASE_URL}/api/quizzes`;
+  console.log(`[API Quizzes] Creating new quiz at ${endpoint}`);
+
+  const options: FetchOptions = {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(quizData),
+    includeAuthHeader: true, // Creating a quiz requires authentication
+  };
+
+  try {
+    // The backend should return the created QuizDTO with its new UUID etc.
+    const createdQuiz = await fetchWithAuth<QuizDTO>(endpoint, options);
+    console.log(
+      `[API Quizzes] Quiz created successfully (UUID: ${createdQuiz.uuid})`
+    );
+    return createdQuiz;
+  } catch (error) {
+    console.error("[API Quizzes] Failed to create quiz:", error);
+    // Re-throw the error so the caller can handle it (e.g., show toast)
+    throw error;
+  }
+}
+
+/**
+ * Updates an existing quiz via the backend API.
+ * @param quizId - The UUID of the quiz to update.
+ * @param quizData - The QuizDTO object containing the updated quiz data.
+ * @returns A promise that resolves with the updated QuizDTO (as returned by the backend).
+ * @throws {AuthApiError} If the request fails.
+ */
+export async function updateQuiz(
+  quizId: string,
+  quizData: QuizDTO
+): Promise<QuizDTO> {
+  // Note: OpenAPI spec doesn't explicitly define PUT /api/quizzes/{quizId}
+  // Assuming it exists and behaves similarly to POST but targets a specific ID.
+  // Adjust endpoint and method if your backend implementation differs.
+  if (!quizId) {
+    throw new Error("Quiz ID is required for update.");
+  }
+  const endpoint = `${API_BASE_URL}/api/quizzes/${quizId}`; // Assuming PUT uses ID in path
+  console.log(`[API Quizzes] Updating quiz ${quizId} at ${endpoint}`);
+
+  // Remove fields that shouldn't be sent on update or are generated by backend
+  const updatePayload: Partial<QuizDTO> = { ...quizData };
+  delete updatePayload.uuid;
+  delete updatePayload.creator;
+  delete updatePayload.creator_username;
+  delete updatePayload.created;
+  delete updatePayload.modified;
+  // Potentially remove question IDs if backend handles updates based on position/content match
+
+  const options: FetchOptions = {
+    method: "PUT", // Assuming PUT for update
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(updatePayload),
+    includeAuthHeader: true, // Updating likely requires authentication
+  };
+
+  try {
+    // Assuming backend returns the updated QuizDTO
+    const updatedQuiz = await fetchWithAuth<QuizDTO>(endpoint, options);
+    console.log(`[API Quizzes] Quiz ${quizId} updated successfully`);
+    return updatedQuiz;
+  } catch (error) {
+    console.error(`[API Quizzes] Failed to update quiz ${quizId}:`, error);
+    throw error; // Re-throw for caller handling
+  }
+}
+
+// Optional: Add deleteQuiz function if needed
+// export async function deleteQuiz(quizId: string): Promise<void> { ... }
