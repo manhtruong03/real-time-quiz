@@ -3,29 +3,28 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import {
   LiveGameState,
   QuizStructureHost,
-  LivePlayerState,
+  // LivePlayerState, // Not directly used in createInitialGameState signature
   QuestionAnswerStats,
   PlayerScoreRankSnapshot,
 } from "@/src/lib/types";
 
-const initialGamePin = "PENDING_PIN"; // Use a distinct initial value
+const initialGamePin = "PENDING_PIN";
 const initialHostId = "PENDING_HOST";
 
-// Helper to create default state - Now internal to this hook
 const createInitialGameState = (quizId: string | undefined): LiveGameState => ({
   gamePin: initialGamePin,
   quizId: quizId || "",
   hostUserId: initialHostId,
   status: "LOBBY",
   currentQuestionIndex: -1,
-  players: {}, // Player state will be managed externally or passed in
+  players: {},
   currentQuestionStartTime: null,
   currentQuestionEndTime: null,
   sessionStartTime: Date.now(),
   allowLateJoin: true,
   powerUpsEnabled: false,
-  currentQuestionStats: null, // Initialize stats as null
-  previousPlayerStateForScoreboard: null,
+  currentQuestionStats: null,
+  previousPlayerStateForScoreboard: null, // Initialize as null
 });
 
 export function useGameStateManagement(
@@ -34,9 +33,8 @@ export function useGameStateManagement(
   const [liveGameState, setLiveGameState] = useState<LiveGameState | null>(
     null
   );
-  const [timerKey, setTimerKey] = useState<string | number>("initial"); // Timer reset key
+  const [timerKey, setTimerKey] = useState<string | number>("initial");
 
-  // Initialize or update base game state when quiz data changes
   useEffect(() => {
     if (initialQuizData && !liveGameState) {
       console.log(
@@ -50,14 +48,11 @@ export function useGameStateManagement(
       liveGameState.quizId !== initialQuizData.uuid
     ) {
       console.log("[GameStateHook] Updating quizId:", initialQuizData.uuid);
-      // Reset state if quiz ID changes fundamentally? Or just update ID?
-      // For now, let's reset to ensure consistency, but this could be adjusted.
       setLiveGameState(createInitialGameState(initialQuizData.uuid));
-      setTimerKey("initial"); // Reset timer key as well
+      setTimerKey("initial");
     }
-  }, [initialQuizData, liveGameState]); // Rerun if quizData or existing state changes
+  }, [initialQuizData, liveGameState]);
 
-  // Function for Page component to initialize session details (PIN, Host ID)
   const initializeSession = useCallback(
     (pin: string, hostId: string) => {
       console.log(
@@ -69,26 +64,23 @@ export function useGameStateManagement(
         console.log("[GameStateHook] Session reset");
         return;
       }
-      // Ensure state is initialized if it wasn't already by useEffect
       setLiveGameState((prev) => {
-        const baseState = prev ?? createInitialGameState(initialQuizData?.uuid);
+        // When initializing a new session, previousPlayerState should be null
+        const baseState = createInitialGameState(initialQuizData?.uuid);
         return {
           ...baseState,
           gamePin: pin,
           hostUserId: hostId,
-          status: "LOBBY", // Ensure status is LOBBY on init
-          currentQuestionIndex: -1, // Ensure index is reset
-          players: {}, // Clear players on new session init
-          currentQuestionStats: null, // Reset stats on new session
-          previousPlayerStateForScoreboard: null, // Reset previous state on new session
+          status: "LOBBY",
+          // players: {}, // Already handled by createInitialGameState
+          // currentQuestionIndex: -1, // Already handled
+          // previousPlayerStateForScoreboard: null, // Already handled
         };
       });
-      setTimerKey("lobby"); // Set timer key for lobby phase
+      setTimerKey("lobby");
     },
-    [initialQuizData]
-  ); // Dependency on initialQuizData for createInitialGameState
-
-  // --- State Transition Functions ---
+    [initialQuizData] // initialQuizData is used in createInitialGameState
+  );
 
   const advanceToQuestion = useCallback(
     (index: number) => {
@@ -106,20 +98,32 @@ export function useGameStateManagement(
           );
           return prev;
         }
-        // Snapshotting previous state before showing a new question is crucial for animations
-        // If the previous state was SHOWING_SCOREBOARD or SHOWING_STATS, capture the final player state from there.
-        // If coming directly from LOBBY, the previous state is effectively empty.
-        const previousStateMap: Record<string, PlayerScoreRankSnapshot> | null =
-          prev.status === "LOBBY"
-            ? null
-            : Object.entries(prev.players).reduce((acc, [cid, player]) => {
-                acc[cid] = { score: player.totalScore, rank: player.rank };
-                return acc;
-              }, {} as Record<string, PlayerScoreRankSnapshot>);
 
-        console.log(
-          `[GameStateHook] Setting state to QUESTION_SHOW for index ${index}`
-        );
+        // Capture the current state of players to serve as the "previous" state
+        // for the question we are NOW advancing to.
+        const snapshotForUpcomingQuestion: Record<
+          string,
+          PlayerScoreRankSnapshot
+        > = {};
+        // Only capture if not coming from LOBBY (no scores/ranks yet)
+        // or if there are players to snapshot.
+        if (prev.status !== "LOBBY" && Object.keys(prev.players).length > 0) {
+          Object.entries(prev.players).forEach(([cid, p]) => {
+            snapshotForUpcomingQuestion[cid] = {
+              score: p.totalScore,
+              rank: p.rank,
+            };
+          });
+          console.log(
+            `[GameStateHook - advanceToQuestion ${index}] Captured previousPlayerStateForScoreboard:`,
+            JSON.stringify(snapshotForUpcomingQuestion, null, 2)
+          );
+        } else if (prev.status === "LOBBY") {
+          console.log(
+            `[GameStateHook - advanceToQuestion ${index}] Coming from LOBBY, previousPlayerStateForScoreboard remains null.`
+          );
+        }
+
         return {
           ...prev,
           status: "QUESTION_SHOW",
@@ -127,35 +131,25 @@ export function useGameStateManagement(
           currentQuestionStartTime: Date.now(),
           currentQuestionEndTime: null,
           currentQuestionStats: null,
-          // Store the state BEFORE this new question starts
-          previousPlayerStateForScoreboard: previousStateMap,
+          // This field now correctly stores the state *before* the current question (index) is answered.
+          previousPlayerStateForScoreboard:
+            Object.keys(snapshotForUpcomingQuestion).length > 0
+              ? snapshotForUpcomingQuestion
+              : null,
         };
       });
     },
     [initialQuizData]
   );
 
-  // const showResults = useCallback(() => {
-  //   // console.log("[GameStateHook] Setting state to QUESTION_RESULT");
-  //   setLiveGameState((prev) => {
-  //     if (!prev || prev.status !== "QUESTION_SHOW") return prev; // Only transition from Q_SHOW
-  //     return {
-  //       ...prev,
-  //       status: "QUESTION_RESULT" as const,
-  //       currentQuestionEndTime: Date.now(), // Mark end time when results are shown
-  //     };
-  //   });
-  // }, []);
-  // Renamed from showResults and updated logic
   const transitionToStatsView = useCallback(
     (calculatedStats: QuestionAnswerStats | null) => {
       console.log("[GameStateHook] Transitioning state to SHOWING_STATS");
       setLiveGameState((prev) => {
-        // Only transition if we were showing the question or maybe get_ready
         if (
           !prev ||
           (prev.status !== "QUESTION_SHOW" &&
-            prev.status !== "QUESTION_GET_READY") // Allow transition from GET_READY if needed? Unlikely but safe.
+            prev.status !== "QUESTION_GET_READY")
         ) {
           console.warn(
             `[GameStateHook] Attempted to transition to SHOWING_STATS from invalid state: ${prev?.status}`
@@ -163,72 +157,68 @@ export function useGameStateManagement(
           return prev;
         }
 
-        // *** CAPTURE PREVIOUS STATE ***
-        const previousStateMap: Record<string, PlayerScoreRankSnapshot> = {};
-        Object.entries(prev.players).forEach(([cid, player]) => {
-          // Capture the score and rank *before* the latest updates applied in processAnswer
-          // Note: Since ranking is done *within* the same processAnswer update,
-          // 'prev' here ALREADY contains the ranks calculated *after* the last answer,
-          // but *before* this transitionToStatsView is fully committed.
-          // This is suitable for showing the rank change animation UP TO this point.
-          // If you need the rank *before* the last answer was processed, the snapshot
-          // needs to be taken *inside* processAnswer before ranks are recalculated.
-          // For now, we capture the state as it is *just before* moving to SHOWING_STATS.
-          previousStateMap[cid] = {
-            score: player.totalScore,
-            rank: player.rank,
-          };
-        });
+        // At this point, prev.players ALREADY reflects the scores/ranks
+        // AFTER the question (prev.currentQuestionIndex) just finished.
+        // The prev.previousPlayerStateForScoreboard holds the state captured by advanceToQuestion,
+        // which is the state BEFORE the question just finished. This is correct for scoreboard animations.
+
+        console.log(
+          "[GameStateHook - transitionToStatsView] Current players (for display on stats/scoreboard):",
+          JSON.stringify(prev.players, null, 2)
+        );
+        console.log(
+          "[GameStateHook - transitionToStatsView] Previous player state (for animation 'from' values):",
+          JSON.stringify(prev.previousPlayerStateForScoreboard, null, 2)
+        );
 
         return {
           ...prev,
-          status: "SHOWING_STATS", // <-- Set new status
-          currentQuestionEndTime: Date.now(), // Mark end time when stats are shown
-          currentQuestionStats: calculatedStats, // <-- Store calculated stats
-          previousPlayerStateForScoreboard: previousStateMap, // <-- STORED
+          status: "SHOWING_STATS",
+          currentQuestionEndTime: Date.now(),
+          currentQuestionStats: calculatedStats,
+          // previousPlayerStateForScoreboard is NOT changed here. It was set by advanceToQuestion.
         };
       });
     },
-    [] // No dependency needed for setLiveGameState
+    []
   );
 
-  // --- ADDED: Function to transition to showing the scoreboard ---
   const transitionToShowingScoreboard = useCallback(() => {
     console.log("[GameStateHook] Transitioning state to SHOWING_SCOREBOARD");
     setLiveGameState((prev) => {
-      // Typically transition from SHOWING_STATS
       if (!prev || prev.status !== "SHOWING_STATS") {
         console.warn(
           `[GameStateHook] Attempted to transition to SHOWING_SCOREBOARD from invalid state: ${prev?.status}`
         );
         return prev;
       }
-      // previousPlayerStateForScoreboard should already be set from the transitionToStatsView call
+      // No change to previousPlayerStateForScoreboard, it's carried over from the SHOWING_STATS state.
+      // It should hold the state from *before* the last question's results were calculated.
+      // And prev.players holds the state *after* the last question's results. This is the desired setup.
       return {
         ...prev,
         status: "SHOWING_SCOREBOARD",
-        // Keep currentQuestionStats and previousPlayerStateForScoreboard as they are
       };
     });
   }, []);
-  // --- END ADDED ---
 
   const showPodium = useCallback(() => {
     console.log("[GameStateHook] Setting state to PODIUM");
     setLiveGameState((prev) => {
       if (!prev) return null;
-      // Capture final state before podium if needed, although ranking logic might handle this
-      const finalStateMap: Record<string, PlayerScoreRankSnapshot> = {};
-      Object.entries(prev.players).forEach(([cid, player]) => {
-        finalStateMap[cid] = {
-          score: player.totalScore,
-          rank: player.rank,
+      // For the podium, previousPlayerStateForScoreboard should reflect the final state before showing the podium.
+      // It might be the same state that was used for the last scoreboard.
+      const finalSnapshot: Record<string, PlayerScoreRankSnapshot> = {};
+      Object.entries(prev.players).forEach(([cid, p]) => {
+        finalSnapshot[cid] = {
+          score: p.totalScore,
+          rank: p.rank,
         };
       });
       return {
         ...prev,
         status: "PODIUM",
-        previousPlayerStateForScoreboard: finalStateMap, // Store final state before podium
+        previousPlayerStateForScoreboard: finalSnapshot, // Or could just use prev.players directly in PodiumView
       };
     });
   }, []);
@@ -247,24 +237,23 @@ export function useGameStateManagement(
 
   const resetGameState = useCallback(() => {
     console.log("[GameStateHook] Resetting state completely");
-    setLiveGameState(null);
+    setLiveGameState(null); // This will trigger the useEffect to re-create with initialQuizData if available
     setTimerKey("initial");
   }, []);
 
-  // --- Update Timer Key ---
   useEffect(() => {
     setTimerKey(
       liveGameState
         ? liveGameState.currentQuestionIndex >= 0
-          ? liveGameState.currentQuestionIndex // Use index during questions/results
-          : liveGameState.status // Use status string for LOBBY, PODIUM etc.
+          ? liveGameState.currentQuestionIndex
+          : liveGameState.status
         : "initial"
     );
   }, [liveGameState?.currentQuestionIndex, liveGameState?.status]);
 
   return {
     liveGameState,
-    setLiveGameState, // Expose setter for player management hook
+    setLiveGameState,
     timerKey,
     initializeSession,
     advanceToQuestion,
