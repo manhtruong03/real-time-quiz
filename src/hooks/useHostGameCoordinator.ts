@@ -54,27 +54,9 @@ export function useHostGameCoordinator({
 
   // --- Refs for state and callbacks ---
   const liveGameStateRef = useRef<LiveGameState | null>(liveGameState);
-  const allAnsweredTriggeredRef = useRef<boolean>(false); // Ref to prevent multiple triggers
   useEffect(() => {
     liveGameStateRef.current = liveGameState;
-    // Reset trigger flag when moving to a new question
-    if (
-      liveGameState?.status === "QUESTION_SHOW" &&
-      allAnsweredTriggeredRef.current
-    ) {
-      const hasAnswerRecordForCurrentIndex = Object.values(
-        liveGameState.players
-      ).some((p) =>
-        p.answers.some(
-          (a) => a.questionIndex === liveGameState.currentQuestionIndex
-        )
-      );
-      if (!hasAnswerRecordForCurrentIndex) {
-        // Only reset if no answers exist for the *new* index
-        allAnsweredTriggeredRef.current = false;
-        // console.log("[Coordinator] Reset allAnsweredTriggeredRef for new question:", liveGameState.currentQuestionIndex);
-      }
-    }
+    // console.log("[Coordinator] LiveGameState updated:", liveGameState?.status, liveGameState?.currentQuestionIndex, liveGameState?.currentQuestionStats);
   }, [liveGameState]);
 
   const callbacksRef = useRef({
@@ -148,9 +130,6 @@ export function useHostGameCoordinator({
     console.log(
       `[Coordinator] handleTimeUp triggered for index: ${currentState.currentQuestionIndex}`
     );
-
-    // Reset trigger flag in case time runs out *after* all answered (edge case)
-    allAnsweredTriggeredRef.current = false;
 
     // 1. Process timeouts for players who haven't answered
     Object.keys(currentState.players).forEach((cid) => {
@@ -329,46 +308,6 @@ export function useHostGameCoordinator({
       showPodium();
     }
   }, [initialQuizData, advanceToQuestion, showPodium]);
-
-  // *** NEW: Effect to check if all players have answered ***
-  useEffect(() => {
-    const currentState = liveGameStateRef.current;
-
-    // Only run check when question is being shown and hasn't already been triggered
-    if (
-      !currentState ||
-      currentState.status !== "QUESTION_SHOW" ||
-      allAnsweredTriggeredRef.current
-    ) {
-      return;
-    }
-
-    const connectedPlayers = Object.values(currentState.players).filter(
-      (p) => p.isConnected && p.playerStatus !== "KICKED"
-    );
-    const connectedPlayerCount = connectedPlayers.length;
-
-    if (connectedPlayerCount === 0) return; // Don't trigger if no connected players
-
-    const answeredCount = connectedPlayers.filter(
-      (p) =>
-        p.answers.some(
-          (a) =>
-            a.questionIndex === currentState.currentQuestionIndex &&
-            a.status !== "TIMEOUT"
-        ) // Count non-timeout answers for current question
-    ).length;
-
-    // console.log(`[Coordinator] Answer check: Index=${currentState.currentQuestionIndex}, Answered=${answeredCount}, Connected=${connectedPlayerCount}`);
-
-    if (answeredCount >= connectedPlayerCount) {
-      console.log(
-        `[Coordinator] All ${connectedPlayerCount} players have answered question ${currentState.currentQuestionIndex}. Triggering time up.`
-      );
-      allAnsweredTriggeredRef.current = true; // Set flag to prevent re-triggering
-      handleTimeUp(); // Trigger the end-of-question logic
-    }
-  }, [liveGameState?.players, liveGameState?.status, handleTimeUp]); // Rerun when players map or status changes
 
   // Calculate derived values for the UI
   const currentTotalPlayers = liveGameState
