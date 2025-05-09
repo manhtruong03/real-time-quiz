@@ -32,6 +32,8 @@ export function usePlayerManagement(
             lastActivityAt: joinTimestamp,
           };
         } else {
+          // For a new player
+          const newPlayerRank = Object.keys(prev.players).length + 1; // Assign a rank at the bottom initially
           updatedPlayer = {
             cid: cid,
             nickname: nickname,
@@ -49,7 +51,7 @@ export function usePlayerManagement(
 
             deviceInfoJson: null,
             totalScore: 0,
-            rank: 0,
+            rank: newPlayerRank,
             currentStreak: 0,
             maxStreak: 0,
             lastAnswerTimestamp: null,

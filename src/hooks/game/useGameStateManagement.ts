@@ -74,7 +74,7 @@ export function useGameStateManagement(
           status: "LOBBY",
           // players: {}, // Already handled by createInitialGameState
           // currentQuestionIndex: -1, // Already handled
-          // previousPlayerStateForScoreboard: null, // Already handled
+          previousPlayerStateForScoreboard: null, // Already handled
         };
       });
       setTimerKey("lobby");
