@@ -63,8 +63,8 @@ export interface LiveGameState {
     | "LOBBY"
     | "QUESTION_GET_READY"
     | "QUESTION_SHOW"
-    // | "QUESTION_RESULT" // This state might be replaced by SHOWING_STATS
-    | "SHOWING_STATS" // <-- NEW STATE
+    | "SHOWING_STATS"
+    | "SHOWING_SCOREBOARD"
     | "PODIUM"
     | "ENDED";
 

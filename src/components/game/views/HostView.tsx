@@ -19,6 +19,7 @@ import { HostLoadingView } from "../host/views/HostLoadingView";
 import { HostContentBlockView } from "../host/views/HostContentBlockView";
 import { HostInteractiveQuestionView } from "../host/views/HostInteractiveQuestionView";
 import { HostAnswerStatsView } from "../host/views/HostAnswerStatsView"; // Import the stats view
+import { ScoreboardView } from "../host/scoreboard/ScoreboardView"; // Adjust path if needed
 
 interface HostViewProps {
   // Replace questionData with liveGameState and quizData
@@ -93,24 +94,25 @@ const HostViewComponent: React.FC<HostViewProps> = ({
         <HostLoadingView message={`Error loading assets: ${assetsError}`} />
       );
     }
-    if (!liveGameState || !currentBlock) {
-      // Show loading or specific message if state/block isn't ready during an active game phase
-      if (status && status !== "LOBBY") {
-        return <HostLoadingView message="Loading question data..." />;
-      }
-      return <HostLoadingView message="Waiting..." />; // Fallback
+    if (!liveGameState) {
+      // If no game state at all, show initial loading/waiting
+      return <HostLoadingView message="Waiting for game session..." />;
+    }
+    // If we have game state, but no currentBlock during an active phase, show loading
+    if (!currentBlock && status && status !== "LOBBY" && status !== "PODIUM" && status !== "ENDED" && status !== "SHOWING_SCOREBOARD") {
+      return <HostLoadingView message="Loading question data..." />;
     }
 
     switch (status) {
-      case "QUESTION_GET_READY": // Combine with QUESTION_SHOW or add specific Get Ready overlay
+      case "QUESTION_GET_READY":
       case "QUESTION_SHOW":
+        if (!currentBlock) return <HostLoadingView message="Loading question..." />; // Should be caught above, but safe fallback
         if (isContentBlock(currentBlock)) {
           return <HostContentBlockView block={currentBlock} />;
         } else {
-          // Pass only necessary props to HostInteractiveQuestionView
           return (
             <HostInteractiveQuestionView
-              block={currentBlock} // Already checked it's not ContentBlock
+              block={currentBlock}
               timerKey={timerKey}
               currentAnswerCount={currentAnswerCount}
               totalPlayers={totalPlayers}
@@ -119,27 +121,39 @@ const HostViewComponent: React.FC<HostViewProps> = ({
           );
         }
       case "SHOWING_STATS":
-        // Render the stats view
+        if (!currentBlock) return <HostLoadingView message="Loading stats..." />; // Need block context for stats
         return (
           <HostAnswerStatsView
             currentBlock={currentBlock}
-            quizData={quizData} // Pass full quiz data
-            answerStats={liveGameState.currentQuestionStats} // Pass calculated stats
+            quizData={quizData}
+            answerStats={liveGameState.currentQuestionStats}
           />
         );
+      // --- ADD CASE FOR SCOREBOARD ---
+      case "SHOWING_SCOREBOARD":
+        return (
+          <ScoreboardView
+            players={liveGameState.players}
+            previousPlayerStates={liveGameState.previousPlayerStateForScoreboard}
+            quizTitle={quizData?.title}
+          />
+        );
+      // --- END ADDED CASE ---
       case "PODIUM":
         return (
           <div className="flex items-center justify-center h-full">
-            <p className="text-2xl">Podium Screen (TODO)</p>
+            <p className="text-2xl text-white">Podium Screen (TODO)</p>
           </div>
         );
       case "ENDED":
         return (
           <div className="flex items-center justify-center h-full">
-            <p className="text-2xl">Game Ended Screen (TODO)</p>
+            <p className="text-2xl text-white">Game Ended Screen (TODO)</p>
           </div>
         );
-      // LOBBY is handled by HostPage directly
+      case "LOBBY": // Lobby view is handled by HostPage, HostView shouldn't render in LOBBY
+        console.warn("HostView rendered during LOBBY state - this should ideally not happen.");
+        return <HostLoadingView message="Returning to lobby..." />;
       default:
         console.warn("HostView encountered unexpected state:", status);
         return <HostLoadingView message="Waiting for game state..." />;
@@ -171,18 +185,28 @@ const HostViewComponent: React.FC<HostViewProps> = ({
       </main>
 
       {/* Footer is always present in HostView */}
-      <FooterBar
-        currentQuestionIndex={liveGameState?.currentQuestionIndex ?? -1}
-        totalQuestions={quizData?.questions?.length ?? 0} // Get total from quizData
-        gamePin={gamePin}
-        accessUrl={accessUrl}
-        onSkip={onSkip}
-        onNext={onNext}
-        onSettingsClick={onSettingsClick}
-        isMuted={isMuted}
-        onToggleMute={onToggleMute}
-        className="relative z-10 flex-shrink-0" // Ensure footer doesn't grow
-      />
+      {liveGameState && liveGameState.status !== 'LOBBY' && ( // Don't show footer in lobby
+        <FooterBar
+          currentQuestionIndex={liveGameState.currentQuestionIndex ?? -1}
+          totalQuestions={quizData?.questions?.length ?? 0}
+          gamePin={gamePin}
+          accessUrl={accessUrl}
+          // Only show Skip/Next buttons in relevant states
+          onSkip={liveGameState.status === 'QUESTION_SHOW' ? onSkip : undefined}
+          onNext={
+            liveGameState.status === 'SHOWING_STATS' ||
+              liveGameState.status === 'SHOWING_SCOREBOARD' ||
+              liveGameState.status === 'PODIUM' ||
+              (liveGameState.status === 'QUESTION_SHOW') // Allow next for content blocks  |  && currentBlock?.type === 'content'
+              ? onNext
+              : undefined
+          }
+          onSettingsClick={onSettingsClick}
+          isMuted={isMuted}
+          onToggleMute={onToggleMute}
+          className="relative z-10 flex-shrink-0"
+        />
+      )}
     </div>
   );
 };

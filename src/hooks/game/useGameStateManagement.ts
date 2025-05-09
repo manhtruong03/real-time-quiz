@@ -4,8 +4,8 @@ import {
   LiveGameState,
   QuizStructureHost,
   LivePlayerState,
-  QuestionAnswerStats, // Import the stats type
-  PlayerScoreRankSnapshot, // <-- IMPORT SNAPSHOT TYPE
+  QuestionAnswerStats,
+  PlayerScoreRankSnapshot,
 } from "@/src/lib/types";
 
 const initialGamePin = "PENDING_PIN"; // Use a distinct initial value
@@ -104,23 +104,36 @@ export function useGameStateManagement(
             "[GameStateHook] Cannot advance, invalid state or index",
             { prev, index, quizQuestions: initialQuizData?.questions.length }
           );
-          return prev; // Return previous state if invalid
+          return prev;
         }
-        // console.log(`[GameStateHook] Setting state to QUESTION_SHOW for index ${index}`);
+        // Snapshotting previous state before showing a new question is crucial for animations
+        // If the previous state was SHOWING_SCOREBOARD or SHOWING_STATS, capture the final player state from there.
+        // If coming directly from LOBBY, the previous state is effectively empty.
+        const previousStateMap: Record<string, PlayerScoreRankSnapshot> | null =
+          prev.status === "LOBBY"
+            ? null
+            : Object.entries(prev.players).reduce((acc, [cid, player]) => {
+                acc[cid] = { score: player.totalScore, rank: player.rank };
+                return acc;
+              }, {} as Record<string, PlayerScoreRankSnapshot>);
+
+        console.log(
+          `[GameStateHook] Setting state to QUESTION_SHOW for index ${index}`
+        );
         return {
           ...prev,
           status: "QUESTION_SHOW",
           currentQuestionIndex: index,
-          currentQuestionStartTime: Date.now(), // Set start time immediately
-          currentQuestionEndTime: null, // Reset end time
-          currentQuestionStats: null, // <-- Reset stats when advancing
-          // ** IMPORTANT: Reset previousPlayerState when advancing to a NEW question **
-          previousPlayerStateForScoreboard: null,
+          currentQuestionStartTime: Date.now(),
+          currentQuestionEndTime: null,
+          currentQuestionStats: null,
+          // Store the state BEFORE this new question starts
+          previousPlayerStateForScoreboard: previousStateMap,
         };
       });
     },
     [initialQuizData]
-  ); // Depends on initialQuizData to check index bounds
+  );
 
   // const showResults = useCallback(() => {
   //   // console.log("[GameStateHook] Setting state to QUESTION_RESULT");
@@ -179,11 +192,44 @@ export function useGameStateManagement(
     [] // No dependency needed for setLiveGameState
   );
 
+  // --- ADDED: Function to transition to showing the scoreboard ---
+  const transitionToShowingScoreboard = useCallback(() => {
+    console.log("[GameStateHook] Transitioning state to SHOWING_SCOREBOARD");
+    setLiveGameState((prev) => {
+      // Typically transition from SHOWING_STATS
+      if (!prev || prev.status !== "SHOWING_STATS") {
+        console.warn(
+          `[GameStateHook] Attempted to transition to SHOWING_SCOREBOARD from invalid state: ${prev?.status}`
+        );
+        return prev;
+      }
+      // previousPlayerStateForScoreboard should already be set from the transitionToStatsView call
+      return {
+        ...prev,
+        status: "SHOWING_SCOREBOARD",
+        // Keep currentQuestionStats and previousPlayerStateForScoreboard as they are
+      };
+    });
+  }, []);
+  // --- END ADDED ---
+
   const showPodium = useCallback(() => {
     console.log("[GameStateHook] Setting state to PODIUM");
     setLiveGameState((prev) => {
       if (!prev) return null;
-      return { ...prev, status: "PODIUM" as const };
+      // Capture final state before podium if needed, although ranking logic might handle this
+      const finalStateMap: Record<string, PlayerScoreRankSnapshot> = {};
+      Object.entries(prev.players).forEach(([cid, player]) => {
+        finalStateMap[cid] = {
+          score: player.totalScore,
+          rank: player.rank,
+        };
+      });
+      return {
+        ...prev,
+        status: "PODIUM",
+        previousPlayerStateForScoreboard: finalStateMap, // Store final state before podium
+      };
     });
   }, []);
 
@@ -193,7 +239,7 @@ export function useGameStateManagement(
       if (!prev) return null;
       return {
         ...prev,
-        status: "ENDED" as const,
+        status: "ENDED",
         currentQuestionEndTime: Date.now(),
       };
     });
@@ -223,6 +269,7 @@ export function useGameStateManagement(
     initializeSession,
     advanceToQuestion,
     transitionToStatsView,
+    transitionToShowingScoreboard,
     showPodium,
     endGame,
     resetGameState,
