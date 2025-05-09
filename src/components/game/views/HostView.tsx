@@ -18,8 +18,9 @@ import { useGameViewBackground } from "@/src/hooks/game/useGameViewBackground";
 import { HostLoadingView } from "../host/views/HostLoadingView";
 import { HostContentBlockView } from "../host/views/HostContentBlockView";
 import { HostInteractiveQuestionView } from "../host/views/HostInteractiveQuestionView";
-import { HostAnswerStatsView } from "../host/views/HostAnswerStatsView"; // Import the stats view
-import { ScoreboardView } from "../host/scoreboard/ScoreboardView"; // Adjust path if needed
+import { HostAnswerStatsView } from "../host/views/HostAnswerStatsView";
+import { ScoreboardView } from "../host/scoreboard/ScoreboardView";
+import { PodiumView } from "../host/podium/PodiumView";
 
 interface HostViewProps {
   // Replace questionData with liveGameState and quizData
@@ -69,7 +70,7 @@ const HostViewComponent: React.FC<HostViewProps> = ({
     hasCustomBackground: hasFinalCustomBackground,
   } = useGameViewBackground({
     selectedBackgroundId,
-    currentBlock,
+    currentBlock: liveGameState?.status === 'PODIUM' ? null : currentBlock, // Don't use block background for podium
   });
 
   const hostViewClasses = cn(
@@ -141,9 +142,10 @@ const HostViewComponent: React.FC<HostViewProps> = ({
       // --- END ADDED CASE ---
       case "PODIUM":
         return (
-          <div className="flex items-center justify-center h-full">
-            <p className="text-2xl text-white">Podium Screen (TODO)</p>
-          </div>
+          <PodiumView
+            players={liveGameState.players}
+            quizData={quizData}
+          />
         );
       case "ENDED":
         return (
@@ -176,7 +178,7 @@ const HostViewComponent: React.FC<HostViewProps> = ({
     <div className={hostViewClasses} style={finalBackgroundStyle}>
       {!hasFinalCustomBackground && <div className="stars-layer"></div>}
       {hasFinalCustomBackground && finalBackgroundStyle.backgroundImage && (
-        <div className="absolute inset-0 bg-black/40 z-0"></div>
+        <div className="absolute inset-0 bg-black/60 z-0"></div>
       )}
 
       {/* Main area renders the selected view */}
