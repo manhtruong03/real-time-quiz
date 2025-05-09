@@ -182,7 +182,13 @@ const HostViewComponent: React.FC<HostViewProps> = ({
       )}
 
       {/* Main area renders the selected view */}
-      <main className="flex-grow flex flex-col justify-center items-stretch p-4 md:p-6 relative z-10 overflow-y-auto">
+      <main className="flex-grow flex flex-col items-stretch p-0 relative z-10 overflow-y-auto">
+        {/*
+          ITEMS-STRETCH: Will make PodiumView (the child) stretch vertically if PodiumView doesn't have a fixed height.
+          P-0: Padding will be handled by PodiumView itself to allow its background to go edge-to-edge if needed.
+          OVERFLOW-Y-AUTO: This is critical for the whole page scroll.
+          REMOVED justify-center, as PodiumView will now control its internal alignment and can grow.
+        */}
         {mainContent}
       </main>
 
