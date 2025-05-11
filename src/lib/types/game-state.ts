@@ -5,7 +5,7 @@ import type { QuestionAnswerStats } from "./stats";
 export interface PlayerAnswerRecord {
   questionIndex: number;
   blockType: GameBlock["type"];
-  choice: number | number[] | string | null;
+  choice: number | number[] | null;
   text?: string | null;
 
   reactionTimeMs: number;
