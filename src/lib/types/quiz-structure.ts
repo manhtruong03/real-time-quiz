@@ -51,6 +51,7 @@ export interface ChoiceHost {
   correct: boolean; // HOST HAS THIS
 }
 export interface QuestionHost {
+  id: string;
   type: GameBlock["type"];
   question?: string | undefined; // For quiz, jumble, survey, open_ended
   title?: string | undefined; // For content

@@ -6,7 +6,7 @@
  * Maps to the 'player_answer' table.
  * (Backend generates 'answer_id', links 'slide_id' and 'player_id').
  */
-interface SessionPlayerAnswerDto {
+export interface SessionPlayerAnswerDto {
   clientId: string; // Player's 'cid', used by backend to link to the correct player_id.
   questionIndex: number; // 0-based index of the game slide, used by backend to link to the correct slide_id.
 
@@ -27,7 +27,7 @@ interface SessionPlayerAnswerDto {
  * Maps closely to the 'game_slide' table.
  * (Backend generates 'slide_id', links 'session_id').
  */
-interface SessionGameSlideDto {
+export interface SessionGameSlideDto {
   // --- Data matching game_slide columns ---
   slideIndex: number; // Maps to 'slide_index'. (NOT NULL in DB)
   slideType: string; // 'QUESTION', 'LEADERBOARD', etc. Maps to 'slide_type'. (NOT NULL in DB)
@@ -46,7 +46,7 @@ interface SessionGameSlideDto {
  * Maps closely to the 'player' table.
  * (Backend generates 'player_id', links 'session_id', calculates 'average_time', maps 'avatar').
  */
-interface SessionPlayerDto {
+export interface SessionPlayerDto {
   // --- Data matching player columns ---
   clientId: string; // The 'cid' used during WS session. Maps to 'client_id'. (NOT NULL in DB)
   nickname: string; // Maps to 'nickname'. (NOT NULL in DB)

@@ -16,6 +16,7 @@ export default {
         // --- Question 0: content ---
         // Informational slide, no choices, no scoring.
         {
+            id: "question-uuid-001",
             type: "content",
             title: "Welcome to the All-Types Sample Quiz!",
             description: "We will go through Content, Quiz (True/False, 4-Choice, Image), Jumble, Survey, and Open-Ended questions. Get ready!",
@@ -25,6 +26,7 @@ export default {
         },
         // --- Question 1: quiz (2 choices - True/False) ---
         {
+            id: "question-uuid-002",
             type: "quiz",
             question: "<b>True or False:</b> Mock data helps frontend development.",
             time: 20000, // Time limit in milliseconds
@@ -39,6 +41,7 @@ export default {
         },
         // --- Question 2: quiz (4 choices - Text) ---
         {
+            id: "question-uuid-003",
             type: "quiz",
             question: "Which technology is NOT part of the frontend stack mentioned?",
             time: 30000,
@@ -55,6 +58,7 @@ export default {
         },
         // --- Question 3: quiz (4 choices - Image) ---
         {
+            id: "question-uuid-004",
             type: "quiz",
             question: "Which shape is a square?",
             time: 20000,
@@ -85,6 +89,7 @@ export default {
         // Player needs to order these items correctly.
         // The 'correct' field is always true; the correct order is defined by the array sequence here.
         {
+            id: "question-uuid-005",
             type: "jumble",
             question: "Place these frontend technologies in alphabetical order:",
             time: 60000,
@@ -104,6 +109,7 @@ export default {
         // Poll question, no single correct answer for scoring.
         // correct:true just means it's a valid selectable option.
         {
+            id: "question-uuid-006",
             type: "survey",
             question: "Which CSS framework do you prefer?",
             time: 20000,
@@ -120,6 +126,7 @@ export default {
         // --- Question 6: open_ended ---
         // Player types the answer.
         {
+            id: "question-uuid-007",
             type: "open_ended",
             question: "What package manager is used in this project? (Hint: starts with 'p')",
             time: 30000,

@@ -33,6 +33,11 @@ import { HostLobbyView } from "@/src/components/game/host/lobby/HostLobbyView";
 import { useToast } from "@/src/components/ui/use-toast";
 import { useHostAudioManager } from "@/src/hooks/game/useHostAudioManager";
 
+import { useAuth } from '@/src/context/AuthContext';
+import { transformLiveStateToFinalizationDto } from '@/src/lib/game-utils/session-transformer';
+import { saveSessionResults } from '@/src/lib/api/sessions'; // Assuming this file is created
+// toast is already imported
+
 // Constants remain the same
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080/api/session";
 const TOPIC_PREFIX = "/topic";
@@ -67,6 +72,8 @@ const HostPageContent = () => {
   const [autoStartCountdown, setAutoStartCountdown] = useState<number | null>(null);
   const autoStartIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const [isFullScreen, setIsFullScreen] = useState(false);
+  const [isFinalizingSession, setIsFinalizingSession] = useState(false);
+  const { isAuthenticated } = useAuth();
   const { toast } = useToast();
 
   // --- Hooks ---
@@ -234,6 +241,7 @@ const HostPageContent = () => {
     selectedBackgroundId,
     selectedSoundId,
   ]);
+
   useEffect(() => { /* ... WS Status effect ... */
     // Only update UI state based on WS connection *after* the initial state
     if (uiState === 'INITIAL' && isQuizDataLoading) return; // Don't react to WS while loading quiz
@@ -250,6 +258,7 @@ const HostPageContent = () => {
       setUiState("ERROR");
     }
   }, [wsConnectionStatus, wsError, uiState, isQuizDataLoading]); // Add isQuizDataLoading dependency
+
   useEffect(() => { /* ... Send Question/Result effect ... */
     if (!liveGameState) return;
     // Send messages only when CONNECTED state is reached (implies WS is ready)
@@ -316,6 +325,7 @@ const HostPageContent = () => {
     prepareQuestionMessage,
     prepareResultMessage,
   ]);
+
   useEffect(() => { /* ... Auto-Start Countdown effect ... */
     // (Logic remains the same)
     if (autoStartIntervalRef.current) {
@@ -351,16 +361,63 @@ const HostPageContent = () => {
       if (autoStartIntervalRef.current) clearInterval(autoStartIntervalRef.current);
     };
   }, [isAutoStartEnabled, autoStartTimeSeconds, autoStartCountdown, liveGameState?.status, handleNext]);
+
   useEffect(() => { /* ... WebSocket cleanup effect ... */
     return () => {
       disconnectWebSocket();
     };
   }, [disconnectWebSocket]);
+
   useEffect(() => { /* ... Fullscreen effect ... */
     const handleFullscreenChange = () => setIsFullScreen(!!document.fullscreenElement);
     document.addEventListener("fullscreenchange", handleFullscreenChange);
     return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
   }, []);
+
+  useEffect(() => {
+    if (
+      liveGameState &&
+      quizData && // originalQuizData is available as 'quizData' in HostPageContent
+      (liveGameState.status === "PODIUM" || liveGameState.status === "ENDED") &&
+      isAuthenticated &&
+      !isFinalizingSession
+    ) {
+      setIsFinalizingSession(true);
+      console.log("[HostPage] Game ended. Finalizing session...");
+
+      const finalPayload = transformLiveStateToFinalizationDto(liveGameState, quizData);
+
+      const sendFinalizationRequest = async () => {
+        try {
+          // console.log("[HostPage] Sending DTO:", JSON.stringify(finalPayload, null, 2)); // For debugging
+          await saveSessionResults(finalPayload);
+          toast({
+            title: "Session Results Saved",
+            description: "The game results have been successfully recorded.",
+          });
+          // Consider next actions: e.g., enable a "Play Again" button, or navigate.
+          // For now, just logs success. Further UI changes can be a separate task.
+        } catch (error: any) {
+          console.error("[HostPage] Error saving session results:", error);
+          toast({
+            variant: "destructive",
+            title: "Error Saving Results",
+            description: error.message || "An unexpected error occurred.",
+          });
+        } finally {
+          // setIsFinalizingSession(false); // Or keep it true to prevent re-submission until a new game starts
+        }
+      };
+      sendFinalizationRequest();
+    }
+  }, [
+    liveGameState,
+    quizData, // quizData from HostPageContent state
+    isAuthenticated,
+    isFinalizingSession,
+    toast,
+    setIsFinalizingSession // Add setter to deps if used in finally
+  ]);
 
   // === Action Handlers ===
   // This is triggered by the button in InitialHostView *after* quiz data is loaded

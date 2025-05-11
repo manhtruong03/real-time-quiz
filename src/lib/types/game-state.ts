@@ -21,10 +21,7 @@ export interface PlayerAnswerRecord {
 export interface LivePlayerState {
   cid: string;
   nickname: string;
-  // --- MODIFIED ---
-  // Store the avatar_id (UUID string) directly
   avatarId: string | null;
-  // --- END MODIFIED ---
 
   isConnected: boolean;
   joinedAt: number;
@@ -53,6 +50,20 @@ export interface LivePlayerState {
 export interface PlayerScoreRankSnapshot {
   score: number;
   rank: number;
+}
+
+export interface QuestionEventLogEntry {
+  questionIndex: number; // The 0-based index of the question in the quiz
+  startedAt: number | null;
+  endedAt: number | null;
+  // More granular statuses can be added if needed for SessionGameSlideDto.status mapping
+  status:
+    | "PENDING"
+    | "ACTIVE"
+    | "SKIPPED"
+    | "ENDED"
+    | "STATS_SHOWN"
+    | "SCOREBOARD_SHOWN";
 }
 
 export interface LiveGameState {
@@ -85,4 +96,7 @@ export interface LiveGameState {
     string,
     PlayerScoreRankSnapshot
   > | null;
+
+  /** Log of events for each question/slide presented during the game. */
+  questionEventsLog: QuestionEventLogEntry[];
 }

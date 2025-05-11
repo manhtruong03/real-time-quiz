@@ -3,13 +3,21 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import {
   LiveGameState,
   QuizStructureHost,
-  // LivePlayerState, // Not directly used in createInitialGameState signature
   QuestionAnswerStats,
   PlayerScoreRankSnapshot,
+  QuestionEventLogEntry,
 } from "@/src/lib/types";
 
 const initialGamePin = "PENDING_PIN";
 const initialHostId = "PENDING_HOST";
+
+export type QuestionEventStatus =
+  | "PENDING"
+  | "ACTIVE"
+  | "SKIPPED"
+  | "ENDED"
+  | "STATS_SHOWN"
+  | "SCOREBOARD_SHOWN";
 
 const createInitialGameState = (quizId: string | undefined): LiveGameState => ({
   gamePin: initialGamePin,
@@ -25,6 +33,7 @@ const createInitialGameState = (quizId: string | undefined): LiveGameState => ({
   powerUpsEnabled: false,
   currentQuestionStats: null,
   previousPlayerStateForScoreboard: null, // Initialize as null
+  questionEventsLog: [],
 });
 
 export function useGameStateManagement(
@@ -75,6 +84,7 @@ export function useGameStateManagement(
           // players: {}, // Already handled by createInitialGameState
           // currentQuestionIndex: -1, // Already handled
           previousPlayerStateForScoreboard: null, // Already handled
+          questionEventsLog: [],
         };
       });
       setTimerKey("lobby");
@@ -124,6 +134,27 @@ export function useGameStateManagement(
           );
         }
 
+        const newEventLogEntry: QuestionEventLogEntry = {
+          questionIndex: index,
+          startedAt: Date.now(),
+          endedAt: null,
+          status: "ACTIVE",
+        };
+        const updatedEventsLog = [...prev.questionEventsLog];
+        const existingEntryIndex = updatedEventsLog.findIndex(
+          (e) => e.questionIndex === index
+        );
+        if (existingEntryIndex > -1) {
+          updatedEventsLog[existingEntryIndex] = {
+            ...updatedEventsLog[existingEntryIndex], // Keep previous data if any
+            startedAt: newEventLogEntry.startedAt, // Potentially re-starting a slide? Or ensure it's only new.
+            status: "ACTIVE", // Reset status if re-visiting (though unlikely in linear flow)
+            endedAt: null,
+          };
+        } else {
+          updatedEventsLog.push(newEventLogEntry);
+        }
+
         return {
           ...prev,
           status: "QUESTION_SHOW",
@@ -136,10 +167,11 @@ export function useGameStateManagement(
             Object.keys(snapshotForUpcomingQuestion).length > 0
               ? snapshotForUpcomingQuestion
               : null,
+          questionEventsLog: updatedEventsLog,
         };
       });
     },
-    [initialQuizData]
+    [initialQuizData, setLiveGameState]
   );
 
   const transitionToStatsView = useCallback(
@@ -171,16 +203,42 @@ export function useGameStateManagement(
           JSON.stringify(prev.previousPlayerStateForScoreboard, null, 2)
         );
 
+        const questionIndexToEnd = prev.currentQuestionIndex;
+        const now = Date.now();
+        const updatedEventsLog = prev.questionEventsLog.map((entry) =>
+          entry.questionIndex === questionIndexToEnd
+            ? {
+                ...entry,
+                endedAt: now,
+                status: "STATS_SHOWN" as QuestionEventStatus,
+              } // Ensure type
+            : entry
+        );
+        // If no entry existed (shouldn't happen if advanceToQuestion worked), add one
+        if (
+          !updatedEventsLog.some(
+            (e) => e.questionIndex === questionIndexToEnd
+          ) &&
+          questionIndexToEnd !== -1
+        ) {
+          updatedEventsLog.push({
+            questionIndex: questionIndexToEnd,
+            startedAt: prev.currentQuestionStartTime, // Best guess
+            endedAt: now,
+            status: "STATS_SHOWN",
+          });
+        }
+
         return {
           ...prev,
           status: "SHOWING_STATS",
-          currentQuestionEndTime: Date.now(),
+          currentQuestionEndTime: now,
           currentQuestionStats: calculatedStats,
-          // previousPlayerStateForScoreboard is NOT changed here. It was set by advanceToQuestion.
+          questionEventsLog: updatedEventsLog,
         };
       });
     },
-    []
+    [setLiveGameState]
   );
 
   const transitionToShowingScoreboard = useCallback(() => {
@@ -192,15 +250,26 @@ export function useGameStateManagement(
         );
         return prev;
       }
+
+      // +++ UPDATE questionEventsLog for current question (optional, if distinct status needed) +++
+      const questionIndexForScoreboard = prev.currentQuestionIndex;
+      const updatedEventsLog = prev.questionEventsLog.map((entry) =>
+        entry.questionIndex === questionIndexForScoreboard &&
+        entry.status === "STATS_SHOWN" // Ensure it was in stats
+          ? { ...entry, status: "SCOREBOARD_SHOWN" as QuestionEventStatus }
+          : entry
+      );
+
       // No change to previousPlayerStateForScoreboard, it's carried over from the SHOWING_STATS state.
       // It should hold the state from *before* the last question's results were calculated.
       // And prev.players holds the state *after* the last question's results. This is the desired setup.
       return {
         ...prev,
         status: "SHOWING_SCOREBOARD",
+        questionEventsLog: updatedEventsLog,
       };
     });
-  }, []);
+  }, [setLiveGameState]);
 
   const showPodium = useCallback(() => {
     console.log("[GameStateHook] Setting state to PODIUM");
@@ -215,31 +284,59 @@ export function useGameStateManagement(
           rank: p.rank,
         };
       });
+
+      // Update status of potentially last active question if not already marked as fully ended in log
+      const updatedEventsLog = prev.questionEventsLog.map((entry) =>
+        entry.questionIndex === prev.currentQuestionIndex &&
+        entry.status !== "ENDED" &&
+        entry.status !== "SKIPPED"
+          ? {
+              ...entry,
+              endedAt: entry.endedAt ?? Date.now(),
+              status: "ENDED" as QuestionEventStatus,
+            }
+          : entry
+      );
       return {
         ...prev,
         status: "PODIUM",
         previousPlayerStateForScoreboard: finalSnapshot, // Or could just use prev.players directly in PodiumView
+        questionEventsLog: updatedEventsLog,
       };
     });
-  }, []);
+  }, [setLiveGameState]);
 
   const endGame = useCallback(() => {
     console.log("[GameStateHook] Setting state to ENDED");
     setLiveGameState((prev) => {
       if (!prev) return null;
+      // Update status of potentially last active question if not already marked as fully ended in log
+      const now = Date.now();
+      const updatedEventsLog = prev.questionEventsLog.map((entry) =>
+        entry.questionIndex === prev.currentQuestionIndex &&
+        entry.status !== "ENDED" &&
+        entry.status !== "SKIPPED"
+          ? {
+              ...entry,
+              endedAt: entry.endedAt ?? now,
+              status: "ENDED" as QuestionEventStatus,
+            }
+          : entry
+      );
       return {
         ...prev,
         status: "ENDED",
-        currentQuestionEndTime: Date.now(),
+        currentQuestionEndTime: prev.currentQuestionEndTime ?? now,
+        questionEventsLog: updatedEventsLog,
       };
     });
-  }, []);
+  }, [setLiveGameState]);
 
   const resetGameState = useCallback(() => {
     console.log("[GameStateHook] Resetting state completely");
     setLiveGameState(null); // This will trigger the useEffect to re-create with initialQuizData if available
     setTimerKey("initial");
-  }, []);
+  }, [setLiveGameState]);
 
   useEffect(() => {
     setTimerKey(

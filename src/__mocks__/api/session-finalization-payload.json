@@ -1,0 +1,830 @@
+{
+    "gamePin": "195970",
+    "quizId": "6b14fbae-7e64-4a38-a7ee-5c56c1224825",
+    "hostUserId": "host-1746977232792",
+    "sessionStartTime": 1746977232795,
+    "sessionEndTime": 1746977337440,
+    "gameType": "LIVE",
+    "finalPlayerCount": 3,
+    "finalSessionStatus": "ENDED",
+    "allowLateJoin": true,
+    "powerUpsEnabled": false,
+    "terminationReason": null,
+    "terminationSlideIndex": null,
+    "players": [
+        {
+            "clientId": "dc7dfc5b-daf4-f812-a89b-2d786dc0b70b",
+            "nickname": "Player 01",
+            "userId": null,
+            "status": "FINISHED",
+            "joinedAt": 1746977241731,
+            "joinSlideIndex": -1,
+            "waitingSince": null,
+            "rank": 1,
+            "totalScore": 2673,
+            "correctAnswers": 3,
+            "streakCount": 2,
+            "answerCount": 5,
+            "unansweredCount": 1,
+            "totalTime": 14736,
+            "lastActivityAt": 1746977337388,
+            "deviceInfoJson": null,
+            "avatarId": "avatar-cat-uuid-9i8j"
+        },
+        {
+            "clientId": "2193cbc2-5e88-ee36-3a3c-5e8cce355885",
+            "nickname": "Player 02",
+            "userId": null,
+            "status": "FINISHED",
+            "joinedAt": 1746977263771,
+            "joinSlideIndex": -1,
+            "waitingSince": null,
+            "rank": 3,
+            "totalScore": 0,
+            "correctAnswers": 0,
+            "streakCount": 0,
+            "answerCount": 0,
+            "unansweredCount": 6,
+            "totalTime": 0,
+            "lastActivityAt": 1746977337388,
+            "deviceInfoJson": null,
+            "avatarId": "avatar-robot-uuid-7k6l"
+        },
+        {
+            "clientId": "d11a7c89-dd50-cc94-2dce-1cc3e4238d04",
+            "nickname": "Player 03",
+            "userId": null,
+            "status": "FINISHED",
+            "joinedAt": 1746977272430,
+            "joinSlideIndex": -1,
+            "waitingSince": null,
+            "rank": 2,
+            "totalScore": 2633,
+            "correctAnswers": 3,
+            "streakCount": 2,
+            "answerCount": 5,
+            "unansweredCount": 1,
+            "totalTime": 16964,
+            "lastActivityAt": 1746977337388,
+            "deviceInfoJson": null,
+            "avatarId": "avatar-dog-2-uuid-5m4n"
+        }
+    ],
+    "gameSlides": [
+        {
+            "slideIndex": 0,
+            "slideType": "CONTENT_SLIDE",
+            "status": "ENDED",
+            "startedAt": 1746977275478,
+            "endedAt": 1746977276996,
+            "originalQuestionId": "4188076c-c648-4e7a-9bb0-fe8e5e5ce1a4",
+            "questionDistributionJson": {
+                "id": "4188076c-c648-4e7a-9bb0-fe8e5e5ce1a4",
+                "type": "content",
+                "title": "Get ready to wrap up 2019 and enter a new decade!",
+                "description": "Let's take a tour of everything exciting that happened in 2019, and test how much you paid attention! Get ready in 3...2...1...!",
+                "time": 0,
+                "pointsMultiplier": 0,
+                "choices": [],
+                "image": "https://media.kahoot.it/16cb820f-c510-49ba-8a97-ca121c828a87",
+                "video": {
+                    "startTime": 0,
+                    "endTime": 0,
+                    "service": "youtube",
+                    "fullUrl": ""
+                },
+                "media": [],
+                "position": 0
+            },
+            "playerAnswers": []
+        },
+        {
+            "slideIndex": 1,
+            "slideType": "QUESTION_SLIDE",
+            "status": "ENDED",
+            "startedAt": 1746977276997,
+            "endedAt": 1746977284866,
+            "originalQuestionId": "e26f82d8-bcd8-43a7-b8d8-a33e3d93de6d",
+            "questionDistributionJson": {
+                "id": "e26f82d8-bcd8-43a7-b8d8-a33e3d93de6d",
+                "type": "jumble",
+                "title": "Let's start with science! Place these space events in order:",
+                "time": 60000,
+                "pointsMultiplier": 1,
+                "choices": [
+                    {
+                        "answer": "Food grown in space eaten",
+                        "correct": true
+                    },
+                    {
+                        "answer": "Soft landing on the far side of the moon",
+                        "correct": true
+                    },
+                    {
+                        "answer": "NASA announces International Space Station will open to  tourists",
+                        "correct": true
+                    },
+                    {
+                        "answer": "All female space walk",
+                        "correct": true
+                    }
+                ],
+                "image": "https://media.kahoot.it/f3a2ced4-2a00-4125-b791-9e5621faa001",
+                "video": {
+                    "startTime": 0,
+                    "endTime": 0,
+                    "service": "youtube",
+                    "fullUrl": ""
+                },
+                "media": [],
+                "position": 1
+            },
+            "playerAnswers": [
+                {
+                    "clientId": "dc7dfc5b-daf4-f812-a89b-2d786dc0b70b",
+                    "questionIndex": 1,
+                    "choice": [
+                        0,
+                        1,
+                        2,
+                        3
+                    ],
+                    "text": null,
+                    "reactionTimeMs": 2630,
+                    "answerTimestamp": 1746977279627,
+                    "status": "CORRECT",
+                    "basePoints": 956,
+                    "finalPoints": 956
+                },
+                {
+                    "clientId": "2193cbc2-5e88-ee36-3a3c-5e8cce355885",
+                    "questionIndex": 1,
+                    "choice": null,
+                    "text": null,
+                    "reactionTimeMs": 60000,
+                    "answerTimestamp": 1746977284795,
+                    "status": "TIMEOUT",
+                    "basePoints": 0,
+                    "finalPoints": 0
+                },
+                {
+                    "clientId": "d11a7c89-dd50-cc94-2dce-1cc3e4238d04",
+                    "questionIndex": 1,
+                    "choice": [
+                        0,
+                        1,
+                        2,
+                        3
+                    ],
+                    "text": null,
+                    "reactionTimeMs": 4931,
+                    "answerTimestamp": 1746977281928,
+                    "status": "CORRECT",
+                    "basePoints": 918,
+                    "finalPoints": 918
+                }
+            ]
+        },
+        {
+            "slideIndex": 2,
+            "slideType": "CONTENT_SLIDE",
+            "status": "ENDED",
+            "startedAt": 1746977290246,
+            "endedAt": 1746977291740,
+            "originalQuestionId": "580a2578-f0ac-4332-81d1-5177a58e592c",
+            "questionDistributionJson": {
+                "id": "580a2578-f0ac-4332-81d1-5177a58e592c",
+                "type": "content",
+                "title": "Pantone's Color of 2019 was...",
+                "description": "<b>Living Coral</b> - 16-1546. Knowing this might come in handy later!",
+                "time": 0,
+                "pointsMultiplier": 0,
+                "choices": [],
+                "image": "https://media.kahoot.it/d4ef2f0f-59ff-4ed2-8551-ac83b25af6ad",
+                "video": {
+                    "startTime": 0,
+                    "endTime": 0,
+                    "service": "youtube",
+                    "fullUrl": ""
+                },
+                "media": [],
+                "position": 2
+            },
+            "playerAnswers": []
+        },
+        {
+            "slideIndex": 3,
+            "slideType": "QUESTION_SLIDE",
+            "status": "ENDED",
+            "startedAt": 1746977291741,
+            "endedAt": 1746977297932,
+            "originalQuestionId": "8b572cc2-92f7-428a-822e-0af8a4ffca8d",
+            "questionDistributionJson": {
+                "id": "8b572cc2-92f7-428a-822e-0af8a4ffca8d",
+                "type": "quiz",
+                "title": "<b>True or false </b>-<b> </b>The Beyond Meat fried chicken at a KFC in Atlanta, GA, sold out 5 hours after launch.",
+                "time": 20000,
+                "pointsMultiplier": 1,
+                "choices": [
+                    {
+                        "answer": "True",
+                        "correct": true
+                    },
+                    {
+                        "answer": "False",
+                        "correct": false
+                    }
+                ],
+                "image": "https://media.kahoot.it/290addae-7ff9-4cff-804f-d9354f7e46ac",
+                "video": {
+                    "startTime": 0,
+                    "endTime": 0,
+                    "service": "youtube",
+                    "fullUrl": ""
+                },
+                "media": [],
+                "position": 3
+            },
+            "playerAnswers": [
+                {
+                    "clientId": "dc7dfc5b-daf4-f812-a89b-2d786dc0b70b",
+                    "questionIndex": 3,
+                    "choice": 0,
+                    "text": "True",
+                    "reactionTimeMs": 2833,
+                    "answerTimestamp": 1746977294574,
+                    "status": "CORRECT",
+                    "basePoints": 858,
+                    "finalPoints": 858
+                },
+                {
+                    "clientId": "2193cbc2-5e88-ee36-3a3c-5e8cce355885",
+                    "questionIndex": 3,
+                    "choice": null,
+                    "text": null,
+                    "reactionTimeMs": 20000,
+                    "answerTimestamp": 1746977297878,
+                    "status": "TIMEOUT",
+                    "basePoints": 0,
+                    "finalPoints": 0
+                },
+                {
+                    "clientId": "d11a7c89-dd50-cc94-2dce-1cc3e4238d04",
+                    "questionIndex": 3,
+                    "choice": 0,
+                    "text": "True",
+                    "reactionTimeMs": 4233,
+                    "answerTimestamp": 1746977295974,
+                    "status": "CORRECT",
+                    "basePoints": 788,
+                    "finalPoints": 788
+                }
+            ]
+        },
+        {
+            "slideIndex": 4,
+            "slideType": "CONTENT_SLIDE",
+            "status": "ENDED",
+            "startedAt": 1746977301442,
+            "endedAt": 1746977302129,
+            "originalQuestionId": "0f0b5cda-b3ec-442b-93a5-129402199cfa",
+            "questionDistributionJson": {
+                "id": "0f0b5cda-b3ec-442b-93a5-129402199cfa",
+                "type": "content",
+                "title": "Tech next... Google announced <b>\"quantum supremacy\"</b>",
+                "description": "In October, Google claimed \"Sycamore\" completed a complex computation in 200 seconds. This would've taken the most powerful supercomputers ca. 10,000 years!",
+                "time": 0,
+                "pointsMultiplier": 0,
+                "choices": [],
+                "image": "https://media.kahoot.it/3e1360a8-a9d9-43a3-9b25-1a845ff1b849",
+                "video": {
+                    "startTime": 0,
+                    "endTime": 0,
+                    "service": "youtube",
+                    "fullUrl": ""
+                },
+                "media": [],
+                "position": 4
+            },
+            "playerAnswers": []
+        },
+        {
+            "slideIndex": 5,
+            "slideType": "QUESTION_SLIDE",
+            "status": "ENDED",
+            "startedAt": 1746977302130,
+            "endedAt": 1746977307723,
+            "originalQuestionId": "aaf052f5-3171-4cc3-aa79-a19fe9654c41",
+            "questionDistributionJson": {
+                "id": "aaf052f5-3171-4cc3-aa79-a19fe9654c41",
+                "type": "quiz",
+                "title": "Which of the below is one thing quantum computers <b>can't</b> do?",
+                "time": 30000,
+                "pointsMultiplier": 1,
+                "choices": [
+                    {
+                        "answer": "Help us search for Earth-like planets",
+                        "correct": false
+                    },
+                    {
+                        "answer": "Break mainstream cryptosystems used for data security",
+                        "correct": false
+                    },
+                    {
+                        "answer": "Potentially cure Alzheimer’s disease",
+                        "correct": false
+                    },
+                    {
+                        "answer": "Replace world leaders",
+                        "correct": true
+                    }
+                ],
+                "image": "https://media.kahoot.it/37def5d0-4652-4c2f-a5a8-f0c5f8f28c2c",
+                "video": {
+                    "startTime": 0,
+                    "endTime": 0,
+                    "service": "youtube",
+                    "fullUrl": ""
+                },
+                "media": [],
+                "position": 5
+            },
+            "playerAnswers": [
+                {
+                    "clientId": "dc7dfc5b-daf4-f812-a89b-2d786dc0b70b",
+                    "questionIndex": 5,
+                    "choice": 1,
+                    "text": "Break mainstream cryptosystems used for data security",
+                    "reactionTimeMs": 3811,
+                    "answerTimestamp": 1746977305941,
+                    "status": "WRONG",
+                    "basePoints": 0,
+                    "finalPoints": 0
+                },
+                {
+                    "clientId": "2193cbc2-5e88-ee36-3a3c-5e8cce355885",
+                    "questionIndex": 5,
+                    "choice": null,
+                    "text": null,
+                    "reactionTimeMs": 30000,
+                    "answerTimestamp": 1746977307669,
+                    "status": "TIMEOUT",
+                    "basePoints": 0,
+                    "finalPoints": 0
+                },
+                {
+                    "clientId": "d11a7c89-dd50-cc94-2dce-1cc3e4238d04",
+                    "questionIndex": 5,
+                    "choice": 0,
+                    "text": "Help us search for Earth-like planets",
+                    "reactionTimeMs": 2248,
+                    "answerTimestamp": 1746977304378,
+                    "status": "WRONG",
+                    "basePoints": 0,
+                    "finalPoints": 0
+                }
+            ]
+        },
+        {
+            "slideIndex": 6,
+            "slideType": "CONTENT_SLIDE",
+            "status": "ENDED",
+            "startedAt": 1746977310878,
+            "endedAt": null,
+            "originalQuestionId": "83fa9d9b-60e8-4e10-b0dc-3c39232f0623",
+            "questionDistributionJson": {
+                "id": "83fa9d9b-60e8-4e10-b0dc-3c39232f0623",
+                "type": "content",
+                "title": "<b>Brexit</b> has been a hot political issue in 2019.",
+                "description": "The EU involves 28 European countries. The UK joined in 1973, and will be the first member state to withdraw, once a deal is agreed.",
+                "time": 0,
+                "pointsMultiplier": 0,
+                "choices": [],
+                "image": "https://media.kahoot.it/671ddd3f-6466-4ea5-88f7-ef8848a67a31",
+                "video": {
+                    "startTime": 0,
+                    "endTime": 0,
+                    "service": "youtube",
+                    "fullUrl": ""
+                },
+                "media": [],
+                "position": 6
+            },
+            "playerAnswers": []
+        },
+        {
+            "slideIndex": 7,
+            "slideType": "QUESTION_SLIDE",
+            "status": "ENDED",
+            "startedAt": 1746977312205,
+            "endedAt": null,
+            "originalQuestionId": "21a36b15-ad63-4cf6-bf32-6926cf84e748",
+            "questionDistributionJson": {
+                "id": "21a36b15-ad63-4cf6-bf32-6926cf84e748",
+                "type": "quiz",
+                "title": "What was the actual turnout for the vote on the UK leaving the EU in 2016?",
+                "time": 20000,
+                "pointsMultiplier": 1,
+                "choices": [
+                    {
+                        "answer": "54%",
+                        "correct": false
+                    },
+                    {
+                        "answer": "84%",
+                        "correct": false
+                    },
+                    {
+                        "answer": "72%",
+                        "correct": true
+                    },
+                    {
+                        "answer": "69%",
+                        "correct": false
+                    }
+                ],
+                "image": "https://media.kahoot.it/45ca75df-5f2c-42b2-92eb-6a88e61bf703",
+                "video": {
+                    "startTime": 0,
+                    "endTime": 0,
+                    "service": "youtube",
+                    "fullUrl": ""
+                },
+                "media": [],
+                "position": 7
+            },
+            "playerAnswers": []
+        },
+        {
+            "slideIndex": 8,
+            "slideType": "QUESTION_SLIDE",
+            "status": "ENDED",
+            "startedAt": 1746977312998,
+            "endedAt": null,
+            "originalQuestionId": "8199f5a7-73b7-4413-90c2-6bcd43f8bbf3",
+            "questionDistributionJson": {
+                "id": "8199f5a7-73b7-4413-90c2-6bcd43f8bbf3",
+                "type": "quiz",
+                "title": "Double points! Which music video of 2019 got the most views?",
+                "time": 20000,
+                "pointsMultiplier": 2,
+                "choices": [
+                    {
+                        "answer": "Old Town Road - Lil Nas X",
+                        "correct": false
+                    },
+                    {
+                        "answer": "Truth Hurts - Lizzo",
+                        "correct": false
+                    },
+                    {
+                        "answer": "Dancing with a Stranger - Sam Smith",
+                        "correct": true
+                    }
+                ],
+                "video": {
+                    "id": "w2Ov5jzm3j8",
+                    "startTime": 108,
+                    "endTime": 125,
+                    "service": "youtube",
+                    "fullUrl": "https://youtu.be/w2Ov5jzm3j8"
+                },
+                "media": [],
+                "position": 8
+            },
+            "playerAnswers": []
+        },
+        {
+            "slideIndex": 9,
+            "slideType": "QUESTION_SLIDE",
+            "status": "ENDED",
+            "startedAt": 1746977313510,
+            "endedAt": 1746977319389,
+            "originalQuestionId": "911ce563-0994-4ccd-8317-b50dafff3f3c",
+            "questionDistributionJson": {
+                "id": "911ce563-0994-4ccd-8317-b50dafff3f3c",
+                "type": "quiz",
+                "title": "Movie time! <b>True or false </b>- <i>Avengers: Endgame</i> overtook <i>Avatar</i> to become the highest grossing movie of all time.",
+                "time": 20000,
+                "pointsMultiplier": 1,
+                "choices": [
+                    {
+                        "answer": "True",
+                        "correct": true
+                    },
+                    {
+                        "answer": "False",
+                        "correct": false
+                    }
+                ],
+                "image": "https://media.kahoot.it/dd67afe8-38ea-4047-bf23-07e52f377089",
+                "video": {
+                    "startTime": 0,
+                    "endTime": 0,
+                    "service": "youtube",
+                    "fullUrl": ""
+                },
+                "media": [],
+                "position": 9
+            },
+            "playerAnswers": [
+                {
+                    "clientId": "dc7dfc5b-daf4-f812-a89b-2d786dc0b70b",
+                    "questionIndex": 9,
+                    "choice": 0,
+                    "text": "True",
+                    "reactionTimeMs": 2828,
+                    "answerTimestamp": 1746977316338,
+                    "status": "CORRECT",
+                    "basePoints": 859,
+                    "finalPoints": 859
+                },
+                {
+                    "clientId": "2193cbc2-5e88-ee36-3a3c-5e8cce355885",
+                    "questionIndex": 9,
+                    "choice": null,
+                    "text": null,
+                    "reactionTimeMs": 20000,
+                    "answerTimestamp": 1746977319334,
+                    "status": "TIMEOUT",
+                    "basePoints": 0,
+                    "finalPoints": 0
+                },
+                {
+                    "clientId": "d11a7c89-dd50-cc94-2dce-1cc3e4238d04",
+                    "questionIndex": 9,
+                    "choice": 1,
+                    "text": "False",
+                    "reactionTimeMs": 4089,
+                    "answerTimestamp": 1746977317599,
+                    "status": "WRONG",
+                    "basePoints": 0,
+                    "finalPoints": 0
+                }
+            ]
+        },
+        {
+            "slideIndex": 10,
+            "slideType": "QUESTION_SLIDE",
+            "status": "ENDED",
+            "startedAt": 1746977321351,
+            "endedAt": null,
+            "originalQuestionId": "d9d70b8b-02e6-4281-ac7d-09b1e27f1f4b",
+            "questionDistributionJson": {
+                "id": "d9d70b8b-02e6-4281-ac7d-09b1e27f1f4b",
+                "type": "survey",
+                "title": "What's your top movie choice from these all-time classics?",
+                "time": 20000,
+                "pointsMultiplier": 0,
+                "choices": [
+                    {
+                        "answer": "The Godfather",
+                        "correct": true
+                    },
+                    {
+                        "answer": "Pulp Fiction",
+                        "correct": true
+                    },
+                    {
+                        "answer": "Star Wars",
+                        "correct": true
+                    },
+                    {
+                        "answer": "Forrest Gump",
+                        "correct": true
+                    }
+                ],
+                "image": "https://media.kahoot.it/76df82c1-b762-496c-8e45-a4c5aff89f63",
+                "video": {
+                    "startTime": 0,
+                    "endTime": 0,
+                    "service": "youtube",
+                    "fullUrl": ""
+                },
+                "media": [],
+                "position": 10
+            },
+            "playerAnswers": []
+        },
+        {
+            "slideIndex": 11,
+            "slideType": "QUESTION_SLIDE",
+            "status": "ENDED",
+            "startedAt": 1746977324671,
+            "endedAt": null,
+            "originalQuestionId": "5f57041d-edf1-4b33-9a61-f282af7bdc4e",
+            "questionDistributionJson": {
+                "id": "5f57041d-edf1-4b33-9a61-f282af7bdc4e",
+                "type": "jumble",
+                "title": "This is a tough one, so double points! Sort these top-selling video games of <b>all time</b> in order of sales.",
+                "time": 60000,
+                "pointsMultiplier": 2,
+                "choices": [
+                    {
+                        "answer": "Minecraft (2011)",
+                        "correct": true
+                    },
+                    {
+                        "answer": "Tetris (1984)",
+                        "correct": true
+                    },
+                    {
+                        "answer": "Grand Theft Auto V (2013)",
+                        "correct": true
+                    },
+                    {
+                        "answer": "Wii Sports (2006)",
+                        "correct": true
+                    }
+                ],
+                "image": "https://media.kahoot.it/07eebbd7-13d9-4a4b-a456-387c2c3b67f8",
+                "video": {
+                    "startTime": 0,
+                    "endTime": 0,
+                    "service": "youtube",
+                    "fullUrl": ""
+                },
+                "media": [],
+                "position": 11
+            },
+            "playerAnswers": []
+        },
+        {
+            "slideIndex": 12,
+            "slideType": "QUESTION_SLIDE",
+            "status": "ENDED",
+            "startedAt": 1746977325204,
+            "endedAt": null,
+            "originalQuestionId": "0b1645b1-5664-4dd6-a1ee-a0e8ac8b3ebc",
+            "questionDistributionJson": {
+                "id": "0b1645b1-5664-4dd6-a1ee-a0e8ac8b3ebc",
+                "type": "survey",
+                "title": "Which of the below do you prefer?",
+                "time": 20000,
+                "pointsMultiplier": 0,
+                "choices": [
+                    {
+                        "answer": "video games",
+                        "correct": true
+                    },
+                    {
+                        "answer": "TV",
+                        "correct": true
+                    },
+                    {
+                        "answer": "listening to music",
+                        "correct": true
+                    },
+                    {
+                        "answer": "none of these!",
+                        "correct": true
+                    }
+                ],
+                "image": "https://media.kahoot.it/8430ccb9-6f34-46b7-b3cf-a0e0f07ec86f",
+                "video": {
+                    "startTime": 0,
+                    "endTime": 0,
+                    "service": "youtube",
+                    "fullUrl": ""
+                },
+                "media": [],
+                "position": 12
+            },
+            "playerAnswers": []
+        },
+        {
+            "slideIndex": 13,
+            "slideType": "QUESTION_SLIDE",
+            "status": "ENDED",
+            "startedAt": 1746977326197,
+            "endedAt": 1746977330151,
+            "originalQuestionId": "56000869-b463-4004-b73d-f78432bb613f",
+            "questionDistributionJson": {
+                "id": "56000869-b463-4004-b73d-f78432bb613f",
+                "type": "quiz",
+                "title": "Now onto sports... which of these events had a higher viewership in 2019?",
+                "time": 20000,
+                "pointsMultiplier": 1,
+                "choices": [
+                    {
+                        "answer": "Women's World Cup",
+                        "correct": true
+                    },
+                    {
+                        "answer": "Wimbledon",
+                        "correct": false
+                    }
+                ],
+                "image": "https://media.kahoot.it/32f2893e-e5c1-44e5-b238-6aa86617bc49",
+                "video": {
+                    "startTime": 0,
+                    "endTime": 0,
+                    "service": "youtube",
+                    "fullUrl": ""
+                },
+                "media": [],
+                "position": 13
+            },
+            "playerAnswers": [
+                {
+                    "clientId": "dc7dfc5b-daf4-f812-a89b-2d786dc0b70b",
+                    "questionIndex": 13,
+                    "choice": 1,
+                    "text": "Wimbledon",
+                    "reactionTimeMs": 2634,
+                    "answerTimestamp": 1746977328831,
+                    "status": "WRONG",
+                    "basePoints": 0,
+                    "finalPoints": 0
+                },
+                {
+                    "clientId": "2193cbc2-5e88-ee36-3a3c-5e8cce355885",
+                    "questionIndex": 13,
+                    "choice": null,
+                    "text": null,
+                    "reactionTimeMs": 20000,
+                    "answerTimestamp": 1746977330092,
+                    "status": "TIMEOUT",
+                    "basePoints": 0,
+                    "finalPoints": 0
+                },
+                {
+                    "clientId": "d11a7c89-dd50-cc94-2dce-1cc3e4238d04",
+                    "questionIndex": 13,
+                    "choice": 0,
+                    "text": "Women's World Cup",
+                    "reactionTimeMs": 1463,
+                    "answerTimestamp": 1746977327660,
+                    "status": "CORRECT",
+                    "basePoints": 927,
+                    "finalPoints": 927
+                }
+            ]
+        },
+        {
+            "slideIndex": 14,
+            "slideType": "QUESTION_SLIDE",
+            "status": "ENDED",
+            "startedAt": 1746977335070,
+            "endedAt": 1746977337440,
+            "originalQuestionId": "39239a6c-3191-4c3b-8ecc-3a63a3545312",
+            "questionDistributionJson": {
+                "id": "39239a6c-3191-4c3b-8ecc-3a63a3545312",
+                "type": "open_ended",
+                "title": "Final question and double points! What was Pantone's color of 2019?",
+                "time": 30000,
+                "pointsMultiplier": 2,
+                "choices": [
+                    {
+                        "answer": "Living Coral",
+                        "correct": true
+                    }
+                ],
+                "image": "https://media.kahoot.it/754dc179-c090-4a8d-8404-0e705d813821",
+                "video": {
+                    "startTime": 0,
+                    "endTime": 0,
+                    "service": "youtube",
+                    "fullUrl": ""
+                },
+                "media": [],
+                "position": 14
+            },
+            "playerAnswers": [
+                {
+                    "clientId": "dc7dfc5b-daf4-f812-a89b-2d786dc0b70b",
+                    "questionIndex": 14,
+                    "choice": null,
+                    "text": null,
+                    "reactionTimeMs": 30000,
+                    "answerTimestamp": 1746977337388,
+                    "status": "TIMEOUT",
+                    "basePoints": 0,
+                    "finalPoints": 0
+                },
+                {
+                    "clientId": "2193cbc2-5e88-ee36-3a3c-5e8cce355885",
+                    "questionIndex": 14,
+                    "choice": null,
+                    "text": null,
+                    "reactionTimeMs": 30000,
+                    "answerTimestamp": 1746977337388,
+                    "status": "TIMEOUT",
+                    "basePoints": 0,
+                    "finalPoints": 0
+                },
+                {
+                    "clientId": "d11a7c89-dd50-cc94-2dce-1cc3e4238d04",
+                    "questionIndex": 14,
+                    "choice": null,
+                    "text": null,
+                    "reactionTimeMs": 30000,
+                    "answerTimestamp": 1746977337388,
+                    "status": "TIMEOUT",
+                    "basePoints": 0,
+                    "finalPoints": 0
+                }
+            ]
+        }
+    ]
+}
