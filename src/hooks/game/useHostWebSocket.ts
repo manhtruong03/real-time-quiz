@@ -130,7 +130,7 @@ export function useHostWebSocket({
           // Subscribe to relevant topics
           const hostTopic = `${TOPIC_PREFIX}/host/${gamePin}`;
           const playerTopic = `${TOPIC_PREFIX}/player/${gamePin}`; // Host listens to player events too
-          // const privateTopic = `${USER_QUEUE_PREFIX}/private`; // Host might have private messages
+          const privateTopic = `${USER_QUEUE_PREFIX}/private`; // Host might have private messages
 
           console.log(
             `[HostWS Hook] Subscribing to ${hostTopic}, ${playerTopic}`
@@ -153,7 +153,10 @@ export function useHostWebSocket({
               playerTopic,
               stableOnMessageReceived
             );
-            // subscriptionsRef.current[privateTopic] = client.subscribe(privateTopic, stableOnMessageReceived);
+            subscriptionsRef.current[privateTopic] = client.subscribe(
+              privateTopic,
+              stableOnMessageReceived
+            );
 
             console.log("[HostWS Hook] Subscriptions potentially successful.");
             setConnectionStatus("CONNECTED");

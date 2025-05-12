@@ -142,6 +142,29 @@ export function useHostGameCoordinator({
     setCurrentBlock(formattedBlock);
   }, [liveGameState?.currentQuestionIndex, initialQuizData]);
 
+  // +++ START NEW KICK PLAYER FUNCTION +++
+  const kickPlayerCid = useCallback(
+    (playerIdToKick: string) => {
+      console.log(`[Coordinator] Kicking player CID: ${playerIdToKick}`);
+      setLiveGameState((prev: LiveGameState | null): LiveGameState | null => {
+        // Explicitly type 'prev'
+        if (!prev) return null;
+        const newPlayers = { ...prev.players };
+        if (newPlayers[playerIdToKick]) {
+          newPlayers[playerIdToKick] = {
+            ...newPlayers[playerIdToKick],
+            playerStatus: "KICKED",
+            isConnected: false,
+            lastActivityAt: Date.now(), // Update last activity
+          };
+        }
+        return { ...prev, players: newPlayers };
+      });
+    },
+    [setLiveGameState]
+  ); // Dependency on setLiveGameState
+  // +++ END NEW KICK PLAYER FUNCTION +++
+
   // --- Coordinated Game Flow Logic ---
 
   const handleTimeUp = useCallback(() => {
@@ -504,7 +527,8 @@ export function useHostGameCoordinator({
     handleTimeUp,
     showPodium,
     endGame,
-    transitionToShowingScoreboard, // <-- Add dependency
+    transitionToShowingScoreboard,
+    setLiveGameState, // Added setLiveGameState as it's used in the content slide block
   ]);
 
   // Calculate derived values for the UI
@@ -536,5 +560,6 @@ export function useHostGameCoordinator({
     prepareQuestionMessage: () => prepareQuestionMessage(currentBlock),
     prepareResultMessage,
     resetGameState,
+    kickPlayerCid,
   };
 }

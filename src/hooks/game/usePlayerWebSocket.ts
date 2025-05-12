@@ -131,7 +131,7 @@ export function usePlayerWebSocket({
       const client = new Client({
         brokerURL: WEBSOCKET_URL,
         debug: (str) => {
-          /* console.log("STOMP DEBUG:", str); */
+          console.log("STOMP PLAYER DEBUG:", str);
         },
         reconnectDelay: 5000,
         heartbeatIncoming: 4000,

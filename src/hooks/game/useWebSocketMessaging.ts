@@ -5,7 +5,7 @@ import {
   QuizStructureHost,
   LiveGameState,
   PlayerAnswerPayload,
-  QuestionResultPayload, // Import the specific result type
+  QuestionResultPayload,
   ResultPayloadQuiz,
   ResultPayloadJumble,
   ResultPayloadOpenEnded,
@@ -13,9 +13,11 @@ import {
   isContentBlock,
 } from "@/src/lib/types";
 import { getCurrentHostQuestion } from "@/src/lib/game-utils/question-formatter";
-import { MockWebSocketMessage } from "@/src/components/game/DevMockControls"; // Keep if using DevMockControls
+import { MockWebSocketMessage } from "@/src/components/game/DevMockControls";
 
-// Define the expected structure for callbacks passed to this hook
+const APP_PREFIX = "/app";
+const TOPIC_PREFIX = "/topic";
+
 interface MessagingCallbacks {
   addOrUpdatePlayer: (
     cid: string,
@@ -34,45 +36,49 @@ interface MessagingCallbacks {
     timestamp: number | undefined
   ) => void;
   notifyPlayerJoined: (cid: string) => void;
-  // Add other callbacks if needed (e.g., handleDisconnect)
+}
+
+// Define the return type for prepareResultMessage
+interface PreparedMessage {
+  messageString: string | null;
+  messageDataId: number | null;
 }
 
 export function useWebSocketMessaging(
-  liveGameStateRef: React.RefObject<LiveGameState | null>, // Use Ref for reading current state
-  quizData: QuizStructureHost | null, // Needed for preparing results
-  callbacks: MessagingCallbacks // Pass in functions to call for specific messages
+  liveGameStateRef: React.RefObject<LiveGameState | null>,
+  quizData: QuizStructureHost | null,
+  callbacks: MessagingCallbacks
 ) {
-  // --- Prepare Outgoing Messages ---
-
   const prepareQuestionMessage = useCallback(
     (blockToSend: GameBlock | null): string | null => {
       const currentState = liveGameStateRef.current;
       if (!blockToSend || !currentState) return null;
-      //   console.log("[MessagingHook] Preparing question message:", blockToSend.type);
       const contentString = JSON.stringify(blockToSend);
       const wsMessage = {
-        channel: "/service/player", // Target channel for broadcast
+        // Default to public channel for questions
+        channel: `${TOPIC_PREFIX}/player/${currentState.gamePin}`, // Use TOPIC_PREFIX
         data: {
           gameid: currentState.gamePin,
           type: "message",
-          id: isContentBlock(blockToSend) ? 1 : 2, // 1=GetReady/Content, 2=Question
+          id: isContentBlock(blockToSend) ? 1 : 2,
           content: contentString,
-          host: "VuiQuiz.com", // Optional host identifier
+          host: "VuiQuiz.com",
         },
       };
-      return JSON.stringify([wsMessage]); // Wrap in array as per protocol examples
+      return JSON.stringify([wsMessage]);
     },
     [liveGameStateRef]
-  ); // Depends only on ref
+  );
 
   const prepareResultMessage = useCallback(
-    (playerId: string): string | null => {
+    (playerId: string): PreparedMessage => {
+      // Return PreparedMessage
       const currentState = liveGameStateRef.current;
       if (!currentState || !quizData) {
         console.error(
           "[MessagingHook] Cannot prepare result: missing state or quizData"
         );
-        return null;
+        return { messageString: null, messageDataId: null };
       }
 
       const currentIdx = currentState.currentQuestionIndex;
@@ -81,21 +87,17 @@ export function useWebSocketMessaging(
         console.warn(
           `[MessagingHook] Cannot prepare result for unknown player: ${playerId}`
         );
-        return null;
+        return { messageString: null, messageDataId: null };
       }
 
-      // Find the answer record for the current question
       const playerAnswer = player.answers.find(
         (a) => a.questionIndex === currentIdx
       );
       if (!playerAnswer) {
-        // This might happen if the results are prepared before timeout logic fully processes
-        // Or if a player was disconnected before answering. Send a default "no answer" result?
         console.warn(
           `[MessagingHook] No answer record found for player ${playerId} on question ${currentIdx}. Cannot send result.`
         );
-        // TODO: Decide how to handle this - maybe send a default "timeout" result?
-        return null;
+        return { messageString: null, messageDataId: null };
       }
 
       const hostQuestion = getCurrentHostQuestion(quizData, currentIdx);
@@ -103,10 +105,9 @@ export function useWebSocketMessaging(
         console.error(
           `[MessagingHook] Cannot find host question data for index ${currentIdx}`
         );
-        return null;
+        return { messageString: null, messageDataId: null };
       }
 
-      // Ensure pointsData exists, provide default if somehow null
       const pointsData = playerAnswer.pointsData ?? {
         totalPointsWithBonuses: 0,
         questionPoints: 0,
@@ -116,17 +117,15 @@ export function useWebSocketMessaging(
         },
         lastGameBlockIndex: currentIdx,
       };
-
-      // Base payload common to all result types
       const basePayload = {
-        rank: player.rank, // TODO: Rank needs calculation before sending results
+        rank: player.rank,
         totalScore: player.totalScore,
         pointsData: pointsData,
         hasAnswer: playerAnswer.status !== "TIMEOUT",
         type: playerAnswer.blockType,
         points: playerAnswer.finalPointsEarned,
         isCorrect: playerAnswer.isCorrect,
-        text: playerAnswer.text || "", // Player's submitted text if available
+        text: playerAnswer.text || "",
       };
 
       let finalPayload: QuestionResultPayload | null = null;
@@ -140,39 +139,34 @@ export function useWebSocketMessaging(
       switch (playerAnswer.blockType) {
         case "quiz":
           finalPayload = {
-            ...basePayload, // Spread common fields
+            ...basePayload,
             type: "quiz",
-            choice: playerAnswer.choice as number, // Player's choice index
+            choice: playerAnswer.choice as number,
             correctChoices: correctChoicesIndices,
-            // Ensure text is the choice text if available (might be redundant if basePayload handles it)
             text:
               hostQuestion.choices[playerAnswer.choice as number]?.answer ??
               basePayload.text,
-          } as ResultPayloadQuiz; // Cast to specific type
+          } as ResultPayloadQuiz;
           break;
         case "jumble":
-          // Jumble text might need construction based on player's choice order
-          // This requires mapping player's indices back to original text, complex here.
-          // Sending the raw choice array might be sufficient if UI handles display.
           finalPayload = {
             ...basePayload,
             type: "jumble",
-            choice: playerAnswer.choice as number[], // Player's submitted order indices
-            correctChoices: correctChoicesIndices, // Correct order indices
-            text: "Jumble Order Placeholder", // Placeholder text
+            choice: playerAnswer.choice as number[],
+            correctChoices: correctChoicesIndices,
+            text: "Jumble Order Placeholder",
           } as ResultPayloadJumble;
           break;
         case "open_ended":
           finalPayload = {
             ...basePayload,
             type: "open_ended",
-            text: playerAnswer.text || "", // Player's submitted text
+            text: playerAnswer.text || "",
             correctTexts: correctTexts,
-            choice: undefined, // Explicitly undefined for open_ended result DTO
+            choice: undefined,
           } as ResultPayloadOpenEnded;
           break;
         case "survey":
-          // Find the text corresponding to the player's choice index
           const surveyChoiceText =
             hostQuestion.choices[playerAnswer.choice as number]?.answer ?? "";
           finalPayload = {
@@ -180,8 +174,8 @@ export function useWebSocketMessaging(
             type: "survey",
             choice:
               typeof playerAnswer.choice === "number" ? playerAnswer.choice : 0,
-            text: surveyChoiceText, // Text of the chosen option
-            points: undefined, // No points/correctness for survey
+            text: surveyChoiceText,
+            points: undefined,
             isCorrect: undefined,
           } as ResultPayloadSurvey;
           break;
@@ -189,37 +183,48 @@ export function useWebSocketMessaging(
           console.error(
             `[MessagingHook] Unknown block type in player answer record: ${playerAnswer.blockType}`
           );
-          return null; // Cannot prepare message for unknown type
+          return { messageString: null, messageDataId: null };
       }
 
-      if (!finalPayload) return null;
+      if (!finalPayload) return { messageString: null, messageDataId: null };
 
       const contentString = JSON.stringify(finalPayload);
+
+      const messageDataId =
+        currentState.status === "PODIUM" || currentState.status === "ENDED"
+          ? 13
+          : 8;
+
+      // The channel here is for the *content* of the message if it were part of a larger structure,
+      // but the STOMP destination is what truly matters for routing.
+      // We are removing the direct setting of 'channel' inside the wsMessage envelope's data part,
+      // as it was confusing. The actual STOMP destination is handled in page.tsx
       const wsMessage = {
-        channel: "/service/player", // Send to individual player? No, usually broadcast or targeted. Check protocol. Assuming targetted based on original code.
+        // channel: destinationChannel, // REMOVE THIS, STOMP destination is separate
         data: {
           gameid: currentState.gamePin,
           type: "message",
-          id: 8, // ID for Question Result
+          id: messageDataId,
           content: contentString,
-          cid: playerId, // Target the specific player
+          cid: playerId,
           host: "VuiQuiz.com",
         },
         ext: { timetrack: Date.now() },
       };
-      return JSON.stringify([wsMessage]); // Wrap in array
+      return {
+        messageString: JSON.stringify([wsMessage]),
+        messageDataId: messageDataId,
+      };
     },
     [liveGameStateRef, quizData]
-  ); // Dependencies
+  );
 
-  // --- Handle Incoming Messages ---
   const handleIncomingMessage = useCallback(
     (rawMessage: MockWebSocketMessage | string) => {
-      console.log("[MessagingHook] Received message:", rawMessage);
+      // ... (rest of the function remains the same)
       let parsedMessage: any = null;
       let messageList: any[] = [];
 
-      // Parsing logic (same as before)
       try {
         if (typeof rawMessage === "string")
           messageList = JSON.parse(rawMessage);
@@ -242,149 +247,70 @@ export function useWebSocketMessaging(
       }
 
       const data = parsedMessage?.data;
-      const type = data?.type; // e.g., 'joined', 'message'
-      const id = data?.id; // e.g., 6, 45, 46 (numeric ID within 'data')
-      const cid = data?.cid; // Player client ID
+      const type = data?.type;
+      const id = data?.id;
+      const cid = data?.cid;
 
       if (!data) {
         console.warn("[MessagingHook] Message has no data field");
         return;
       }
 
-      // --- Routing based on message type/ID ---
       if (type === "login" || type === "joined" || type === "IDENTIFY") {
-        // Player Join/Identify message
         if (cid && data.name) {
-          console.log(
-            `[MessagingHook] Processing join for ${cid} (${data.name})`
-          );
-          // Step 1: Update player state
-
-          // --- Try parsing avatarId from content ---
           let avatarId: string | null = null;
           if (data.content && typeof data.content === "string") {
             try {
               const parsedContent = JSON.parse(data.content);
               avatarId = parsedContent?.avatar?.id ?? null;
               if (avatarId && typeof avatarId !== "string") {
-                console.warn(
-                  `[MessagingHook] Received avatar ID is not a string: ${avatarId}. Treating as null.`
-                );
-                avatarId = null; // Ensure it's string or null
+                avatarId = null;
               }
-            } catch (e) {
-              console.warn(
-                "[MessagingHook] Error parsing avatar content from join message:",
-                e,
-                data.content
-              );
-            }
+            } catch (e) {}
           }
-          // --- End parsing avatarId ---
           callbacks.addOrUpdatePlayer(
             cid,
             data.name,
             parsedMessage.ext?.timetrack ?? Date.now(),
-            avatarId // Pass the parsed avatarId
+            avatarId
           );
-          // Step 2: Notify coordinator that this player joined
-          callbacks.notifyPlayerJoined(cid); // <<< Call the new callback
-        } else {
-          console.warn(
-            "[MessagingHook] Join/Login message missing cid or name",
-            data
-          );
+          callbacks.notifyPlayerJoined(cid);
         }
       } else if (id === 6 || id === 45) {
-        // Answer Message IDs
-        console.log(
-          `[MessagingHook] Identified Answer Message (ID: ${id}) for CID: ${cid}`
-        ); // Log identification
         if (cid && data.content) {
           try {
             const payload = JSON.parse(data.content) as PlayerAnswerPayload;
             if (payload.type && payload.questionIndex !== undefined) {
-              // ---> Check if this line is reached and what's in callbacks <---
-              console.log(
-                "[MessagingHook] Calling callbacks.processPlayerAnswer with:",
-                { cid, payload }
-              );
-              console.log("[MessagingHook] Callbacks object:", callbacks); // See if processPlayerAnswer exists
               callbacks.processPlayerAnswer(
                 cid,
                 payload,
                 parsedMessage.ext?.timetrack
               );
-            } else {
-              console.warn(
-                "[MessagingHook] Invalid answer payload structure",
-                payload
-              );
             }
-          } catch (e) {
-            console.error(
-              "[MessagingHook] Error parsing answer content:",
-              e,
-              data.content
-            );
-          }
-        } else {
-          console.warn(
-            "[MessagingHook] Answer message missing cid or content",
-            data
-          );
+          } catch (e) {}
         }
       } else if (id === 46) {
-        // Avatar Change ID
         if (cid && data.content) {
           try {
             const parsedContent = JSON.parse(data.content);
-
-            const avatarIdStr = parsedContent?.avatar?.id; // Expecting string UUID now
+            const avatarIdStr = parsedContent?.avatar?.id;
             if (typeof avatarIdStr === "string" && avatarIdStr) {
-              // Check if it's a non-empty string
               callbacks.updatePlayerAvatar(
                 cid,
-                avatarIdStr, // Pass the string ID
+                avatarIdStr,
                 parsedMessage.ext?.timetrack ?? Date.now()
               );
-            } else {
-              console.warn(
-                "[MessagingHook] Invalid avatar payload (expected string ID)",
-                parsedContent
-              );
             }
-          } catch (e) {
-            console.error(
-              "[MessagingHook] Error parsing avatar content",
-              e,
-              data.content
-            );
-          }
-        } else {
-          console.warn(
-            "[MessagingHook] Avatar message missing cid or content",
-            data
-          );
+          } catch (e) {}
         }
-      }
-      // Add more routing logic here for other message types/IDs if needed
-      // else if (type === 'SOME_OTHER_TYPE') { ... }
-      else {
-        console.log(
-          "[MessagingHook] Unhandled message type/id:",
-          type ?? id,
-          data
-        );
       }
     },
     [callbacks]
-  ); // Dependency on the callbacks object
+  );
 
   return {
     prepareQuestionMessage,
     prepareResultMessage,
     handleIncomingMessage,
-    // Expose functions needed by the coordinator/page
   };
 }

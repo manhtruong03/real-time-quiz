@@ -103,7 +103,7 @@ CREATE TABLE "quiz" (
 CREATE TABLE "game_session" (
     "session_id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     -- ID duy nhất cho mỗi phiên chơi
-    "game_pin" VARCHAR(20) NOT NULL UNIQUE,
+    "game_pin" VARCHAR(20) NOT NULL,
     -- Mã PIN để người chơi tham gia (cần UNIQUE khi active)
     "host_id" UUID NOT NULL REFERENCES "user_account"("user_id") ON DELETE CASCADE,
     -- Người tổ chức phiên chơi

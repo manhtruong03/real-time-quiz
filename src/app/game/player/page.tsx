@@ -90,6 +90,13 @@ function PlayerPageInternal() {
   const handleReceivedMessageCallback = useCallback((message: IMessage) => {
     let parsedBody;
     try {
+      // +++ ADD DETAILED LOGGING HERE +++
+      console.log(
+        `[PlayerPage WS Handler] RAW INCOMING MESSAGE. Destination Header: ${message.headers.destination}, Subscription Header: ${message.headers.subscription}, Message ID Header: ${message.headers['message-id']}`
+      );
+      // console.log("[PlayerPage WS Handler] Full Message Object:", message); // Uncomment for even more detail if needed
+      // +++ END DETAILED LOGGING +++
+
       parsedBody = JSON.parse(message.body);
       const messageData = Array.isArray(parsedBody) ? parsedBody[0] : parsedBody;
 
@@ -98,51 +105,54 @@ function PlayerPageInternal() {
         return;
       }
 
+      console.log("[PlayerPage WS Handler] Parsed messageData Content:", JSON.stringify(messageData.data.content, null, 2));
 
-      if (message.headers.destination?.includes('/private')) {
-        return;
+
+      // The existing check for '/private' in destination is good,
+      // but also log if the subscription ID matches the one for the private queue.
+      // You might need to find out what subscription ID stompClient.subscribe returns for '/user/queue/private'
+      // and compare message.headers.subscription to that.
+      if (message.headers.destination?.includes('/private') || message.headers.destination?.includes(playerClientId || 'impossible-to-match-initially')) {
+        console.log(
+          `[PlayerPage WS Handler] Message looks to be for a private queue (destination: ${message.headers.destination})`
+        );
       }
 
       const { id: dataTypeId, content } = messageData.data;
-      // console.log(`[PlayerPage WS Handler] Received message with data.id: ${dataTypeId}`);
 
       if (typeof content === 'string') {
         const parsedContent = JSON.parse(content);
 
         if (dataTypeId === 1 || dataTypeId === 2) { // Question data
-          // console.log("[PlayerPage WS Handler] Processing Question Block:", parsedContent.type, `(Index: ${parsedContent.gameBlockIndex})`);
-
+          console.log(`[PlayerPage WS Handler] Processing Question Block (ID: ${dataTypeId}):`, parsedContent.type, `(Index: ${parsedContent.gameBlockIndex})`);
           _setCurrentBlock(parsedContent as GameBlock);
-
         } else if (dataTypeId === 8 || dataTypeId === 13) { // Result or Podium data
-          // console.log("[PlayerPage WS Handler] Processing Result/Podium:", parsedContent.type, `(Index: ${parsedContent.pointsData?.lastGameBlockIndex})`);
-
+          console.log(`[PlayerPage WS Handler] Processing Result/Podium (ID: ${dataTypeId}):`, parsedContent.type, `(Index: ${parsedContent.pointsData?.lastGameBlockIndex})`);
           _setCurrentResult(parsedContent as QuestionResultPayload);
-
-        } else if (dataTypeId === 35) { // Host Background Change Message ID
-          // console.log("[PlayerPage WS Handler] Processing Background Change message");
-
+        } else if (dataTypeId === 35) { // Host Background Change
+          console.log(`[PlayerPage WS Handler] Processing Background Change (ID: ${dataTypeId})`);
           const newBackgroundId = parsedContent?.background?.id;
           if (typeof newBackgroundId === 'string' && newBackgroundId) {
-            // console.log(`[PlayerPage WS Handler] Setting background ID to: ${newBackgroundId}`);
-
             setCurrentBackgroundId(newBackgroundId);
           } else {
             console.warn("[PlayerPage WS Handler] Received background change message but ID was missing or invalid:", parsedContent);
-
           }
-        } else {
-          // console.log(`[PlayerPage WS Handler] Received unhandled data type ID: ${dataTypeId}`, parsedContent);
-
+        } else if (dataTypeId === 10) { // Player Kicked (as per docs/websocket_message_structure.txt)
+          console.log(`[PlayerPage WS Handler] Processing Player Kicked (ID: ${dataTypeId})`, parsedContent);
+          // TODO: Implement logic to handle player being kicked (e.g., show message, disconnect)
+          // Example:
+          // setError("You have been kicked from the game by the host.");
+          // setUiState("ERROR"); // or a specific "KICKED" state
+          // disconnectWebSocket();
         }
-
+        else {
+          console.log(`[PlayerPage WS Handler] Received unhandled data type ID: ${dataTypeId}`, parsedContent);
+        }
       } else {
         console.warn("[PlayerPage WS Handler] Received message content is not a string:", content);
-
       }
     } catch (e) {
       console.error('[PlayerPage WS Handler] Failed to parse or process message body:', e, message.body);
-
     }
   }, [_setCurrentBlock, _setCurrentResult]);
 
