@@ -6,19 +6,15 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/src/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/src/components/ui/card';
-import { Badge } from '@/src/components/ui/badge';
-import { Brain, User, BarChart3, Trophy, Calendar, ArrowUpRight, LogOut, List } from 'lucide-react'; // Added List icon
+import { User, Calendar, LogOut, List, PlusCircle, BarChart3, Lock, Brain } from 'lucide-react'; // Added Brain for footer
 import { useAuth } from '@/src/context/AuthContext';
-import type { User as AuthUser } from '@/src/lib/types/auth';
 import ProtectedRoute from '@/src/components/auth/ProtectedRoute';
-import { Loader2 } from 'lucide-react';
+import { AppHeader } from '@/src/components/layout/AppHeader';
+import { cn } from '@/src/lib/utils';
 
-// Mock data (keep if needed for placeholders)
+// Mock data for join date, replace with actual data if available
 const mockProfileStats = {
-  joinDate: 'Jan 2024',
-  totalScore: 0,
-  quizzesTaken: 0,
-  // ... other stats
+  joinDate: 'Tháng 1, 2024', // Matches image
 };
 
 export default function ProfilePage() {
@@ -28,95 +24,105 @@ export default function ProfilePage() {
 
   const handleLogout = () => {
     logout();
-    router.push('/login'); // Redirect after logout
+    router.push('/login');
   };
+
+  const currentYear = new Date().getFullYear();
 
   return (
     <ProtectedRoute>
-      {/* Render the actual profile content only if authenticated */}
       {user && (
-        <div className="min-h-screen flex flex-col">
-          {/* Header (Ideally use AppHeader component here) */}
-          <header className="border-b">
-            <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-              <div className="flex items-center gap-2">
-                <Link href="/">
-                  <div className="flex items-center gap-2">
-                    <Brain className="h-8 w-8 text-primary" />
-                    <h1 className="text-2xl font-bold">VUI QUIZ</h1>
-                  </div>
-                </Link>
-              </div>
-              {/* ... (Rest of header, ideally replaced by AppHeader) ... */}
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={handleLogout}>
-                  <LogOut className="mr-2 h-4 w-4" /> Logout
-                </Button>
-              </div>
-            </div>
-          </header>
+        <div className="min-h-screen flex flex-col bg-background text-foreground">
+          <AppHeader currentPage="profile" />
 
           {/* Main Content */}
-          <main className="flex-1 py-12 bg-muted/30">
-            <div className="container mx-auto px-4">
-              <div className="max-w-5xl mx-auto">
-                {/* Profile Header */}
-                <div className="bg-card rounded-xl p-6 shadow-sm mb-8 flex flex-col md:flex-row gap-6 items-center md:items-start">
-                  <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center">
-                    <User className="h-12 w-12 text-primary" />
+          <main className="flex-1 flex flex-col items-center py-12"> {/* Changed to flex-col for tab content alignment */}
+            <div className="w-full max-w-3xl px-4">
+
+              {/* Profile Information Card */}
+              <Card className="bg-card text-card-foreground border-border shadow-xl">
+                <CardContent className="p-6 md:p-8 flex flex-col items-center">
+                  {/* Avatar */}
+                  <div className="w-32 h-32 md:w-40 md:h-40 rounded-full bg-primary/10 flex items-center justify-center border-4 border-primary mb-6">
+                    <User className="h-16 w-16 md:h-20 md:w-20 text-primary" />
                   </div>
-                  <div className="flex-1 text-center md:text-left">
-                    <h1 className="text-3xl font-bold">{user.username}</h1>
-                    <p className="text-muted-foreground">{user.email}</p>
-                    <div className="flex flex-wrap gap-2 mt-4 justify-center md:justify-start">
-                      <Badge variant="outline" className="gap-1"><Calendar className="h-3 w-3" /> Joined {mockProfileStats.joinDate}</Badge>
-                      {/* Add other stats */}
-                    </div>
-                  </div>
-                  <div className="flex flex-col sm:flex-row gap-2 mt-4 md:mt-0">
-                    {/* === ADDED My Quizzes Button === */}
+
+                  {/* User Details */}
+                  <h1 className="text-3xl md:text-4xl font-bold text-foreground">{user.username}</h1>
+                  {user.email && <p className="text-muted-foreground mt-1">{user.email}</p>}
+                  <p className="text-sm text-muted-foreground mt-2 flex items-center">
+                    <Calendar className="h-4 w-4 mr-2" />
+                    Đã tham gia {mockProfileStats.joinDate}
+                  </p>
+
+                  {/* Action Buttons */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-8 w-full">
                     <Link href="/my-quizzes" passHref>
-                      <Button variant="outline">
-                        <List className="mr-2 h-4 w-4" /> My Quizzes
+                      <Button variant="outline" className="w-full justify-start text-foreground border-border hover:bg-accent hover:text-accent-foreground">
+                        <List className="mr-2 h-5 w-5" /> Quiz của tôi
                       </Button>
                     </Link>
-                    {/* ============================== */}
                     <Link href="/quiz/create" passHref>
-                      <Button><Trophy className="mr-2 h-4 w-4" /> Create Quiz</Button>
+                      <Button variant="outline" className="w-full justify-start text-foreground border-border hover:bg-accent hover:text-accent-foreground">
+                        <PlusCircle className="mr-2 h-5 w-5" /> Tạo Quiz
+                      </Button>
+                    </Link>
+                    <Link href="/reports" passHref> {/* Placeholder link */}
+                      <Button variant="outline" className="w-full justify-start text-foreground border-border hover:bg-accent hover:text-accent-foreground">
+                        <BarChart3 className="mr-2 h-5 w-5" /> Báo cáo Quiz
+                      </Button>
+                    </Link>
+                    <Link href="/profile/change-password" passHref> {/* Placeholder link */}
+                      <Button variant="outline" className="w-full justify-start text-foreground border-border hover:bg-accent hover:text-accent-foreground">
+                        <Lock className="mr-2 h-5 w-5" /> Đổi mật khẩu
+                      </Button>
                     </Link>
                   </div>
-                </div>
+                </CardContent>
+              </Card>
 
-                {/* Profile Tabs */}
-                <div className="flex border-b mb-8">
+              {/* Profile Tabs */}
+              <div className="mt-10"> {/* Added margin-top to separate card from tabs */}
+                <div className="flex border-b border-border">
                   <button
-                    className={`px-4 py-2 font-medium ${activeTab === "overview" ? "border-b-2 border-primary text-primary" : "text-muted-foreground"}`}
+                    className={cn(
+                      "px-4 py-3 font-medium transition-colors", // Removed text-lg
+                      activeTab === "overview"
+                        ? "border-b-2 border-primary text-primary"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
                     onClick={() => setActiveTab("overview")}
-                  >Overview</button>
-                  {/* Other tabs */}
+                  >
+                    Tổng quan
+                  </button>
+                  {/* Other tabs can be added here */}
                 </div>
 
-                {/* Tab Content */}
-                {activeTab === 'overview' && (
-                  <div>
-                    <p>Overview content for {user.username}.</p>
-                    <p className='mt-4 italic'>More profile details and stats will be added later.</p>
-                  </div>
-                )}
-                {/* Other tab content */}
+                {/* Tab Content Area Styling */}
+                <div className="py-6 text-foreground"> {/* Use text-foreground for default text color */}
+                  {activeTab === 'overview' && (
+                    <div>
+                      {/* Styled placeholder text */}
+                      <p className="text-base">Nội dung tổng quan cho {user.username}.</p>
+                      {/* Additional stats/content can be added here later */}
+                    </div>
+                  )}
+                  {/* Placeholder for other tab content if any */}
+                  {/* {activeTab === 'statistics' && ( <div>Statistics Content</div> )} */}
+                </div>
               </div>
             </div>
           </main>
 
-          {/* Footer */}
-          <footer className="bg-muted/30 border-t py-8">
+          {/* Updated Footer */}
+          <footer className="bg-background border-t border-border py-8 mt-auto"> {/* Use bg-background and border-border for consistency */}
             <div className="container mx-auto px-4 text-center">
               <div className="flex items-center justify-center gap-2 mb-4">
-                <Brain className="h-6 w-6 text-primary" />
-                <span className="text-xl font-bold">VUI QUIZ</span>
+                <Brain className="h-7 w-7 text-primary" /> {/* Slightly larger icon */}
+                <span className="text-xl font-bold text-foreground">VUI QUIZ</span>
               </div>
-              <p className="text-muted-foreground text-sm">
-                &copy; {new Date().getFullYear()} VUI QUIZ. All rights reserved.
+              <p className="text-sm text-muted-foreground">
+                &copy; {currentYear}. Toàn bộ bản quyền thuộc VuiQuiz.com
               </p>
             </div>
           </footer>
