@@ -88,6 +88,7 @@ export interface QuizDTO {
     youtube?: VideoDetailDTO; // Assuming structure matches VideoDetailDTO based on mock data
   } | null;
   questions: QuestionDTO[];
+  totalQuizTimeLimitMs?: number;
 
   // Fields usually populated by backend for responses, but good to have for type consistency
   creator?: string; // User ID, set by backend
