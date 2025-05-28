@@ -27,25 +27,50 @@
   }
 
   .dark {
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 240 10% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 240 10% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 263 70% 60%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
-    --accent: 191 97% 77%;
-    --accent-foreground: 240 5.9% 10%;
-    --destructive: 0 62.8% 30.6%;
+    --background: 220 8% 12%;
+    /* Xám rất đậm, hơi xanh (thay vì 240 10% 3.9%) */
+    --foreground: 0 0% 95%;
+    /* Trắng ngà (gần giống 0 0% 98%) */
+
+    --card: 220 7% 16%;
+    /* Xám đậm hơn background một chút */
+    --card-foreground: 0 0% 95%;
+    /* Tương tự foreground */
+
+    --popover: 220 7% 14%;
+    /* Có thể giống card hoặc đậm hơn chút */
+    --popover-foreground: 0 0% 95%;
+
+    --primary: 263 75% 65%;
+    /* Màu tím (điều chỉnh độ sáng cho dễ nhìn hơn, gần giống 263 70% 60%) */
+    --primary-foreground: 0 0% 100%;
+    /* Trắng (giữ nguyên 0 0% 98% là tốt) */
+
+    --secondary: 220 6% 20%;
+    /* Xám cho các yếu tố phụ (thay vì 240 3.7% 15.9%) */
+    --secondary-foreground: 0 0% 90%;
+    /* Chữ trên nền secondary (điều chỉnh từ 0 0% 98%) */
+
+    --muted: 220 6% 18%;
+    /* Xám cho các yếu tố mờ hơn (thay vì 240 3.7% 15.9%) */
+    --muted-foreground: 220 5% 55%;
+    /* Chữ mờ (thay vì 240 5% 64.9%) */
+
+    --accent: 191 90% 65%;
+    /* Màu lục lam/cyan (điều chỉnh độ sáng từ 191 97% 77%) */
+    --accent-foreground: 240 10% 7%;
+    /* Chữ trên nền accent (giữ nguyên 240 5.9% 10% là tốt) */
+
+    --destructive: 0 70% 55%;
+    /* Màu đỏ cảnh báo (điều chỉnh từ 0 62.8% 30.6% cho dễ nhìn hơn trên nền tối) */
     --destructive-foreground: 0 0% 98%;
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 263 70% 60%;
+
+    --border: 220 5% 25%;
+    /* Màu viền (thay vì 240 3.7% 15.9%) */
+    --input: 220 6% 18%;
+    /* Nền input (thay vì 240 3.7% 15.9%) */
+    --ring: 263 75% 70%;
+    /* Màu focus ring (sáng hơn primary một chút) */
   }
 }
 

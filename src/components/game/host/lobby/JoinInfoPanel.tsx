@@ -29,7 +29,7 @@ export const JoinInfoPanel: React.FC<JoinInfoPanelProps> = ({
 
     const joinUrl = `https://${accessUrl}`; // Construct full URL
     // Value for QR Code - using the PIN is usually best for mobile scanning
-    const qrValue = gamePin ?? '';
+    const qrValue = `https://${accessUrl}/game/player?q=${gamePin}`;
 
     const handleCopyPin = async () => {
         if (!gamePin) return;

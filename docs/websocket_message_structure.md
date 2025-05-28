@@ -230,4 +230,25 @@ _Comment: The example provided for this message shows the top-level `id` as "10"
 ]
 ```
 
+#### 3.7. Server Acknowledges Kick to Host
+
+- **Direction**: Server -> Host Client (in response to a kick command)
+- **Channel**: `/service/player` (as per user spec, though typically `/meta/publish` or a direct message might be used for Bayeux ACKs). The host client needs to identify this as an ACK for its sent kick message.
+- **Top-Level `id`**: Matches the `id` of the Host's original kick message.
+
+```json
+// Example Server Kick Acknowledgement (Sent to Host)
+[
+  {
+    "ext": {
+      "timetrack": 1747046088895 // Timestamp of acknowledgement
+    },
+    "channel": "/service/player", // Or specific host acknowledgement channel
+    "id": "10", // Corresponds to the ID of the Host's kick request
+    "successful": true,
+    "clientId": "HOST_WEBSOCKET_CLIENT_ID" // Bayeux client ID of the Host
+  }
+]
+```
+
 _(Rest of the document, potentially including other standard messages like Answer Submission_...
