@@ -11,66 +11,78 @@
     --popover: 0 0% 100%;
     --popover-foreground: 240 10% 3.9%;
     --primary: 263 70% 50%;
+    /* Primary accent (purple) */
     --primary-foreground: 0 0% 98%;
+    /* Text on primary elements */
     --secondary: 240 4.8% 95.9%;
+    /* Secondary elements background */
     --secondary-foreground: 240 5.9% 10%;
+    /* Text on secondary elements */
     --muted: 240 4.8% 95.9%;
+    /* Muted elements background (e.g. hover) */
     --muted-foreground: 240 3.8% 46.1%;
+    /* Muted text */
     --accent: 191 97% 77%;
+    /* Secondary accent (currently cyan, might be less used with new scheme) */
     --accent-foreground: 240 5.9% 10%;
+    /* Text on accent elements */
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
     --border: 240 5.9% 90%;
     --input: 240 5.9% 90%;
     --ring: 263 70% 50%;
+    /* Focus ring, based on primary */
     --radius: 0.5rem;
   }
 
   .dark {
-    --background: 220 8% 12%;
-    /* Xám rất đậm, hơi xanh (thay vì 240 10% 3.9%) */
-    --foreground: 0 0% 95%;
-    /* Trắng ngà (gần giống 0 0% 98%) */
+    /* Updated dark theme variables based on screen-03-profile.html */
+    --background: 240 3% 12%;
+    /* #1F1F21 - Navbar/Page Background */
+    --foreground: 0 0% 92%;
+    /* #EAEAEA - Main text */
 
-    --card: 220 7% 16%;
-    /* Xám đậm hơn background một chút */
-    --card-foreground: 0 0% 95%;
-    /* Tương tự foreground */
+    --card: 240 3% 18%;
+    /* #2D2D30 - Card Background */
+    --card-foreground: 0 0% 92%;
+    /* #EAEAEA - Text on cards */
 
-    --popover: 220 7% 14%;
-    /* Có thể giống card hoặc đậm hơn chút */
-    --popover-foreground: 0 0% 95%;
+    --popover: 240 3% 18%;
+    /* #2D2D30 - Popover Background (same as card) */
+    --popover-foreground: 0 0% 92%;
+    /* #EAEAEA - Text on popovers */
 
-    --primary: 263 75% 65%;
-    /* Màu tím (điều chỉnh độ sáng cho dễ nhìn hơn, gần giống 263 70% 60%) */
+    --primary: 262 93% 72%;
+    /* #A076F9 - Accent Color (Purple) */
     --primary-foreground: 0 0% 100%;
-    /* Trắng (giữ nguyên 0 0% 98% là tốt) */
+    /* #FFFFFF - Text on primary elements */
 
-    --secondary: 220 6% 20%;
-    /* Xám cho các yếu tố phụ (thay vì 240 3.7% 15.9%) */
-    --secondary-foreground: 0 0% 90%;
-    /* Chữ trên nền secondary (điều chỉnh từ 0 0% 98%) */
+    --secondary: 240 2% 29%;
+    /* #4A4A4D - Secondary button background / Input background */
+    --secondary-foreground: 0 0% 92%;
+    /* #EAEAEA - Text on secondary elements */
 
-    --muted: 220 6% 18%;
-    /* Xám cho các yếu tố mờ hơn (thay vì 240 3.7% 15.9%) */
-    --muted-foreground: 220 5% 55%;
-    /* Chữ mờ (thay vì 240 5% 64.9%) */
+    --muted: 240 2% 24%;
+    /* #3C3C3E - Muted elements / Hover states (e.g. profile button hover) */
+    --muted-foreground: 0 0% 69%;
+    /* #B0B0B0 - Muted text / Secondary text */
 
-    --accent: 191 90% 65%;
-    /* Màu lục lam/cyan (điều chỉnh độ sáng từ 191 97% 77%) */
-    --accent-foreground: 240 10% 7%;
-    /* Chữ trên nền accent (giữ nguyên 240 5.9% 10% là tốt) */
+    /* Accent can remain distinct if needed, or be based on primary */
+    --accent: 262 93% 72%;
+    /* Using primary purple as general accent for now */
+    --accent-foreground: 0 0% 100%;
+    /* Text on accent elements */
 
     --destructive: 0 70% 55%;
-    /* Màu đỏ cảnh báo (điều chỉnh từ 0 62.8% 30.6% cho dễ nhìn hơn trên nền tối) */
+    /* Keep existing destructive colors, or adjust if needed */
     --destructive-foreground: 0 0% 98%;
 
-    --border: 220 5% 25%;
-    /* Màu viền (thay vì 240 3.7% 15.9%) */
-    --input: 220 6% 18%;
-    /* Nền input (thay vì 240 3.7% 15.9%) */
-    --ring: 263 75% 70%;
-    /* Màu focus ring (sáng hơn primary một chút) */
+    --border: 0 0% 33%;
+    /* #555555 - Border color */
+    --input: 240 2% 29%;
+    /* #4A4A4D - Input background */
+    --ring: 262 85% 75%;
+    /* Focus ring - slightly lighter/brighter version of primary #A076F9 */
   }
 }
 
@@ -84,13 +96,11 @@
   }
 }
 
-/* --- ADDED STYLES --- */
+/* Default quiz background (if no custom background is set) */
 .default-quiz-background {
   background: linear-gradient(to left, rgb(118, 107, 135), rgb(43, 19, 49));
   position: relative;
-  /* Needed for pseudo-elements */
   overflow: hidden;
-  /* Prevent stars overflowing */
   width: 100%;
   height: 100%;
 }
@@ -100,7 +110,6 @@
   top: 0;
   left: 0;
   width: 2px;
-  /* Small size for the box-shadow origin */
   height: 2px;
   background: transparent;
   box-shadow:
@@ -121,8 +130,7 @@
   }
 }
 
-/* --- END ADDED STYLES --- */
-
+/* --- ADDED STYLES --- */
 .quiz-card {
   @apply relative overflow-hidden;
 }
