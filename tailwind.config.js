@@ -51,6 +51,25 @@ module.exports = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        // Editor-specific colors using CSS variables
+        "editor-primary-bg": "var(--editor-primary-bg)",
+        "editor-secondary-bg": "var(--editor-secondary-bg)",
+        "editor-content-bg": "var(--editor-content-bg)",
+        "editor-text-primary": "var(--editor-text-primary)",
+        "editor-text-secondary": "var(--editor-text-secondary)",
+        "editor-text-placeholder": "var(--editor-text-placeholder)",
+        "editor-accent-color": "var(--editor-accent-color)",
+        "editor-accent-hover": "var(--editor-accent-hover)",
+        "editor-border-color": "var(--editor-border-color)",
+        "editor-input-bg": "var(--editor-input-bg)",
+        "editor-danger-color": "var(--editor-danger-color)",
+        "editor-danger-hover": "var(--editor-danger-hover)",
+        "editor-answer-option-bg": "var(--editor-answer-option-bg)",
+        "editor-correct-answer-highlight": "var(--editor-correct-answer-highlight)",
+        "answer-icon-triangle": "var(--answer-icon-triangle)",
+        "answer-icon-diamond": "var(--answer-icon-diamond)",
+        "answer-icon-circle": "var(--answer-icon-circle)",
+        "answer-icon-square": "var(--answer-icon-square)",
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -74,4 +93,4 @@ module.exports = {
     },
   },
   plugins: [require("tailwindcss-animate")],
-}
+};

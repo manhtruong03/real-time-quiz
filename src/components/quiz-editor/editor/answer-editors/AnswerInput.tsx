@@ -2,117 +2,108 @@
 "use client";
 
 import React from 'react';
-import { useFormContext, Controller, Path } from 'react-hook-form'; // Import Path
+import { useFormContext } from 'react-hook-form';
 import { cn } from '@/src/lib/utils';
+import type { QuestionHostSchemaType } from '@/src/lib/schemas/quiz-question.schema';
 import { RHFTextAreaField } from '@/src/components/rhf/RHFTextAreaField';
 import { Button } from '@/src/components/ui/button';
-import { RadioGroup, RadioGroupItem } from '@/src/components/ui/radio-group';
-import { Label } from '@/src/components/ui/label';
-import { Triangle, Diamond, Circle, Square, Image as ImageIcon, Trash2, Check } from 'lucide-react';
-import type { QuestionHostSchemaType } from '@/src/lib/schemas/quiz-question.schema';
-
-// Mapping remains the same
-const answerOptionMapping = [
-    // ... (mapping details)
-    { Icon: Triangle, colorClasses: 'border-red-500 hover:bg-red-500/10', iconColor: 'text-red-500' },
-    { Icon: Diamond, colorClasses: 'border-blue-500 hover:bg-blue-500/10', iconColor: 'text-blue-500' },
-    { Icon: Circle, colorClasses: 'border-yellow-500 hover:bg-yellow-500/10', iconColor: 'text-yellow-500' },
-    { Icon: Square, colorClasses: 'border-green-500 hover:bg-green-500/10', iconColor: 'text-green-500' },
-];
+import { Image as ImageIcon, Trash2, Check } from 'lucide-react'; // Added Check for toggle
+import { getAnswerOptionStyle } from '@/src/lib/mappings/answerOptionMapping'; // Import the new mapping
 
 interface AnswerInputProps {
     index: number;
-    onRemove: (index: number) => void;
-    fieldId: string;
-    isSurvey: boolean;
+    onRemove: () => void;
+    isSurvey?: boolean; // To hide/disable correct answer toggle
+    className?: string;
 }
 
-export const AnswerInput: React.FC<AnswerInputProps> = ({
+const AnswerInput: React.FC<AnswerInputProps> = ({
     index,
     onRemove,
-    fieldId,
-    isSurvey,
+    isSurvey = false,
+    className,
 }) => {
-    const { control, register, setValue, watch } = useFormContext<QuestionHostSchemaType>();
-    const { Icon, colorClasses, iconColor } = answerOptionMapping[index % answerOptionMapping.length] || answerOptionMapping[0];
-    // --- Explicitly type the field name ---
-    const answerFieldName = `choices.${index}.answer` as Path<QuestionHostSchemaType>;
+    const { control, watch, setValue } = useFormContext<QuestionHostSchemaType>();
+    const { Icon, colorClass } = getAnswerOptionStyle(index);
+    const watchedCorrectIndex = watch('correctChoiceIndex');
+    const isCorrect = watchedCorrectIndex === index;
 
-    const correctChoiceIndex = watch('correctChoiceIndex');
-    const isCorrect = correctChoiceIndex === index;
-
-    const handleCorrectChange = () => {
-        setValue('correctChoiceIndex', index, { shouldValidate: true, shouldDirty: true });
+    const handleSetCorrect = () => {
+        if (!isSurvey) {
+            setValue('correctChoiceIndex', index, {
+                shouldValidate: true,
+                shouldDirty: true,
+            });
+        }
     };
 
     return (
         <div
-            key={fieldId}
             className={cn(
-                "relative flex items-start gap-2 p-3 border rounded-lg bg-background shadow-sm transition-colors",
-                colorClasses,
-                isCorrect && !isSurvey && "ring-2 ring-offset-1 ring-green-500"
+                'flex items-center gap-2.5 p-2.5 rounded-lg border', // Gap 10px, Padding 10px, Rounded 8px
+                'bg-editor-answer-option-bg border-editor-border-color', // Background and default border
+                'transition-all duration-150 ease-in-out', // Smooth transition
+                isCorrect && !isSurvey ? 'border-l-4 border-l-editor-correct-answer-highlight border-editor-border-color' : 'border-editor-border-color', // Highlight if correct
+                className
             )}
         >
-            {/* Shape Indicator */}
-            <div className={cn("mt-1 flex-shrink-0", iconColor)}>
-                <Icon className="h-5 w-5" />
-            </div>
-
-            {/* Main Content Area */}
-            <div className="flex-grow flex flex-col gap-2">
-                {/* Answer Text Input */}
-                <RHFTextAreaField<QuestionHostSchemaType>
-                    // --- Use the typed field name ---
-                    name={answerFieldName}
-                    placeholder={`Answer ${index + 1}...`}
-                    className="text-sm border-none focus-visible:ring-0 p-1 bg-transparent min-h-[40px]"
-                    rows={2}
-                />
-                {/* Image Button Placeholder */}
-                <Button variant="ghost" size="icon" className="h-7 w-7 self-start text-muted-foreground" disabled title="Add image (Phase 4)">
-                    <ImageIcon className="h-4 w-4" />
-                </Button>
-            </div>
-
-            {/* Controls Area */}
-            <div className="flex flex-col items-center gap-2 ml-auto flex-shrink-0">
-                {/* Correct Answer Selector */}
-                {!isSurvey && (
-                    <div title="Mark as correct answer" className="flex items-center justify-center h-7 w-7">
-                        <input
-                            type="radio"
-                            id={`correct-choice-${fieldId}`}
-                            name="correctChoiceIndex"
-                            value={index}
-                            checked={isCorrect}
-                            onChange={handleCorrectChange}
-                            className="sr-only peer"
-                        />
-                        <Label
-                            htmlFor={`correct-choice-${fieldId}`}
-                            className={cn(
-                                "flex items-center justify-center h-6 w-6 rounded-full border border-muted-foreground cursor-pointer transition-colors",
-                                "peer-checked:bg-green-500 peer-checked:border-green-600 peer-checked:text-white",
-                                "hover:bg-accent hover:text-accent-foreground",
-                                "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
-                            )}
-                        >
-                            {isCorrect && <Check className="h-4 w-4" />}
-                        </Label>
-                    </div>
+            {/* Shape Icon */}
+            <div
+                className={cn(
+                    'w-8 h-8 rounded-md flex items-center justify-center flex-shrink-0',
+                    colorClass
                 )}
-                {/* Delete Button */}
+            >
+                <Icon className="h-5 w-5 text-white" />
+            </div>
+
+            {/* Answer Text Input */}
+            <RHFTextAreaField<QuestionHostSchemaType>
+                name={`choices.${index}.answer`}
+                placeholder={`Đáp án ${index + 1}`}
+                className="flex-grow bg-transparent border-none text-editor-text-primary p-2 focus-visible:ring-0 resize-none text-sm placeholder:text-editor-text-placeholder"
+                rows={1} // Start with 1 row, auto-grows
+                aria-label={`Answer option ${index + 1}`}
+            />
+
+            {/* Controls */}
+            <div className="flex items-center gap-1 flex-shrink-0">
                 <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => onRemove(index)}
-                    className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                    title="Remove answer"
+                    className="text-editor-text-secondary hover:text-white hover:bg-editor-secondary-bg h-8 w-8"
+                    aria-label={`Add image to answer ${index + 1}`}
+                    onClick={() => console.log('Add image clicked - TBD')} // Placeholder
+                >
+                    <ImageIcon className="h-4 w-4" />
+                </Button>
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    className="text-editor-text-secondary hover:text-editor-danger-color hover:bg-editor-secondary-bg h-8 w-8"
+                    onClick={onRemove}
+                    aria-label={`Remove answer ${index + 1}`}
                 >
                     <Trash2 className="h-4 w-4" />
                 </Button>
             </div>
+
+            {/* Correct Answer Toggle */}
+            {!isSurvey && (
+                <button
+                    type="button" // Important: Prevent form submission if inside a form
+                    onClick={handleSetCorrect}
+                    className={cn(
+                        'w-7 h-7 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors',
+                        isCorrect
+                            ? 'bg-editor-correct-answer-highlight border-editor-correct-answer-highlight'
+                            : 'bg-transparent border-editor-border-color hover:bg-editor-secondary-bg'
+                    )}
+                    aria-label={`Mark answer ${index + 1} as correct`}
+                >
+                    {isCorrect && <Check className="h-4 w-4 text-white" />}
+                </button>
+            )}
         </div>
     );
 };

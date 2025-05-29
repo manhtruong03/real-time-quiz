@@ -23,7 +23,7 @@
     --muted-foreground: 240 3.8% 46.1%;
     /* Muted text */
     --accent: 191 97% 77%;
-    /* Secondary accent (currently cyan, might be less used with new scheme) */
+    /* Secondary accent (cyan, might be less used with new scheme) */
     --accent-foreground: 240 5.9% 10%;
     /* Text on accent elements */
     --destructive: 0 84.2% 60.2%;
@@ -35,18 +35,40 @@
     --radius: 0.5rem;
 
 
+    /* === General Dark Theme Variables (from screen-08-question-edit.html or similar) === */
+    /* These will be overridden by .dark specific variables if .dark class is applied */
     --primary-bg: #1E1E24;
+    /* Default dark theme main background */
     --secondary-bg: #2D2D34;
+    /* Default dark theme secondary background */
     --content-bg: #25252B;
+    /* Default dark theme content area background */
     --text-primary: #EAEAEA;
+    /* Default dark theme primary text */
     --text-secondary: #B0B0B0;
+    /* Default dark theme secondary text */
+    --text-placeholder: #707075;
+    /* Default dark theme placeholder text */
     --accent-color: #8A3FFC;
+    /* Default dark theme accent color */
     --accent-hover: #7A2ECC;
-    /* Not explicitly used in this phase but good to have */
+    /* Default dark theme accent hover color */
     --border-color: #404048;
+    /* Default dark theme border color */
+    --input-bg: #2D2D34;
+    /* Default dark theme input background */
+    --danger-color: #DA1E28;
+    /* Default dark theme danger color */
+    --danger-hover: #b91c25;
+    /* Default dark theme danger hover color */
+    --answer-option-bg: #17171A;
+    /* Default dark theme answer option background */
+    --correct-answer-highlight: #2ECC71;
+    /* Default dark theme correct answer highlight */
 
 
-    /* Variables from screen-08-question-edit.html for editor's dark theme */
+    /* Editor specific variables - can be same as general dark or more specific */
+    /* These will be primarily used when .dark is active */
     --editor-primary-bg: #1E1E24;
     --editor-secondary-bg: #2D2D34;
     --editor-content-bg: #25252B;
@@ -61,6 +83,11 @@
     --editor-danger-hover: #b91c25;
     --editor-answer-option-bg: #17171A;
     --editor-correct-answer-highlight: #2ECC71;
+
+    --answer-icon-triangle: #E74C3C;
+    --answer-icon-diamond: #3498DB;
+    --answer-icon-circle: #F1C40F;
+    --answer-icon-square: #2ECC71;
   }
 
   .dark {
@@ -94,13 +121,13 @@
     --accent-foreground: 0 0% 100%;
     --destructive: 0 70% 55%;
     --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 33%;
-    /* #555555 */
-    --input: 240 2% 29%;
-    /* #4A4A4D */
+    --border: #404048;
+    /* Updated to match editor-border-color for consistency */
+    --input: #2D2D34;
+    /* Updated to match editor-input-bg for consistency */
     --ring: 262 85% 75%;
 
-    /* Editor specific variables (can be used directly or map to above) */
+    /* Editor specific variables from screen-08-question-edit.html */
     --editor-primary-bg: #1E1E24;
     --editor-secondary-bg: #2D2D34;
     --editor-content-bg: #25252B;
@@ -115,6 +142,11 @@
     --editor-danger-hover: #b91c25;
     --editor-answer-option-bg: #17171A;
     --editor-correct-answer-highlight: #2ECC71;
+
+    --answer-icon-triangle: #E74C3C;
+    --answer-icon-diamond: #3498DB;
+    --answer-icon-circle: #F1C40F;
+    --answer-icon-square: #2ECC71;
   }
 }
 
