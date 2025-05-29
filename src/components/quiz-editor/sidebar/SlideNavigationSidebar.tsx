@@ -3,23 +3,23 @@ import React from 'react';
 import { cn } from '@/src/lib/utils';
 import type { QuestionHost } from '@/src/lib/types';
 import { Button } from '@/src/components/ui/button';
-import { GripVertical, Plus } from 'lucide-react'; // Import icons if needed later
+import { Plus } from 'lucide-react'; // Changed from PlusCircle to match target HTML's implied style
 
 interface SlideNavigationSidebarProps {
     slides: QuestionHost[];
     currentSlideIndex: number;
     onSelectSlide: (index: number) => void;
-    // Add onAddSlide later if needed here
+    onAddSlide: () => void; // New prop for adding a slide
     className?: string;
 }
 
-// Placeholder Thumbnail Component (Will be expanded later)
 const SlideThumbnailPlaceholder: React.FC<{
     index: number;
     type: string;
+    title?: string; // Add title for better display
     isActive: boolean;
     onClick: () => void;
-}> = ({ index, type, isActive, onClick }) => {
+}> = ({ index, type, title, isActive, onClick }) => {
     return (
         <Button
             variant={isActive ? "secondary" : "ghost"}
@@ -29,13 +29,13 @@ const SlideThumbnailPlaceholder: React.FC<{
             )}
             onClick={onClick}
         >
-            <span className="text-xs font-semibold mr-2">{index + 1}.</span>
+            <span className="text-xs font-semibold mr-2 text-muted-foreground dark:text-[var(--text-secondary)]">{index + 1}.</span>
             <div className="flex-grow">
-                <p className="text-xs font-medium truncate">{type}</p>
-                {/* Add small preview later */}
+                <p className="text-xs font-medium truncate text-foreground dark:text-[var(--text-primary)]" title={title || type}>
+                    {title || `${type.toUpperCase()}`}
+                </p>
+                {/* Add small preview later if needed */}
             </div>
-            {/* Drag handle placeholder */}
-            {/* <GripVertical className="h-4 w-4 text-muted-foreground ml-auto flex-shrink-0" /> */}
         </Button>
     );
 };
@@ -44,42 +44,51 @@ const SlideNavigationSidebar: React.FC<SlideNavigationSidebarProps> = ({
     slides,
     currentSlideIndex,
     onSelectSlide,
+    onAddSlide, // Destructure new prop
     className
 }) => {
-    // *** ADD Log received props ***
-    console.log(`[SlideNavigationSidebar Render] Received ${slides?.length} slides.`);
-    if (slides && currentSlideIndex >= 0 && slides[currentSlideIndex]) {
-        console.log(`[SlideNavigationSidebar Render] Type for current index ${currentSlideIndex}: ${slides[currentSlideIndex].type}`);
-    } else if (slides) {
-        // Log types of all slides received for comparison
-        // console.log(`[SlideNavigationSidebar Render] All received slide types:`, slides.map(s => s.type));
-    }
-
     return (
-        <div className={cn('p-2 h-full flex flex-col', className)}>
-            <h3 className="text-sm font-semibold mb-2 px-1 text-muted-foreground">Slides</h3>
-            <div className="flex-grow overflow-y-auto space-y-1 pr-1 -mr-1">
+        // Styling based on screen-06-quiz-setting.html editor-sidebar-slides
+        <aside className={cn(
+            'w-[260px] bg-background dark:bg-[var(--primary-bg)] p-5 border-r dark:border-[var(--border-color)] flex-shrink-0 flex flex-col gap-4 h-full overflow-y-auto',
+            className
+        )}>
+            <h3 className="text-base font-medium text-muted-foreground dark:text-[var(--text-secondary)]">
+                Danh sách Slide
+            </h3>
+            {/* Add Slide Button moved here */}
+            <Button
+                variant="outline" // "btn-secondary" in target HTML suggests outline or secondary variant
+                className="w-full dark:bg-[var(--secondary-bg)] dark:text-[var(--text-primary)] dark:border-[var(--border-color)] dark:hover:bg-[#3a3a42]"
+                onClick={onAddSlide} // Use the new prop
+            >
+                <Plus className="mr-2 h-4 w-4" /> Thêm Slide
+            </Button>
+            <div className="flex-grow overflow-y-auto space-y-1 pr-1 -mr-1 custom-scrollbar-dark"> {/* Added custom-scrollbar-dark for potential styling */}
                 {slides.length === 0 ? (
-                    <p className="text-xs text-muted-foreground p-2 italic text-center">No slides yet.</p>
+                    // Placeholder from screen-06-quiz-setting.html
+                    <div className="slide-list-placeholder text-sm text-center p-5 border border-dashed rounded-md bg-muted dark:bg-[var(--secondary-bg)] dark:border-[var(--border-color)] text-muted-foreground dark:text-[var(--text-placeholder)]">
+                        <p>Chưa có slide nào.</p>
+                        <p>Hãy bắt đầu bằng cách nhấn "Thêm Slide".</p>
+                    </div>
                 ) : (
-                    slides.map((slide, index) => (
-                        <SlideThumbnailPlaceholder
-                            key={index} // Consider using a more stable key if slides have IDs
-                            index={index}
-                            type={slide.type}
-                            isActive={index === currentSlideIndex}
-                            onClick={() => onSelectSlide(index)}
-                        />
-                    ))
+                    // Using ul for semantic list of slides
+                    <ul className="list-none p-0 m-0">
+                        {slides.map((slide, index) => (
+                            <li key={slide.id || `slide-${index}`}> {/* Use slide.id if available, fallback to index */}
+                                <SlideThumbnailPlaceholder
+                                    index={index}
+                                    type={slide.type}
+                                    // title={slide.type === 'content' ? slide.title || `Slide ${index + 1}` : slide.question || `Slide ${index + 1}`}
+                                    isActive={index === currentSlideIndex}
+                                    onClick={() => onSelectSlide(index)}
+                                />
+                            </li>
+                        ))}
+                    </ul>
                 )}
             </div>
-            {/* Add Slide Button (Optional - Footer button might be primary) */}
-            {/*
-             <Button variant="outline" size="sm" className="mt-2 w-full">
-                <Plus className="mr-2 h-4 w-4"/> Add Slide
-             </Button>
-             */}
-        </div>
+        </aside>
     );
 };
 

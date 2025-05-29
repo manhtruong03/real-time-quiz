@@ -558,14 +558,6 @@ export const QuestionEditorView: React.FC<QuestionEditorViewProps> = ({
         >
             {/* ... rest of rendering ... */}
             <div className={cn("flex-grow flex overflow-hidden", className)}>
-                {/* Left Sidebar */}
-                <div className="w-60 flex-shrink-0 border-r bg-background overflow-y-auto hidden md:block">
-                    <SlideNavigationSidebar
-                        slides={quizData?.questions ?? []}
-                        currentSlideIndex={currentSlideIndex}
-                        onSelectSlide={onSlideSelect}
-                    />
-                </div>
                 {/* Center Panel */}
                 <div className="flex-grow flex flex-col overflow-y-auto p-4 md:p-6 bg-muted/30">
                     <QuestionEditorPanel
