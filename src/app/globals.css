@@ -33,6 +33,17 @@
     --ring: 263 70% 50%;
     /* Focus ring, based on primary */
     --radius: 0.5rem;
+
+
+    --primary-bg: #1E1E24;
+    --secondary-bg: #2D2D34;
+    --content-bg: #25252B;
+    --text-primary: #EAEAEA;
+    --text-secondary: #B0B0B0;
+    --accent-color: #8A3FFC;
+    --accent-hover: #7A2ECC;
+    /* Not explicitly used in this phase but good to have */
+    --border-color: #404048;
   }
 
   .dark {

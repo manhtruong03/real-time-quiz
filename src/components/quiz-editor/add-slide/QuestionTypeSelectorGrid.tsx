@@ -14,7 +14,8 @@ export const QuestionTypeSelectorGrid: React.FC<QuestionTypeSelectorGridProps> =
     return (
         <div
             className={cn(
-                'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-4 w-full max-w-4xl mx-auto', // Responsive grid layout [cite: 187]
+                // Styles from screen-07-add-slide.html: .slide-type-grid
+                'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 w-full max-w-4xl mx-auto mb-8', // Adjusted gap and mb
                 className
             )}
         >

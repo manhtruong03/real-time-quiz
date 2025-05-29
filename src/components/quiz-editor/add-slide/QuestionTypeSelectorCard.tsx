@@ -6,17 +6,16 @@ import {
     CardDescription,
     CardHeader,
     CardTitle,
-} from '@/src/components/ui/card'; // [cite: 1325, 2054]
+} from '@/src/components/ui/card';
 import { cn } from '@/src/lib/utils';
-import type { QuestionHost } from '@/src/lib/types/quiz-structure'; // For type safety
+import type { QuestionHost } from '@/src/lib/types/quiz-structure';
 
-// Define Props
 interface QuestionTypeSelectorCardProps {
-    type: QuestionHost['type']; // e.g., 'quiz', 'jumble', 'content'
+    type: QuestionHost['type'];
     title: string;
     description: string;
-    icon: React.ElementType; // e.g., Lucide icon component
-    onClick: (type: QuestionHost['type']) => void; // Callback when clicked
+    icon: React.ElementType; // Expecting a Lucide icon component
+    onClick: (type: QuestionHost['type']) => void;
     className?: string;
 }
 
@@ -24,37 +23,45 @@ export const QuestionTypeSelectorCard: React.FC<QuestionTypeSelectorCardProps> =
     type,
     title,
     description,
-    icon: Icon, // Rename prop for clarity
+    icon: IconComponent, // Renamed for clarity
     onClick,
     className,
 }) => {
     const handleClick = () => {
-        onClick(type); // Pass the type back on click
+        onClick(type);
     };
 
     return (
         <Card
             className={cn(
-                'cursor-pointer hover:border-primary transition-colors flex flex-col h-full', // Make card clickable and add hover effect [cite: 193]
+                "cursor-pointer transition-all duration-200 ease-in-out flex flex-col h-full",
+                "bg-[var(--secondary-bg)] border border-[var(--border-color)] rounded-lg p-5 text-left", // Styles from .slide-type-card
+                "hover:border-[var(--accent-color)] hover:translate-y-[-3px] hover:shadow-[0_4px_15px_rgba(0,0,0,0.2)]",
                 className
             )}
-            onClick={handleClick} // Attach click handler
-            role="button" // Semantic role
-            tabIndex={0} // Make it focusable
+            onClick={handleClick}
+            role="button"
+            tabIndex={0}
             onKeyDown={(e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
                     handleClick();
                 }
-            }} // Allow activation with Enter/Space
+            }}
         >
-            <CardHeader className="flex-shrink-0 pb-2">
-                <div className="flex items-center gap-3">
-                    <Icon className="h-6 w-6 text-primary" strokeWidth={2} /> {/* Render the icon */}
-                    <CardTitle className="text-lg">{title}</CardTitle>
+            <CardHeader className="p-0 flex-shrink-0"> {/* Removed default CardHeader padding */}
+                {/* Mimicking .slide-type-header structure */}
+                <div className="flex items-center gap-3 mb-2"> {/* Adjusted gap from 12px to 3 (Tailwind) */}
+                    <IconComponent className="h-[22px] w-[22px] text-[var(--accent-color)]" strokeWidth={2.5} /> {/* Icon styling */}
+                    <CardTitle className="text-[17px] font-medium text-[var(--text-primary)] m-0"> {/* Title styling */}
+                        {title}
+                    </CardTitle>
                 </div>
             </CardHeader>
-            <CardContent className="flex-grow">
-                <CardDescription>{description}</CardDescription>
+            <CardContent className="flex-grow p-0">
+                {/* Mimicking .slide-type-card p styling for description */}
+                <CardDescription className="text-[13px] text-[var(--text-secondary)] leading-normal pl-[calc(22px+0.75rem)]"> {/* pl should align with text after icon (22px icon + 12px gap from HTML -> ~pl-[34px] or pl-8/pl-9. Let's use calc for precision based on icon size and gap */}
+                    {description}
+                </CardDescription>
             </CardContent>
         </Card>
     );
