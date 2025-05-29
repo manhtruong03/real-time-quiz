@@ -1,25 +1,13 @@
 // src/components/quiz-editor/sidebar/QuestionConfigurationSidebar.tsx
 "use client";
 
-import React, { useState } from 'react';
+import React from 'react';
 import { useFormContext } from 'react-hook-form';
 import { cn } from '@/src/lib/utils';
-import type { QuestionHostSchemaType, ChoiceHostSchemaType } from '@/src/lib/schemas/quiz-question.schema';
-import type { QuestionHost } from '@/src/lib/types';
+import type { QuestionHostSchemaType } from '@/src/lib/schemas/quiz-question.schema';
 import { RHFSelectField } from '@/src/components/rhf/RHFSelectField';
-import SlideActions from '../sidebar/SlideActions'; // Corrected path
-import { DEFAULT_TIME_LIMIT } from '@/src/lib/game-utils/quiz-creation';
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-    // AlertDialogTrigger, // We will trigger it manually
-} from "@/src/components/ui/alert-dialog"; // Import AlertDialog components
+import { Button } from '@/src/components/ui/button';
+import { Copy, Trash2 } from 'lucide-react';
 
 interface QuestionConfigurationSidebarProps {
     onConfirmDelete: () => void;
@@ -27,160 +15,83 @@ interface QuestionConfigurationSidebarProps {
     className?: string;
 }
 
-// Options definitions remain the same...
 const questionTypeOptions = [
-    { value: 'quiz', label: 'Quiz (Multiple Choice)' },
-    // { value: 'quiz-tf', label: 'True / False' }, // Keep for display selection in dropdown trigger
-    { value: 'jumble', label: 'Jumble' },
-    { value: 'survey', label: 'Poll / Survey' },
-    { value: 'open_ended', label: 'Type Answer' },
-    { value: 'content', label: 'Content Slide' },
+    { value: 'quiz', label: 'Quiz (Trắc nghiệm)' },
+    { value: 'quiz-tf', label: 'Đúng / Sai' }, // Special value to handle True/False variant of Quiz
+    { value: 'jumble', label: 'Sắp xếp (Jumble)' },
+    { value: 'survey', label: 'Thăm dò ý kiến' },
+    { value: 'open_ended', label: 'Tự luận ngắn' },
+    { value: 'content', label: 'Slide Nội dung' },
 ];
 const timeLimitOptions = [
-    { value: '5000', label: '5 Seconds' },
-    { value: '10000', label: '10 Seconds' },
-    { value: '20000', label: '20 Seconds' },
-    { value: '30000', label: '30 Seconds' },
-    { value: '60000', label: '1 Minute' },
-    { value: '90000', label: '1.5 Minutes' },
-    { value: '120000', label: '2 Minutes' },
+    { value: '5000', label: '5 giây' }, { value: '10000', label: '10 giây' },
+    { value: '20000', label: '20 giây' }, { value: '30000', label: '30 giây' },
+    { value: '60000', label: '1 phút' }, { value: '90000', label: '1 phút 30 giây' },
+    { value: '120000', label: '2 phút' },
 ];
 const pointsOptions = [
-    { value: '0', label: 'No Points' },
-    { value: '1', label: 'Standard Points (x1)' },
-    { value: '2', label: 'Double Points (x2)' },
-];
-const answerOptions = [
-    { value: 'single', label: 'Single Select' },
-    { value: 'multi', label: 'Multi-select (Not implemented)' },
+    { value: '1', label: 'Điểm chuẩn (x1)' }, { value: '2', label: 'Gấp đôi điểm (x2)' },
+    { value: '0', label: 'Không có điểm' },
 ];
 
-
-export const QuestionConfigurationSidebar: React.FC<QuestionConfigurationSidebarProps> = ({
+const QuestionConfigurationSidebar: React.FC<QuestionConfigurationSidebarProps> = ({
     onConfirmDelete,
     onConfirmDuplicate,
     className
 }) => {
-    const { control, watch, setValue } = useFormContext<QuestionHostSchemaType>();// Added control, watch, setValue for completeness from previous steps
-    const watchedType = watch('type');
-    const choices = watch('choices');
+    const { control, watch } = useFormContext<QuestionHostSchemaType>();
+    const watchedType = watch('type'); // To potentially disable/hide options based on type later
 
-    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false); // State for dialog
-
-    const isSurvey = watchedType === 'survey';
-    const isContent = watchedType === 'content';
-    const isLikelyTrueFalse = watchedType === 'quiz' &&
-        choices?.length === 2 &&
-        choices.some((c: ChoiceHostSchemaType) => c.answer === 'True') &&
-        choices.some((c: ChoiceHostSchemaType) => c.answer === 'False');
-
-    const handleValueChange = (value: string) => {
-        let targetType: QuestionHost['type'];
-        if (value === 'quiz-tf') {
-            targetType = 'quiz';
-        } else {
-            targetType = value as QuestionHost['type'];
-        }
-        setValue('type', targetType, { shouldValidate: true, shouldDirty: true });
-        console.log(`[Sidebar Select] RHF type set to: ${targetType}`);
-    };
-
-    const handleDeleteClick = () => {
-        setIsDeleteDialogOpen(true); // Open confirmation dialog
-    };
-
-    const handleConfirmDeleteAction = () => {
-        onConfirmDelete(); // Call the prop passed from parent
-        setIsDeleteDialogOpen(false);
-    };
-
-    const handleDuplicateClick = () => {
-        // Directly call the passed prop. No confirmation needed for duplicate by default,
-        // but one could be added here if desired, similar to delete.
-        onConfirmDuplicate();
-    };
     return (
-        <>
-            <div className={cn("flex flex-col h-full space-y-6", className)}>
-                {/* Question Type Select */}
-                <div>
-                    <RHFSelectField<QuestionHostSchemaType>
-                        name="type"
-                        label="Question Type"
-                        options={questionTypeOptions}
-                        placeholder="Select type..."
-                        onValueChange={handleValueChange}
-                    />
-                </div>
-
-                {/* Time Limit */}
-                {!isContent && (
-                    <div>
-                        <RHFSelectField<QuestionHostSchemaType>
-                            name="time"
-                            label="Time Limit"
-                            options={timeLimitOptions}
-                            placeholder="Select time..."
-                            onValueChange={(value) => setValue('time', parseInt(value, 10) || DEFAULT_TIME_LIMIT, { shouldValidate: true, shouldDirty: true })}
-                        />
-                    </div>
-                )}
-
-                {/* Points */}
-                {!(isContent || isSurvey) && (
-                    <div>
-                        <RHFSelectField<QuestionHostSchemaType>
-                            name="pointsMultiplier"
-                            label="Points"
-                            options={pointsOptions}
-                            placeholder="Select points..."
-                            onValueChange={(value) => setValue('pointsMultiplier', parseInt(value, 10), { shouldValidate: true, shouldDirty: true })}
-                        />
-                    </div>
-                )}
-
-                {/* Answer Options */}
-                {/* {watchedType === 'quiz' && !isLikelyTrueFalse && (
-                    <div>
-                        <RHFSelectField<any>
-                            name="answerOptionsConfig"
-                            label="Answer Options"
-                            options={answerOptions}
-                            placeholder="Select options..."
-                            disabled={true}
-                        />
-                        <p className="text-xs text-muted-foreground mt-1 italic">(Multi-select coming soon)</p>
-                    </div>
-                )} */}
-
-                {/* Slide Actions */}
-                <div className="mt-auto border-t pt-4">
-                    <SlideActions
-                        onDelete={handleDeleteClick} // Open dialog
-                        onDuplicate={handleDuplicateClick}
-                    />
-                </div>
+        <div className={cn("flex flex-col h-full space-y-5", className)}>
+            <div className="form-group">
+                <label htmlFor="questionType" className="block text-xs font-medium text-[var(--editor-text-secondary)] mb-1.5">Loại câu hỏi</label>
+                <RHFSelectField<QuestionHostSchemaType>
+                    name="type"
+                    options={questionTypeOptions}
+                    placeholder="Chọn loại câu hỏi..."
+                    triggerClassName="bg-[var(--editor-secondary-bg)] text-[var(--editor-text-primary)] border-[var(--editor-border-color)]"
+                    contentClassName="bg-[var(--editor-secondary-bg)] text-[var(--editor-text-primary)] border-[var(--editor-border-color)]"
+                />
+            </div>
+            <div className="form-group">
+                <label htmlFor="timeLimit" className="block text-xs font-medium text-[var(--editor-text-secondary)] mb-1.5">Giới hạn thời gian</label>
+                <RHFSelectField<QuestionHostSchemaType>
+                    name="time"
+                    options={timeLimitOptions}
+                    placeholder="Chọn thời gian..."
+                    triggerClassName="bg-[var(--editor-secondary-bg)] text-[var(--editor-text-primary)] border-[var(--editor-border-color)]"
+                    contentClassName="bg-[var(--editor-secondary-bg)] text-[var(--editor-text-primary)] border-[var(--editor-border-color)]"
+                />
+            </div>
+            <div className="form-group">
+                <label htmlFor="points" className="block text-xs font-medium text-[var(--editor-text-secondary)] mb-1.5">Điểm</label>
+                <RHFSelectField<QuestionHostSchemaType>
+                    name="pointsMultiplier"
+                    options={pointsOptions}
+                    placeholder="Chọn điểm..."
+                    triggerClassName="bg-[var(--editor-secondary-bg)] text-[var(--editor-text-primary)] border-[var(--editor-border-color)]"
+                    contentClassName="bg-[var(--editor-secondary-bg)] text-[var(--editor-text-primary)] border-[var(--editor-border-color)]"
+                />
             </div>
 
-            {/* Confirmation Dialog */}
-            <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            This action cannot be undone. This will permanently delete the
-                            current slide.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleConfirmDeleteAction}>
-                            Delete
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
-        </>
+            <hr className="border-[var(--editor-border-color)] my-3" />
+
+            <Button
+                variant="outline"
+                onClick={onConfirmDuplicate}
+                className="w-full justify-start bg-[var(--editor-secondary-bg)] text-[var(--editor-text-primary)] border-[var(--editor-border-color)] hover:bg-[#3a3a42]"
+            >
+                <Copy className="mr-2 h-4 w-4" /> Nhân bản Slide
+            </Button>
+            <Button
+                variant="destructive"
+                onClick={onConfirmDelete}
+                className="w-full justify-start bg-[var(--editor-danger-color)] text-white hover:bg-[var(--editor-danger-hover)]"
+            >
+                <Trash2 className="mr-2 h-4 w-4" /> Xóa Slide
+            </Button>
+        </div>
     );
 };
 

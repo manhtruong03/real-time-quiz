@@ -44,56 +44,77 @@
     --accent-hover: #7A2ECC;
     /* Not explicitly used in this phase but good to have */
     --border-color: #404048;
+
+
+    /* Variables from screen-08-question-edit.html for editor's dark theme */
+    --editor-primary-bg: #1E1E24;
+    --editor-secondary-bg: #2D2D34;
+    --editor-content-bg: #25252B;
+    --editor-text-primary: #EAEAEA;
+    --editor-text-secondary: #B0B0B0;
+    --editor-text-placeholder: #707075;
+    --editor-accent-color: #8A3FFC;
+    --editor-accent-hover: #7A2ECC;
+    --editor-border-color: #404048;
+    --editor-input-bg: #2D2D34;
+    --editor-danger-color: #DA1E28;
+    --editor-danger-hover: #b91c25;
+    --editor-answer-option-bg: #17171A;
+    --editor-correct-answer-highlight: #2ECC71;
   }
 
   .dark {
-    /* Updated dark theme variables based on screen-03-profile.html */
+    /* General Dark Theme (can be overridden by more specific editor styles if needed) */
     --background: 240 3% 12%;
-    /* #1F1F21 - Navbar/Page Background */
+    /* #1F1F21 */
     --foreground: 0 0% 92%;
-    /* #EAEAEA - Main text */
-
+    /* #EAEAEA */
     --card: 240 3% 18%;
-    /* #2D2D30 - Card Background */
+    /* #2D2D30 */
     --card-foreground: 0 0% 92%;
-    /* #EAEAEA - Text on cards */
-
+    /* #EAEAEA */
     --popover: 240 3% 18%;
-    /* #2D2D30 - Popover Background (same as card) */
+    /* #2D2D30 */
     --popover-foreground: 0 0% 92%;
-    /* #EAEAEA - Text on popovers */
-
+    /* #EAEAEA */
     --primary: 262 93% 72%;
-    /* #A076F9 - Accent Color (Purple) */
+    /* #A076F9 - Editor Accent / General Accent */
     --primary-foreground: 0 0% 100%;
-    /* #FFFFFF - Text on primary elements */
-
+    /* #FFFFFF */
     --secondary: 240 2% 29%;
-    /* #4A4A4D - Secondary button background / Input background */
+    /* #4A4A4D */
     --secondary-foreground: 0 0% 92%;
-    /* #EAEAEA - Text on secondary elements */
-
+    /* #EAEAEA */
     --muted: 240 2% 24%;
-    /* #3C3C3E - Muted elements / Hover states (e.g. profile button hover) */
+    /* #3C3C3E */
     --muted-foreground: 0 0% 69%;
-    /* #B0B0B0 - Muted text / Secondary text */
-
-    /* Accent can remain distinct if needed, or be based on primary */
+    /* #B0B0B0 */
     --accent: 262 93% 72%;
     /* Using primary purple as general accent for now */
     --accent-foreground: 0 0% 100%;
-    /* Text on accent elements */
-
     --destructive: 0 70% 55%;
-    /* Keep existing destructive colors, or adjust if needed */
     --destructive-foreground: 0 0% 98%;
-
     --border: 0 0% 33%;
-    /* #555555 - Border color */
+    /* #555555 */
     --input: 240 2% 29%;
-    /* #4A4A4D - Input background */
+    /* #4A4A4D */
     --ring: 262 85% 75%;
-    /* Focus ring - slightly lighter/brighter version of primary #A076F9 */
+
+    /* Editor specific variables (can be used directly or map to above) */
+    --editor-primary-bg: #1E1E24;
+    --editor-secondary-bg: #2D2D34;
+    --editor-content-bg: #25252B;
+    --editor-text-primary: #EAEAEA;
+    --editor-text-secondary: #B0B0B0;
+    --editor-text-placeholder: #707075;
+    --editor-accent-color: #8A3FFC;
+    --editor-accent-hover: #7A2ECC;
+    --editor-border-color: #404048;
+    --editor-input-bg: #2D2D34;
+    --editor-danger-color: #DA1E28;
+    --editor-danger-hover: #b91c25;
+    --editor-answer-option-bg: #17171A;
+    --editor-correct-answer-highlight: #2ECC71;
   }
 }
 
@@ -186,4 +207,33 @@
   50% {
     transform: translateY(-20px);
   }
+}
+
+/* Custom scrollbar for webkit browsers */
+.custom-scrollbar-dark::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.custom-scrollbar-dark::-webkit-scrollbar-track {
+  background: var(--editor-secondary-bg, #2D2D34);
+  /* Fallback color */
+  border-radius: 4px;
+}
+
+.custom-scrollbar-dark::-webkit-scrollbar-thumb {
+  background: var(--editor-border-color, #404048);
+  /* Fallback color */
+  border-radius: 4px;
+}
+
+.custom-scrollbar-dark::-webkit-scrollbar-thumb:hover {
+  background: var(--editor-text-placeholder, #707075);
+  /* Fallback color */
+}
+
+/* For Firefox - might need more specific styling if default is not good */
+.custom-scrollbar-dark {
+  scrollbar-width: thin;
+  scrollbar-color: var(--editor-border-color, #404048) var(--editor-secondary-bg, #2D2D34);
 }
