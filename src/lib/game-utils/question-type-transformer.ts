@@ -1,39 +1,30 @@
 // src/lib/game-utils/question-type-transformer.ts
-
-import type { QuestionHost } from "@/src/lib/types";
+import type { QuestionHost } from "@/src/lib/types"; //
 import type {
   QuestionFormContextType,
   ChoiceHostSchemaType,
-} from "@/src/lib/schemas/quiz-question.schema";
-import { createDefaultChoice, DEFAULT_TIME_LIMIT } from "./quiz-creation";
+} from "@/src/lib/schemas/quiz-question.schema"; //
+import { createDefaultChoice, DEFAULT_TIME_LIMIT } from "./quiz-creation"; //
 
-/**
- * Transforms the RHF form data for a question to match the constraints of a target question type.
- */
 export function transformQuestionDataForType(
-  currentData: QuestionFormContextType,
+  currentData: QuestionFormContextType, // This now includes imageFile
   targetType: QuestionHost["type"],
-  isTargetTrueFalse: boolean = false // For 'quiz' type, if it should be T/F
+  isTargetTrueFalse: boolean = false
 ): QuestionFormContextType {
   console.log(
-    `[Transformer] Transforming from ${currentData.type} (isTF: ${
-      isTargetTrueFalse && currentData.type === "quiz"
-    }) to ${targetType}${
+    `[Transformer] Transforming from ${currentData.type} to ${targetType}${
       isTargetTrueFalse && targetType === "quiz" ? " (T/F)" : ""
     }.`
   );
-  // console.log("[Transformer] Input data:", JSON.parse(JSON.stringify(currentData)));
 
   const newFormData: QuestionFormContextType = {
-    // Preserve some common fields by default
-    image: currentData.image, // Preserve main image
-    video: currentData.video, // Preserve video
-    media: currentData.media, // Preserve media array
-
-    // Fields to be determined/reset based on targetType
+    image: currentData.image,
+    imageFile: currentData.imageFile, // Preserve imageFile by default
+    video: currentData.video,
+    media: currentData.media,
     type: targetType,
     question:
-      currentData.type === "content" ? currentData.title : currentData.question, // Sensible default for question text
+      currentData.type === "content" ? currentData.title : currentData.question,
     title:
       targetType === "content"
         ? currentData.question || currentData.title
@@ -41,13 +32,11 @@ export function transformQuestionDataForType(
     description: targetType === "content" ? currentData.description : undefined,
     time: currentData.time ?? DEFAULT_TIME_LIMIT,
     pointsMultiplier: currentData.pointsMultiplier ?? 1,
-    choices: [...(currentData.choices ?? []).map((c) => ({ ...c }))], // Deep copy choices
+    choices: [...(currentData.choices ?? []).map((c) => ({ ...c }))],
     correctChoiceIndex: currentData.correctChoiceIndex ?? -1,
   };
 
-  // --- TYPE-SPECIFIC TRANSFORMATIONS ---
-
-  // 1. Defaults for 'content' type
+  // TYPE-SPECIFIC TRANSFORMATIONS for imageFile
   if (targetType === "content") {
     newFormData.title =
       currentData.question || currentData.title || "Informational Slide";
@@ -58,15 +47,20 @@ export function transformQuestionDataForType(
     newFormData.correctChoiceIndex = -1;
     newFormData.time = 0;
     newFormData.pointsMultiplier = 0;
+    // Content slides can still have images, so image/imageFile are preserved by default from currentData.
+    // If content slides should NOT have an image, uncomment below:
+    // newFormData.image = null;
+    // newFormData.imageFile = null;
   } else {
-    // For all non-content types
     newFormData.question =
       newFormData.question ||
-      (currentData.type === "content" ? currentData.title : "New Question..."); // Default if empty
+      (currentData.type === "content" ? currentData.title : "New Question...");
     newFormData.title = undefined;
     newFormData.description = undefined;
+    // For other types, image/imageFile are also preserved by default.
   }
 
+  // ... (rest of the points multiplier, time limit, choices logic remains the same) ...
   // 2. Points Multiplier
   if (targetType === "survey" || targetType === "content") {
     newFormData.pointsMultiplier = 0;
@@ -74,7 +68,6 @@ export function transformQuestionDataForType(
     newFormData.pointsMultiplier === 0 &&
     (currentData.type === "survey" || currentData.type === "content")
   ) {
-    // If coming from a non-pointed type to a pointed one, default to 1
     newFormData.pointsMultiplier = 1;
   }
 
@@ -87,13 +80,10 @@ export function transformQuestionDataForType(
     newFormData.time !== 90000 &&
     newFormData.time !== 120000
   ) {
-    // Common jumble times
     newFormData.time = 60000;
   } else if (newFormData.time === 0 && currentData.type === "content") {
-    // Coming from content to a timed question
     newFormData.time = DEFAULT_TIME_LIMIT;
   } else if (!newFormData.time) {
-    // General fallback if time is undefined/null
     newFormData.time = DEFAULT_TIME_LIMIT;
   }
 
@@ -120,11 +110,9 @@ export function transformQuestionDataForType(
             newFormData.choices[1]?.answer || "Answer 2"
           ),
         ];
-        // Add more if needed to reach a certain default (e.g., 2 or 4)
         while (newFormData.choices.length < 2)
           newFormData.choices.push(createDefaultChoice(false));
       }
-      // Ensure only one 'correct' answer for standard quiz
       let foundCorrect = false;
       newFormData.choices = newFormData.choices.map((choice, index) => {
         if (choice.correct) {
@@ -143,7 +131,6 @@ export function transformQuestionDataForType(
       } else if (newFormData.choices.length === 0) {
         newFormData.correctChoiceIndex = -1;
       }
-      // Limit choices for quiz
       if (newFormData.choices.length > 6)
         newFormData.choices = newFormData.choices.slice(0, 6);
     }
@@ -154,8 +141,8 @@ export function transformQuestionDataForType(
         ? newFormData.choices
         : [createDefaultChoice(true), createDefaultChoice(true)]
     ).map((choice) => ({
-      ...createDefaultChoice(true, choice.answer), // Ensure answer is string, correct is true
-      image: undefined, // Jumble doesn't use images in choices per schema
+      ...createDefaultChoice(true, choice.answer),
+      image: undefined,
     }));
     while (newFormData.choices.length < 2)
       newFormData.choices.push(
@@ -163,57 +150,58 @@ export function transformQuestionDataForType(
       );
     if (newFormData.choices.length > 6)
       newFormData.choices = newFormData.choices.slice(0, 6);
-    newFormData.correctChoiceIndex = -1; // Not used by Jumble RHF state
+    newFormData.correctChoiceIndex = -1;
   } else if (targetType === "survey") {
     newFormData.question = newFormData.question || "Poll Question...";
     newFormData.choices = (
       newFormData.choices.length > 0
         ? newFormData.choices
         : [createDefaultChoice(true), createDefaultChoice(true)]
-    ).map((choice) => ({ ...choice, correct: true })); // All choices are structurally correct
+    ).map((choice) => ({ ...choice, correct: true }));
     while (newFormData.choices.length < 2)
       newFormData.choices.push(
         createDefaultChoice(true, `Option ${newFormData.choices.length + 1}`)
       );
     if (newFormData.choices.length > 6)
       newFormData.choices = newFormData.choices.slice(0, 6);
-    newFormData.correctChoiceIndex = -1; // Not used
+    newFormData.correctChoiceIndex = -1;
   } else if (targetType === "open_ended") {
     newFormData.question = newFormData.question || "Type your answer...";
-    // Open ended might have multiple "acceptable" answers, all marked as correct: true
-    // If coming from a type with choices, attempt to use the first one.
     if (newFormData.choices.length > 0) {
       newFormData.choices = newFormData.choices.map((choice) => ({
         answer: choice.answer || "Acceptable Answer",
         correct: true,
-        image: undefined, // Open Ended choices are text only
+        image: undefined,
       }));
       if (newFormData.choices.length > 10)
         newFormData.choices = newFormData.choices.slice(0, 10);
     } else {
       newFormData.choices = [createDefaultChoice(true, "Correct Answer")];
     }
-    newFormData.correctChoiceIndex = -1; // Not used
+    newFormData.correctChoiceIndex = -1;
   } else if (targetType === "content") {
-    // Already handled at the top mostly
     newFormData.choices = [];
     newFormData.correctChoiceIndex = -1;
   }
 
-  // Final check: if not a quiz, correctChoiceIndex should be -1
   if (
     newFormData.type !== "quiz" ||
     (newFormData.type === "quiz" && isTargetTrueFalse)
   ) {
     if (newFormData.type !== "quiz") {
-      // For jumble, survey, OE, content
       newFormData.correctChoiceIndex = -1;
     }
   }
 
   console.log(
     "[Transformer] Transformation complete. Result:",
-    JSON.parse(JSON.stringify(newFormData))
+    JSON.parse(
+      JSON.stringify(newFormData, (key, value) =>
+        value instanceof File
+          ? { name: value.name, size: value.size, type: value.type }
+          : value
+      )
+    )
   );
   return newFormData;
 }

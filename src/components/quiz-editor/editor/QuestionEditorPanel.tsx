@@ -63,6 +63,7 @@ const QuestionEditorPanel: React.FC<QuestionEditorPanelProps> = ({
             <div className="flex justify-center">
                 <MediaManager<QuestionHostSchemaType>
                     name="image"
+                    fileFieldName="imageFile"
                     aspectRatio={16 / 9}
                     placeholderText="Add Question Media"
                     className="w-full max-w-md"

@@ -38,6 +38,7 @@ export const createDefaultQuestion = (
     pointsMultiplier: 1,
     choices: [],
     image: null,
+    imageFile: null,
     video: {
       // Default video object structure
       id: undefined,

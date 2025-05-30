@@ -82,16 +82,17 @@ const MediaItemSchema = z
 
 const BaseQuestionSchema = z.object({
   type: QuestionTypeEnum,
-  image: z
+  image: z // This will store the URL (string) for preview, including object URLs
     .string()
     .url({ message: "Invalid image URL" })
     .nullable()
     .optional()
     .default(null),
-  // --- ADDED video and media ---
+
+  imageFile: z.custom<File>().nullable().optional().default(null), // RHF will manage this File object
+
   video: VideoSchema, // Use the defined VideoSchema
   media: z.array(MediaItemSchema).optional().default([]), // Array of MediaItemSchema
-  // --- END ADDED ---
   question: z.string().optional(),
   title: z.string().optional(),
   description: z.string().optional(),

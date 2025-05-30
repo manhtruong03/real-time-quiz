@@ -15,7 +15,8 @@ export const QuizSettingsView: React.FC<QuizSettingsViewProps> = () => {
 
     const mediaManager = (
         <MediaManager<QuizMetadataSchemaType>
-            name="cover"
+            name="cover" // RHF field for the image URL string
+            fileFieldName="coverImageFile" // RHF field for the File object
             label="Cover Image"
             aspectRatio={16 / 9}
             placeholderText="Add Cover Image (16:9 Recommended)"

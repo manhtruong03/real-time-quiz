@@ -25,13 +25,16 @@ export const QuizMetadataSchema = z.object({
     .optional()
     .default([]),
   // --- PHASE 4 FIELD ---
-  cover: z
+  cover: z // This will store the URL (string) for preview, including object URLs
     .string()
     // .url({ message: "Please enter a valid URL." }) // Optional: Enable stricter URL validation if needed
     .max(1024, { message: "Cover URL too long." }) // Example length limit
     .optional()
     .nullable() // Allow null or undefined
     .default(null), // Default to null
+
+  // ADDED FOR PHASE 1 FILE UPLOAD - RHF will manage this File object based on form type
+  coverImageFile: z.custom<File>().nullable().optional().default(null),
 });
 
 export type QuizMetadataSchemaType = z.infer<typeof QuizMetadataSchema>;

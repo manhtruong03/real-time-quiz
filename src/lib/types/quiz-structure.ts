@@ -60,6 +60,7 @@ export interface QuestionHost {
   pointsMultiplier?: number;
   choices: ChoiceHost[]; // Host sees choices WITH 'correct' field
   image?: string | null; // URL for the main question image/media (can be Kahoot media URL)
+  imageFile?: File | null; // To store the selected File object client-side
   video?: VideoDetailsHost | null | undefined; // Use the defined VideoDetailsHost type
   media?: MediaItemHost[] | undefined; // Use array of MediaItemHost
 }
@@ -73,6 +74,7 @@ export interface QuizStructureHost {
   description: string;
   quizType: string; // e.g., "quiz", "survey" - general type of the quiz
   cover: string; // URL for the cover image
+  coverImageFile?: File | null; // To store the selected File object client-side for the cover
   lobby_video?: {
     // Lobby video for the entire quiz
     youtube?: VideoDetailsHost; // Can reuse VideoDetailsHost if structure is similar

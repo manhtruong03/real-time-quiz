@@ -4,14 +4,15 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   QuizMetadataSchema,
-  QuizMetadataSchemaType,
+  QuizMetadataSchemaType, // This type will now include coverImageFile due to schema update
   QuizVisibilityEnum,
 } from "@/src/lib/schemas/quiz-settings.schema";
 import type {
   QuestionHost,
   QuizStructureHost,
   ChoiceHost,
-} from "@/src/lib/types/quiz-structure";
+} from "@/src/lib/types/quiz-structure"; // QuizStructureHost and QuestionHost now include File fields
+// QuestionFormContextType will include imageFile due to schema update
 import type {
   QuestionFormContextType,
   ChoiceHostSchemaType,
@@ -19,14 +20,15 @@ import type {
 import { createDefaultQuestion } from "@/src/lib/game-utils/quiz-creation";
 
 const createDefaultQuizShell = (): QuizStructureHost => ({
-  uuid: "", // Will be generated on actual save
-  creator: "", // Will be set based on logged-in user
+  uuid: "",
+  creator: "",
   creator_username: "",
-  visibility: 0, // Default to Private (0)
+  visibility: 0,
   title: "",
   description: "",
   quizType: "quiz",
   cover: "",
+  coverImageFile: null, // Initialize new field
   lobby_video: {
     youtube: {
       id: "",
@@ -48,7 +50,7 @@ export function useQuizCreator() {
   const [quizData, setQuizData] = useState<QuizStructureHost>(
     createDefaultQuizShell()
   );
-  const [currentSlideIndex, setCurrentSlideIndex] = useState<number>(-1); // -1 means settings or no slide selected
+  const [currentSlideIndex, setCurrentSlideIndex] = useState<number>(-1);
 
   const formMethods = useForm<QuizMetadataSchemaType>({
     resolver: zodResolver(QuizMetadataSchema),
@@ -59,13 +61,15 @@ export function useQuizCreator() {
         quizData.visibility === 1
           ? QuizVisibilityEnum.enum.PUBLIC
           : QuizVisibilityEnum.enum.PRIVATE,
-      tags: [], // quizData.tags || [], // Assuming tags might be added to QuizStructureHost later
+      tags: [],
       cover: quizData.cover || null,
+      coverImageFile: quizData.coverImageFile || null, // Initialize in RHF
     },
-    mode: "onChange", // Or "onBlur"
+    mode: "onChange",
   });
 
-  const { reset: resetForm, handleSubmit: handleMetadataSubmit } = formMethods;
+  const { reset: resetForm, handleSubmit: handleMetadataSubmitRHF } =
+    formMethods; // Renamed to avoid conflict
 
   useEffect(() => {
     resetForm({
@@ -75,27 +79,30 @@ export function useQuizCreator() {
         quizData.visibility === 1
           ? QuizVisibilityEnum.enum.PUBLIC
           : QuizVisibilityEnum.enum.PRIVATE,
-      tags: (quizData as any).tags || [], // Assuming tags might be added later
+      tags: (quizData as any).tags || [],
       cover: quizData.cover || null,
+      coverImageFile: quizData.coverImageFile || null, // Reset in RHF
     });
   }, [
     quizData.title,
     quizData.description,
     quizData.visibility,
     quizData.cover,
-    // (quizData as any).tags,
+    quizData.coverImageFile, // Add to dependencies
     resetForm,
   ]);
 
   const updateQuizMetadata = useCallback(
     (data: QuizMetadataSchemaType) => {
+      // data now includes coverImageFile
       setQuizData((prevData) => ({
         ...prevData,
         title: data.title,
         description: data.description ?? "",
         visibility: data.visibility === QuizVisibilityEnum.enum.PUBLIC ? 1 : 0,
         tags: data.tags,
-        cover: data.cover ?? "",
+        cover: data.cover ?? "", // This would be the objectURL or actual URL
+        coverImageFile: data.coverImageFile, // Persist the File object
         modified: Date.now(),
       }));
     },
@@ -104,7 +111,12 @@ export function useQuizCreator() {
 
   const addQuestion = useCallback(
     (type: QuestionHost["type"], isTrueFalse: boolean = false): number => {
+      // createDefaultQuestion should ideally initialize imageFile: null
       const newQuestion = createDefaultQuestion(type, isTrueFalse);
+      if (!("imageFile" in newQuestion)) {
+        (newQuestion as QuestionHost).imageFile = null; // Ensure it's there
+      }
+
       let newIndex = 0;
       setQuizData((prevData) => {
         const currentQuestions = prevData.questions || [];
@@ -116,7 +128,7 @@ export function useQuizCreator() {
           modified: Date.now(),
         };
       });
-      return newIndex; // Return the index of the newly added question
+      return newIndex;
     },
     [setQuizData]
   );
@@ -145,6 +157,7 @@ export function useQuizCreator() {
           `[useQuizCreator] Successfully updating question at index ${index}`
         );
         const updatedQuestions = [...prevData.questions];
+        // finalQuestionData comes from QuestionFormManagement, which should include image and imageFile
         updatedQuestions[index] = finalQuestionData;
         return {
           ...prevData,
@@ -157,7 +170,6 @@ export function useQuizCreator() {
   );
 
   const deleteQuestion = useCallback(
-    // ... (same as before, ensure setCurrentSlideIndex is called correctly)
     (indexToDelete: number) => {
       console.log(
         `[useQuizCreator] Attempting to delete question at index: ${indexToDelete}`
@@ -169,7 +181,7 @@ export function useQuizCreator() {
           console.warn(
             `[useQuizCreator] Invalid index ${indexToDelete} for deletion. No changes made.`
           );
-          newCurrentSlideIndexValue = prevData.questions.length > 0 ? 0 : -1; // Fallback if index was bad
+          newCurrentSlideIndexValue = prevData.questions.length > 0 ? 0 : -1;
           return prevData;
         }
 
@@ -207,7 +219,6 @@ export function useQuizCreator() {
     [setQuizData, currentSlideIndex, setCurrentSlideIndex]
   );
 
-  // --- Phase Dup1: Add duplicateQuestion function ---
   const duplicateQuestion = useCallback(
     (indexToDuplicate: number): number => {
       console.log(
@@ -227,23 +238,26 @@ export function useQuizCreator() {
         }
 
         const originalQuestion = prevData.questions[indexToDuplicate];
-        // Deep copy the question object
-        // For plain JSON-like data, JSON.parse(JSON.stringify()) is a common way.
-        // If QuestionHost contained Dates, Functions, or undefined values that need preservation,
-        // a more robust deep cloning method would be needed. For now, this should suffice.
         const duplicatedQuestion = JSON.parse(
           JSON.stringify(originalQuestion)
         ) as QuestionHost;
 
-        // Optional: Modify any properties of the duplicatedQuestion if needed,
-        // e.g., if questions had unique IDs, generate a new one here.
-        // For now, it's a true structural copy.
+        // IMPORTANT: Reset imageFile for the duplicated question if the original had one,
+        // as the File object itself cannot be truly "duplicated" by JSON.stringify.
+        // The user will need to re-select a file for the duplicated question if they want a file.
+        // The image URL (preview or actual) will be copied.
+        if (originalQuestion.imageFile) {
+          duplicatedQuestion.imageFile = null; // Or undefined, depending on your type preference
+          // Optionally, you might want to keep the 'image' (URL) field if it was an objectURL from the original.
+          // However, for a true duplicate intending a new file, clearing `image` might also be desired if imageFile was present.
+          // For now, let's assume `image` (the URL) is copied, but `imageFile` is reset.
+        }
 
         const updatedQuestions = [...prevData.questions];
         const insertionPoint = indexToDuplicate + 1;
         updatedQuestions.splice(insertionPoint, 0, duplicatedQuestion);
 
-        newSlideIndex = insertionPoint; // The index of the new duplicated slide
+        newSlideIndex = insertionPoint;
 
         console.log(
           `[useQuizCreator] Duplicated question inserted at index: ${newSlideIndex}`
@@ -255,13 +269,11 @@ export function useQuizCreator() {
         };
       });
 
-      // Set the current slide index to the newly duplicated slide
       setCurrentSlideIndex(newSlideIndex);
-      return newSlideIndex; // Return the index for the calling component
+      return newSlideIndex;
     },
     [setQuizData, setCurrentSlideIndex]
   );
-  // --- End Phase Dup1 ---
 
   const resetCreatorState = useCallback(() => {
     const initialQuiz = createDefaultQuizShell();
@@ -275,6 +287,7 @@ export function useQuizCreator() {
           : QuizVisibilityEnum.enum.PRIVATE,
       tags: [],
       cover: initialQuiz.cover || null,
+      coverImageFile: null, // Reset in RHF
     });
     setCurrentSlideIndex(-1);
     console.log("useQuizCreator: State reset to default shell");
@@ -282,15 +295,15 @@ export function useQuizCreator() {
 
   return {
     quizData,
-    setQuizData, // Keep exposing this for direct manipulation if absolutely needed
+    setQuizData,
     currentSlideIndex,
     setCurrentSlideIndex,
     formMethods,
     updateQuizMetadata,
-    handleMetadataSubmit, // RHF's handleSubmit wrapped
+    handleMetadataSubmit: handleMetadataSubmitRHF, // Expose RHF's handleSubmit
     addQuestion,
     updateQuestion,
-    deleteQuestion, // Expose the new function
+    deleteQuestion,
     duplicateQuestion,
     resetCreatorState,
   };
