@@ -120,20 +120,23 @@ export default function CreateQuizPage() {
                 throw new Error("Quiz data is missing.");
             }
 
-            const quizPayload = transformQuizStateToDTO(currentQuizState);
-            if (!quizPayload.title || quizPayload.title.trim().length < 3) {
+            if (!currentQuizState.title || currentQuizState.title.trim().length < 3) {
                 toast({ title: "Validation Error", description: "Quiz title must be at least 3 characters.", variant: "destructive" });
                 setIsSaving(false);
                 if (currentViewMode !== 'settings') setViewMode('settings');
+                // Also ensure the RHF form for settings shows the error if not already.
+                // This might be redundant if formMethods.trigger() above already did this.
                 formMethods.setError("title", { type: "manual", message: "Quiz title must be at least 3 characters." });
                 return;
             }
-            if (!quizPayload.questions || quizPayload.questions.length === 0) {
+            if (!currentQuizState.questions || currentQuizState.questions.length === 0) {
                 toast({ title: "Empty Quiz", description: "Your quiz has no slides. Please add at least one slide.", variant: "default" });
-                // Not throwing error, allowing save of empty quiz
+                // Allowing save of empty quiz, so no 'return' here
             }
 
-            const savedQuiz = await createQuiz(quizPayload);
+            // Call createQuiz with the QuizStructureHost state.
+            // The transformation to FormData will happen inside createQuiz.
+            const savedQuiz = await createQuiz(currentQuizState);
             toast({
                 title: "Quiz Saved!",
                 description: `Quiz "${savedQuiz.title}" has been saved successfully.`,

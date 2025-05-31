@@ -1,9 +1,21 @@
 // src/lib/api/quizzes.ts
 import type { QuizDTO, Page } from "@/src/lib/types/api";
 import { fetchWithAuth, FetchOptions } from "./client";
+import type { QuizStructureHost } from "@/src/lib/types/quiz-structure";
+import { transformQuizStateToDTO } from "@/src/lib/api-utils/quiz-transformer";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080";
+
+export const API_ENDPOINTS = {
+  // ... other endpoints
+  QUIZZES: {
+    CREATE: `${API_BASE_URL}/api/quizzes`, // This is the endpoint for creating quizzes
+    GET_BY_ID: (quizId: string) => `${API_BASE_URL}/api/quizzes/${quizId}`,
+    // ... other quiz-related endpoints
+  },
+  // ...
+};
 
 // Interface for pagination parameters (keep existing functions if they are there)
 interface PageableParams {
@@ -64,37 +76,54 @@ export async function fetchQuizDetails(quizId: string): Promise<QuizDTO> {
 }
 
 /**
- * Creates a new quiz via the backend API.
- * @param quizData - The QuizDTO object representing the quiz to create.
- * @returns A promise that resolves with the created QuizDTO (as returned by the backend).
- * @throws {AuthApiError} If the request fails.
+ * Creates a new quiz by sending quiz data and optional images as multipart/form-data.
+ * @param quizState - The full quiz structure from the frontend, including any File objects.
+ * @returns A Promise resolving to the created QuizDTO from the backend.
  */
-export async function createQuiz(quizData: QuizDTO): Promise<QuizDTO> {
-  const endpoint = `${API_BASE_URL}/api/quizzes`;
-  console.log(`[API Quizzes] Creating new quiz at ${endpoint}`);
+export const createQuiz = async (
+  quizState: QuizStructureHost
+): Promise<QuizDTO> => {
+  console.log(
+    "[API Quizzes] Preparing to create quiz. Initial state:",
+    quizState
+  );
 
-  const options: FetchOptions = {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(quizData),
-    includeAuthHeader: true, // Creating a quiz requires authentication
-  };
+  // Transform the frontend state to FormData
+  const formData = transformQuizStateToDTO(quizState);
+
+  // Optional: Log FormData entries for debugging (can be verbose for actual file data)
+  console.log("[API Quizzes] FormData to be sent:");
+  for (const [key, value] of formData.entries()) {
+    if (value instanceof File) {
+      console.log(
+        `  ${key}: File { name: "${value.name}", size: ${value.size}, type: "${value.type}" }`
+      );
+    } else {
+      // This will log the 'quizData' JSON string
+      console.log(`  ${key}: ${value}`);
+    }
+  }
 
   try {
-    // The backend should return the created QuizDTO with its new UUID etc.
-    const createdQuiz = await fetchWithAuth<QuizDTO>(endpoint, options);
     console.log(
-      `[API Quizzes] Quiz created successfully (UUID: ${createdQuiz.uuid})`
+      `[API Quizzes] Sending POST request to ${API_ENDPOINTS.QUIZZES.CREATE} with FormData.`
     );
-    return createdQuiz;
+    const response = await fetchWithAuth<QuizDTO>(
+      API_ENDPOINTS.QUIZZES.CREATE,
+      {
+        method: "POST",
+        body: formData, // Pass FormData directly
+        // Content-Type header will be set by the browser for FormData
+      }
+    );
+    console.log("[API Quizzes] Quiz creation successful. Response:", response);
+    return response;
   } catch (error) {
-    console.error("[API Quizzes] Failed to create quiz:", error);
-    // Re-throw the error so the caller can handle it (e.g., show toast)
+    console.error("[API Quizzes] Error during quiz creation:", error);
+    // Re-throw the error so it can be caught by the calling UI component (e.g., to show a toast)
     throw error;
   }
-}
+};
 
 /**
  * Updates an existing quiz via the backend API.
