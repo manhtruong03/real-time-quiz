@@ -1,13 +1,13 @@
 // src/lib/game-utils/question-type-transformer.ts
-import type { QuestionHost } from "@/src/lib/types"; //
+import type { QuestionHost } from "@/src/lib/types";
 import type {
   QuestionFormContextType,
-  ChoiceHostSchemaType,
-} from "@/src/lib/schemas/quiz-question.schema"; //
-import { createDefaultChoice, DEFAULT_TIME_LIMIT } from "./quiz-creation"; //
+  // ChoiceHostSchemaType, // Not directly used in this version of the snippet
+} from "@/src/lib/schemas/quiz-question.schema";
+import { createDefaultChoice, DEFAULT_TIME_LIMIT } from "./quiz-creation";
 
 export function transformQuestionDataForType(
-  currentData: QuestionFormContextType, // This now includes imageFile
+  currentData: QuestionFormContextType,
   targetType: QuestionHost["type"],
   isTargetTrueFalse: boolean = false
 ): QuestionFormContextType {
@@ -19,7 +19,8 @@ export function transformQuestionDataForType(
 
   const newFormData: QuestionFormContextType = {
     image: currentData.image,
-    imageFile: currentData.imageFile, // Preserve imageFile by default
+    imageFile: currentData.imageFile,
+    questionImageUploadKey: currentData.questionImageUploadKey ?? null,
     video: currentData.video,
     media: currentData.media,
     type: targetType,
@@ -30,64 +31,63 @@ export function transformQuestionDataForType(
         ? currentData.question || currentData.title
         : undefined,
     description: targetType === "content" ? currentData.description : undefined,
-    time: currentData.time ?? DEFAULT_TIME_LIMIT,
+    time: currentData.time ?? DEFAULT_TIME_LIMIT, // User's time or general default
     pointsMultiplier: currentData.pointsMultiplier ?? 1,
     choices: [...(currentData.choices ?? []).map((c) => ({ ...c }))],
     correctChoiceIndex: currentData.correctChoiceIndex ?? -1,
   };
 
-  // TYPE-SPECIFIC TRANSFORMATIONS for imageFile
+  // General field setup based on targetType
   if (targetType === "content") {
     newFormData.title =
-      currentData.question || currentData.title || "Informational Slide";
+      newFormData.title || // Preserve if already set (e.g. from currentData.question if current was 'content')
+      currentData.title || // Fallback to currentData.title
+      "Informational Slide";
     newFormData.description =
-      currentData.description || "Add your content here...";
-    newFormData.question = undefined;
-    newFormData.choices = [];
-    newFormData.correctChoiceIndex = -1;
-    newFormData.time = 0;
-    newFormData.pointsMultiplier = 0;
-    // Content slides can still have images, so image/imageFile are preserved by default from currentData.
-    // If content slides should NOT have an image, uncomment below:
-    // newFormData.image = null;
-    // newFormData.imageFile = null;
+      newFormData.description || // Preserve if already set
+      currentData.description || // Fallback
+      "Add your content here...";
+    newFormData.question = undefined; // Content slides don't have a 'question' field in this model
   } else {
+    // For non-content types
     newFormData.question =
-      newFormData.question ||
-      (currentData.type === "content" ? currentData.title : "New Question...");
+      newFormData.question || // Preserve if already set (e.g. from currentData.question)
+      (currentData.type === "content" ? currentData.title : "New Question..."); // If coming from content, use its title
     newFormData.title = undefined;
     newFormData.description = undefined;
-    // For other types, image/imageFile are also preserved by default.
   }
 
-  // ... (rest of the points multiplier, time limit, choices logic remains the same) ...
-  // 2. Points Multiplier
+  // Points Multiplier
   if (targetType === "survey" || targetType === "content") {
     newFormData.pointsMultiplier = 0;
   } else if (
     newFormData.pointsMultiplier === 0 &&
     (currentData.type === "survey" || currentData.type === "content")
   ) {
-    newFormData.pointsMultiplier = 1;
+    // If transforming from a type that had 0 points to one that should have points
+    newFormData.pointsMultiplier = 1; // Default to 1x
   }
+  // If pointsMultiplier is already set from currentData (e.g., user chose 2x), it's preserved unless targetType is survey/content.
 
-  // 3. Time Limit
+  // --- REFINED TIME LIMIT LOGIC ---
   if (targetType === "content") {
-    newFormData.time = 0;
-  } else if (
-    targetType === "jumble" &&
-    newFormData.time !== 60000 &&
-    newFormData.time !== 90000 &&
-    newFormData.time !== 120000
-  ) {
-    newFormData.time = 60000;
-  } else if (newFormData.time === 0 && currentData.type === "content") {
-    newFormData.time = DEFAULT_TIME_LIMIT;
-  } else if (!newFormData.time) {
-    newFormData.time = DEFAULT_TIME_LIMIT;
+    newFormData.time = 0; // Content slides always have 0 time.
+  } else {
+    // For all non-content target types:
+    // newFormData.time currently holds `currentData.time ?? DEFAULT_TIME_LIMIT`.
+    // Ensure it's a positive value if it's not content.
+    // Zod validation will also check min/max positive constraints.
+    if (newFormData.time == null || newFormData.time <= 0) {
+      // `== null` checks for undefined or null
+      // also catches 0 or negative for non-content.
+      newFormData.time = DEFAULT_TIME_LIMIT; // Fallback to a general positive default.
+    }
   }
+  // Note: The Jumble-specific time override (forcing 60k/90k/120k) has been removed.
+  // The .default(60000) in JumbleQuestionSchema will apply if Zod receives 'undefined' for time.
+  // This logic ensures a number (user's choice or DEFAULT_TIME_LIMIT) is passed to Zod.
 
-  // 4. Choices and Correctness Logic
+  // Choices and Correctness Logic (as per last fully corrected version)
   if (targetType === "quiz") {
     if (isTargetTrueFalse) {
       newFormData.question = newFormData.question || "True or False: ...";
@@ -97,42 +97,59 @@ export function transformQuestionDataForType(
       ];
       newFormData.correctChoiceIndex = 0;
     } else {
-      // Standard Quiz
+      // Standard Quiz logic
       newFormData.question = newFormData.question || "Quiz Question...";
-      if (newFormData.choices.length < 2) {
+      if (newFormData.choices.length === 0) {
         newFormData.choices = [
-          createDefaultChoice(
-            true,
-            newFormData.choices[0]?.answer || "Answer 1"
-          ),
-          createDefaultChoice(
-            false,
-            newFormData.choices[1]?.answer || "Answer 2"
-          ),
+          createDefaultChoice(false, "Answer 1"),
+          createDefaultChoice(false, "Answer 2"),
         ];
-        while (newFormData.choices.length < 2)
-          newFormData.choices.push(createDefaultChoice(false));
+      } else if (newFormData.choices.length === 1) {
+        newFormData.choices = [
+          { ...newFormData.choices[0], correct: false },
+          createDefaultChoice(false, "Answer 2"),
+        ];
+      } else {
+        newFormData.choices = newFormData.choices.map((choice) => ({
+          ...choice,
+          correct: false,
+        }));
       }
-      let foundCorrect = false;
-      newFormData.choices = newFormData.choices.map((choice, index) => {
-        if (choice.correct) {
-          if (!foundCorrect) {
-            foundCorrect = true;
-            newFormData.correctChoiceIndex = index;
-            return choice;
-          }
-          return { ...choice, correct: false };
+      let authoritativeCorrectIndex = newFormData.correctChoiceIndex;
+      if (
+        authoritativeCorrectIndex < 0 ||
+        authoritativeCorrectIndex >= newFormData.choices.length
+      ) {
+        if (newFormData.choices.length > 0) {
+          authoritativeCorrectIndex = 0;
+        } else {
+          authoritativeCorrectIndex = -1;
         }
-        return choice;
-      });
-      if (!foundCorrect && newFormData.choices.length > 0) {
-        newFormData.choices[0].correct = true;
-        newFormData.correctChoiceIndex = 0;
-      } else if (newFormData.choices.length === 0) {
-        newFormData.correctChoiceIndex = -1;
       }
-      if (newFormData.choices.length > 6)
+      newFormData.correctChoiceIndex = authoritativeCorrectIndex;
+      if (
+        newFormData.correctChoiceIndex !== -1 &&
+        newFormData.choices.length > 0
+      ) {
+        newFormData.choices = newFormData.choices.map((choice, index) => ({
+          ...choice,
+          correct: index === newFormData.correctChoiceIndex,
+        }));
+      }
+      if (newFormData.choices.length > 6) {
         newFormData.choices = newFormData.choices.slice(0, 6);
+        if (newFormData.correctChoiceIndex >= newFormData.choices.length) {
+          if (newFormData.choices.length > 0) {
+            newFormData.correctChoiceIndex = 0;
+            newFormData.choices = newFormData.choices.map((choice, index) => ({
+              ...choice,
+              correct: index === newFormData.correctChoiceIndex,
+            }));
+          } else {
+            newFormData.correctChoiceIndex = -1;
+          }
+        }
+      }
     }
   } else if (targetType === "jumble") {
     newFormData.question = newFormData.question || "Order these items...";
@@ -180,17 +197,25 @@ export function transformQuestionDataForType(
     }
     newFormData.correctChoiceIndex = -1;
   } else if (targetType === "content") {
+    // Ensure content specific fields are definitively set
     newFormData.choices = [];
     newFormData.correctChoiceIndex = -1;
+    // newFormData.time = 0; // Already handled by the refined time logic
+    // newFormData.pointsMultiplier = 0; // Already handled by pointsMultiplier logic
   }
 
+  // Final check for correctChoiceIndex consistency (can often be simplified or removed if type-specific logic is robust)
   if (
     newFormData.type !== "quiz" ||
     (newFormData.type === "quiz" && isTargetTrueFalse)
   ) {
+    // This means: if not a "standard quiz" (i.e., it's Content, Jumble, Survey, OpenEnded, or a T/F Quiz)
     if (newFormData.type !== "quiz") {
+      // For truly non-quiz types
       newFormData.correctChoiceIndex = -1;
     }
+    // For T/F Quiz, its correctChoiceIndex is already set to 0 and is not -1, so this doesn't override.
+    // For standard quiz, this outer condition is false, so it's not affected.
   }
 
   console.log(

@@ -88,8 +88,8 @@ const BaseQuestionSchema = z.object({
   question: z.string().optional(),
   title: z.string().optional(),
   description: z.string().optional(),
-  time: z.number().optional().default(20000),
-  pointsMultiplier: z.number().optional().default(1),
+  time: z.coerce.number().optional().default(20000),
+  pointsMultiplier: z.coerce.number().optional().default(1),
   choices: z.array(ChoiceHostObjectSchema).optional().default([]),
   correctChoiceIndex: z.number().int().min(-1).optional().default(-1),
 });
@@ -108,8 +108,11 @@ export const QuizQuestionSchema = BaseQuestionSchema.extend({
     .array(ChoiceHostRefinedSchema)
     .min(2, "Quiz questions need 2-6 choices.")
     .max(6, "Maximum 6 choices allowed."),
-  time: z.number().positive("Time limit must be positive.").default(20000),
-  pointsMultiplier: z.number().min(0).max(2).default(1),
+  time: z.coerce
+    .number()
+    .positive("Time limit must be positive.")
+    .default(20000),
+  pointsMultiplier: z.coerce.number().min(0).max(2).default(1),
   correctChoiceIndex: z.number().int().min(-1).default(-1),
 }).omit({ title: true, description: true });
 
@@ -132,8 +135,8 @@ export const ContentSchema = BaseQuestionSchema.extend({
     .max(0, "Content slides cannot have choices.")
     .optional()
     .default([]),
-  time: z.number().optional().default(0),
-  pointsMultiplier: z.number().optional().default(0),
+  time: z.coerce.number().optional().default(0),
+  pointsMultiplier: z.coerce.number().optional().default(0),
 }).omit({ question: true, correctChoiceIndex: true });
 
 export const JumbleQuestionSchema = BaseQuestionSchema.extend({
@@ -153,8 +156,11 @@ export const JumbleQuestionSchema = BaseQuestionSchema.extend({
     )
     .min(2, "Jumble questions need 2-6 items.")
     .max(6, "Maximum 6 items allowed."),
-  time: z.number().positive("Time limit must be positive.").default(60000),
-  pointsMultiplier: z.number().min(0).max(2).default(1),
+  time: z.coerce
+    .number()
+    .positive("Time limit must be positive.")
+    .default(60000),
+  pointsMultiplier: z.coerce.number().min(0).max(2).default(1),
 }).omit({ title: true, description: true, correctChoiceIndex: true });
 
 export const OpenEndedQuestionSchema = BaseQuestionSchema.extend({
@@ -179,8 +185,11 @@ export const OpenEndedQuestionSchema = BaseQuestionSchema.extend({
     )
     .min(1, "At least one correct answer required.")
     .max(10, "Maximum 10 acceptable answers."),
-  time: z.number().positive("Time limit must be positive.").default(30000),
-  pointsMultiplier: z.number().min(0).max(2).default(1),
+  time: z.coerce
+    .number()
+    .positive("Time limit must be positive.")
+    .default(30000),
+  pointsMultiplier: z.coerce.number().min(0).max(2).default(1),
 }).omit({ title: true, description: true, correctChoiceIndex: true });
 
 export const SurveyQuestionSchema = BaseQuestionSchema.extend({
@@ -200,7 +209,10 @@ export const SurveyQuestionSchema = BaseQuestionSchema.extend({
     )
     .min(2, "Polls need 2-6 options.")
     .max(6, "Maximum 6 options allowed."),
-  time: z.number().positive("Time limit must be positive.").default(20000),
+  time: z.coerce
+    .number()
+    .positive("Time limit must be positive.")
+    .default(20000),
   pointsMultiplier: z.literal(0).default(0),
 }).omit({ title: true, description: true, correctChoiceIndex: true });
 
