@@ -3,9 +3,7 @@
 
 import React, { useState, useEffect, useRef, useCallback, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { WifiOff, Loader2 } from "lucide-react";
 
-import { fetchQuizDetails } from "@/src/lib/api/quizzes";
 import HostView from "@/src/components/game/views/HostView";
 import DevMockControls from "@/src/components/game/DevMockControls";
 import {
@@ -30,595 +28,332 @@ import { HostLobbyView } from "@/src/components/game/host/lobby/HostLobbyView";
 import { useToast } from "@/src/components/ui/use-toast";
 import { useHostAudioManager } from "@/src/hooks/game/useHostAudioManager";
 import { useAuth } from '@/src/context/AuthContext';
-import { transformLiveStateToFinalizationDto } from '@/src/lib/game-utils/session-transformer';
-import { saveSessionResults } from '@/src/lib/api/sessions';
 
+import { useHostGameSetup } from "./hooks/useHostGameSetup";
+import { useHostPageUIStateManager, PageUiState } from "./hooks/useHostPageUIStateManager";
+import { useGameSettingsManager } from "./hooks/useGameSettingsManager";
+import { useAutoStartManager } from "./hooks/useAutoStartManager";
+import { useSessionFinalizationHandler } from "./hooks/useSessionFinalizationHandler";
+import { useHostPageActions } from "./hooks/useHostPageActions";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080/api/session";
 const TOPIC_PREFIX = "/topic";
-const APP_PREFIX = "/app"; // Added for private messages
-const DEFAULT_AUTO_START_SECONDS = 30;
+const APP_PREFIX = "/app"; // Also used in useHostPageActions
 
 const HostPageContent = () => {
   const searchParams = useSearchParams();
   const quizId = searchParams.get('quizId');
 
-  type PageUiState =
-    | "INITIAL"
-    | "FETCHING_PIN"
-    | "CONNECTING"
-    | "CONNECTED"
-    | "DISCONNECTED"
-    | "ERROR";
-  const [uiState, setUiState] = useState<PageUiState>("INITIAL");
-  const [apiError, setApiError] = useState<string | null>(null);
-  const [fetchedGamePin, setFetchedGamePin] = useState<string | null>(null);
-  const [quizData, setQuizData] = useState<QuizStructureHost | null>(null);
-  const [isQuizDataLoading, setIsQuizDataLoading] = useState(true);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [selectedBackgroundId, setSelectedBackgroundId] = useState<string | null>(null);
-  const [selectedSoundId, setSelectedSoundId] = useState<string | null>(null);
-  const lastSentQuestionIndexRef = useRef<number | null>(null);
-  const [isAutoStartEnabled, setIsAutoStartEnabled] = useState(false);
-  const [autoStartTimeSeconds, setAutoStartTimeSeconds] = useState<number | null>(DEFAULT_AUTO_START_SECONDS);
-  const [autoStartCountdown, setAutoStartCountdown] = useState<number | null>(null);
-  const autoStartIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const [isFullScreen, setIsFullScreen] = useState(false);
-  const [isFinalizingSession, setIsFinalizingSession] = useState(false);
-  const { isAuthenticated } = useAuth();
-  const { toast } = useToast();
-
-  const {
-    backgrounds,
-    sounds,
-    isLoading: assetsLoading,
-    error: assetsError,
-  } = useGameAssets();
-  const { isMuted, toggleMute } = useHostAudioManager({ selectedSoundId });
-
-  const liveGameStateRef = useRef<LiveGameState | null>(null);
-
-  const coordinator = useHostGameCoordinator({
-    initialQuizData: quizData,
-    onPlayerJoined: (joiningPlayerCid: string) => {
-      const currentSelectedBgId = selectedBackgroundIdRef.current; // Use ref here
-      const currentPin = liveGameStateRef.current?.gamePin ?? fetchedGamePinRef.current; // Use ref here
-      if (
-        currentSelectedBgId &&
-        currentPin &&
-        wsConnectionStatusRef.current === "CONNECTED" // Use ref here
-      ) {
-        const contentPayload = { background: { id: currentSelectedBgId } };
-        const contentString = JSON.stringify(contentPayload);
-        // For individual background updates upon join, this should go to the specific player.
-        // However, background changes are often broadcast. If it needs to be private for late joiners:
-        const privateBgUpdateMessage = {
-          channel: `${APP_PREFIX}/controller/${currentPin}`, // Target private controller
-          data: {
-            gameid: currentPin,
-            id: 35, // Assuming 35 is for background updates
-            type: "message",
-            host: "VuiQuiz.com",
-            content: contentString,
-            cid: joiningPlayerCid, // Target the specific player
-          },
-          ext: { timetrack: Date.now() },
-        };
-        if (sendMessageRef.current) sendMessageRef.current(privateBgUpdateMessage.channel, JSON.stringify([privateBgUpdateMessage]));
-
-      }
-      // Auto-Start Logic (remains the same)
-      if (
-        isAutoStartEnabledRef.current && // Use ref
-        autoStartTimeSecondsRef.current !== null && // Use ref
-        liveGameStateRef.current &&
-        Object.keys(liveGameStateRef.current.players).length > 0 &&
-        autoStartCountdownRef.current === null && // Use ref
-        autoStartIntervalRef.current === null
-      ) {
-        setAutoStartCountdown(autoStartTimeSecondsRef.current); // Use ref value to set state
-      }
-    },
-  });
-  const coordinatorRef = useRef(coordinator);
+  // --- Instantiate Hooks (Phase 1 and others) ---
+  const { quizData, isQuizDataLoading, quizApiError, setQuizApiError: setQuizSetupApiError } = useHostGameSetup(quizId);
+  const { backgrounds, sounds, isLoading: assetsLoading, error: assetsError } = useGameAssets();
 
   const {
     connect: connectWebSocket,
     disconnect: disconnectWebSocket,
-    sendMessage,
+    sendMessage, // This is stable from useHostWebSocket
     connectionStatus: wsConnectionStatus,
     error: wsError,
     hostClientId,
   } = useHostWebSocket({
     onMessageReceived: (message) => {
+      // Ensure coordinatorRef is current or pass coordinator functions directly if they are stable
       if (coordinatorRef.current?.handleWebSocketMessage) {
-        coordinatorRef.current.handleWebSocketMessage(message.body as any); // Cast if DevMockControls used
+        coordinatorRef.current.handleWebSocketMessage(message.body as any);
       } else {
-        console.warn("[HostPage] Coordinator ref not ready for message handling.");
+        console.warn("[HostPage] Coordinator ref not ready for message handling on receive.");
       }
     },
   });
 
-  // Refs for values used in callbacks that might otherwise cause stale closures
-  const selectedBackgroundIdRef = useRef(selectedBackgroundId);
-  const fetchedGamePinRef = useRef(fetchedGamePin);
-  const wsConnectionStatusRef = useRef(wsConnectionStatus);
-  const isAutoStartEnabledRef = useRef(isAutoStartEnabled);
-  const autoStartTimeSecondsRef = useRef(autoStartTimeSeconds);
-  const autoStartCountdownRef = useRef(autoStartCountdown);
-  const sendMessageRef = useRef(sendMessage);
+  const uiManager = useHostPageUIStateManager({
+    quizId, isQuizDataLoading, quizApiError, assetsLoading,
+    assetsError, wsConnectionStatus, wsError,
+  });
+  // Destructure ALL needed values from uiManager to ensure they are current
+  const { uiState, setUiState, pageApiError, setPageApiError, fetchedGamePin, setFetchedGamePin } = uiManager;
 
-  useEffect(() => { selectedBackgroundIdRef.current = selectedBackgroundId; }, [selectedBackgroundId]);
-  useEffect(() => { fetchedGamePinRef.current = fetchedGamePin; }, [fetchedGamePin]);
-  useEffect(() => { wsConnectionStatusRef.current = wsConnectionStatus; }, [wsConnectionStatus]);
-  useEffect(() => { isAutoStartEnabledRef.current = isAutoStartEnabled; }, [isAutoStartEnabled]);
-  useEffect(() => { autoStartTimeSecondsRef.current = autoStartTimeSeconds; }, [autoStartTimeSeconds]);
-  useEffect(() => { autoStartCountdownRef.current = autoStartCountdown; }, [autoStartCountdown]);
-  useEffect(() => { sendMessageRef.current = sendMessage; }, [sendMessage]);
+  const { isAuthenticated } = useAuth();
+  const { toast } = useToast(); // toast function is stable
 
+  const coordinator = useHostGameCoordinator({
+    initialQuizData: quizData,
+    onPlayerJoined: (joiningPlayerCid: string) => {
+      const currentSelectedBgId = gameSettingsRef.current?.selectedBackgroundId;
+      // Use fetchedGamePin directly from uiManager to ensure it's current
+      const currentPin = liveGameStateRef.current?.gamePin ?? uiManager.fetchedGamePin;
+      if (currentSelectedBgId && currentPin && wsConnectionStatusRef.current === "CONNECTED") {
+        const contentPayload = { background: { id: currentSelectedBgId } };
+        const contentString = JSON.stringify(contentPayload);
+        const privateBgUpdateMessage = {
+          channel: `${APP_PREFIX}/controller/${currentPin}`,
+          data: { gameid: currentPin, id: 35, type: "message", host: "VuiQuiz.com", content: contentString, cid: joiningPlayerCid },
+          ext: { timetrack: Date.now() },
+        };
+        if (sendMessageRef.current) { // sendMessageRef contains stable sendMessage
+          sendMessageRef.current(privateBgUpdateMessage.channel, JSON.stringify([privateBgUpdateMessage]));
+        }
+      }
+      // Auto-start logic on player join (relying on autoStartManager's internal effects based on hasPlayers prop)
+      // Or, if explicit trigger is needed and setAutoStartCountdown is stable:
+      // if (autoStartManagerRef.current?.isAutoStartEnabled && ... ) {
+      //   autoStartManagerRef.current.setAutoStartCountdown?.(...);
+      // }
+    },
+  });
+  const coordinatorRef = useRef(coordinator); // Ref for callbacks if coordinator object itself is not stable
+  // Ideally, coordinator returns stable functions.
 
-  useEffect(() => {
-    coordinatorRef.current = coordinator;
-  }, [coordinator]);
-
+  // Destructure ALL values from coordinator needed by effects or other hooks/components
   const {
-    liveGameState,
-    currentBlock,
-    timerKey,
-    currentQuestionAnswerCount,
-    currentTotalPlayers,
-    handleNext,
-    handleSkip,
-    handleTimeUp,
-    initializeSession,
-    prepareQuestionMessage,
-    prepareResultMessage,
-    resetGameState,
-    kickPlayerCid,
+    liveGameState, currentBlock, timerKey, currentQuestionAnswerCount, currentTotalPlayers,
+    handleNext, // Passed to autoStartManager and HostLobbyView
+    handleSkip, // Passed to HostView
+    handleTimeUp, // Passed to HostView
+    initializeSession, // Passed to useHostPageActions
+    prepareQuestionMessage, // Used in message sending effect
+    prepareResultMessage,   // Used in message sending effect
+    resetGameState,         // Passed to useHostPageActions
+    kickPlayerCid,          // Passed to useHostPageActions (as kickPlayerCidFromCoordinator)
   } = coordinator;
 
-  useEffect(() => {
-    liveGameStateRef.current = liveGameState;
-  }, [liveGameState]);
 
-  useEffect(() => {
-    if (!quizId) {
-      setApiError("No Quiz ID provided in the URL.");
-      setUiState("ERROR");
-      setIsQuizDataLoading(false);
-      return;
-    }
-    let isMounted = true;
-    setIsQuizDataLoading(true);
-    setApiError(null);
-    fetchQuizDetails(quizId)
-      .then((fetchedQuiz) => {
-        if (isMounted) {
-          setQuizData(fetchedQuiz as unknown as QuizStructureHost);
-          setIsQuizDataLoading(false);
-        }
-      })
-      .catch((error: any) => {
-        if (isMounted) {
-          setApiError(error.message || "Failed to load quiz data.");
-          setUiState("ERROR");
-          setIsQuizDataLoading(false);
-        }
-      });
-    return () => {
-      isMounted = false;
-    };
-  }, [quizId]);
+  const gameSettings = useGameSettingsManager({
+    initialBackgrounds: backgrounds, initialSounds: sounds,
+    liveGamePin: liveGameState?.gamePin ?? fetchedGamePin, // Use current fetchedGamePin
+    sendMessage: sendMessage, // Pass stable sendMessage
+    isWsConnected: wsConnectionStatus === "CONNECTED",
+  });
+  const {
+    isSettingsOpen, selectedBackgroundId, selectedSoundId,
+    handleOpenSettings, handleSoundSelect, handleBackgroundSelect,
+    // Ensure setIsSettingsOpen is stable from useGameSettingsManager if passed directly
+    // For actions hook, it's setIsSettingsOpenFromManager
+  } = gameSettings;
+  const gameSettingsRef = useRef(gameSettings); // Ref for onPlayerJoined if needed
 
+  const autoStartManager = useAutoStartManager({
+    onAutoStartTrigger: handleNext, // Pass stable handleNext from coordinator
+    liveGameStatus: liveGameState?.status,
+    hasPlayers: liveGameState ? Object.keys(liveGameState.players ?? {}).filter(pId => pId !== liveGameState.hostUserId).length > 0 : false,
+  });
+  const {
+    isAutoStartEnabled, autoStartTimeSeconds, autoStartCountdown,
+    handleAutoStartToggle, handleAutoStartTimeChange, setAutoStartCountdown,
+  } = autoStartManager;
+  const autoStartManagerRef = useRef(autoStartManager);
+
+  useSessionFinalizationHandler({ liveGameState, quizData, isAuthenticated, toast });
+
+  // This ref is critical for the WebSocket message sending effect.
+  // It's modified by that effect and reset by handleResetAndGoToInitial (now in useHostPageActions).
+  const lastSentQuestionIndexRef = useRef<number | null>(null);
+
+  // --- Instantiate useHostPageActions ---
+  const pageActions = useHostPageActions({
+    uiState, setUiState, setPageApiError, fetchedGamePin, setFetchedGamePin, // All from uiManager
+    isQuizDataLoading, quizData, setQuizSetupApiError, // From useHostGameSetup
+    assetsLoading, // From useGameAssets
+    connectWebSocket, disconnectWebSocket, sendMessage, wsConnectionStatus, // From useHostWebSocket
+    initializeSession, resetGameState, kickPlayerCidFromCoordinator: kickPlayerCid, liveGameState, // From coordinator
+    handleAutoStartToggleForActions: handleAutoStartToggle, // from autoStartManager
+    handleAutoStartTimeChangeForActions: handleAutoStartTimeChange, // from autoStartManager
+    setIsSettingsOpenFromManager: gameSettings.setIsSettingsOpen, // from gameSettings (ensure stable)
+    toast,
+    lastSentQuestionIndexRef, // Pass the ref
+  });
+  // Destructure actions for use in JSX
+  const {
+    handleStartGameClick, handleResetAndGoToInitial, handleReconnect,
+    handleToggleFullScreen, handleKickPlayer,
+  } = pageActions;
+
+  const [isFullScreen, setIsFullScreen] = useState(false); // This state is for the fullscreen UI toggle
+  const { isMuted, toggleMute } = useHostAudioManager({ selectedSoundId });
+
+
+  // Refs for values that might be needed in callbacks not re-created frequently
+  // Ensure these refs are updated if their source values change.
+  const liveGameStateRef = useRef<LiveGameState | null>(liveGameState);
+  const fetchedGamePinRef = useRef(fetchedGamePin); // Ref for fetchedGamePin
+  const wsConnectionStatusRef = useRef(wsConnectionStatus);
+  const sendMessageRef = useRef(sendMessage); // Ref for stable sendMessage
+
+  useEffect(() => { liveGameStateRef.current = liveGameState; }, [liveGameState]);
+  useEffect(() => { fetchedGamePinRef.current = fetchedGamePin; }, [fetchedGamePin]); // Update ref when fetchedGamePin changes
+  useEffect(() => { wsConnectionStatusRef.current = wsConnectionStatus; }, [wsConnectionStatus]);
+  useEffect(() => { sendMessageRef.current = sendMessage; }, [sendMessage]); // sendMessage is stable
+  useEffect(() => { coordinatorRef.current = coordinator; }, [coordinator]); // If coordinator object itself is a dependency
+  useEffect(() => { gameSettingsRef.current = gameSettings; }, [gameSettings]);
+  useEffect(() => { autoStartManagerRef.current = autoStartManager; }, [autoStartManager]);
+
+
+  // Effect to trigger auto-start countdown when conditions are met (e.g., player joins)
+  // This relies on states from autoStartManager hook.
   useEffect(() => {
-    if (!assetsLoading && !assetsError) {
-      if (selectedBackgroundId === null && backgrounds.length > 0) {
-        const firstActiveBg = backgrounds.find((bg) => bg.is_active);
-        if (firstActiveBg) setSelectedBackgroundId(firstActiveBg.background_id);
-      }
-      if (selectedSoundId === null && sounds.length > 0) {
-        const firstActiveLobbySound = sounds.find(
-          (s) => s.sound_type === "LOBBY" && s.is_active
-        );
-        if (firstActiveLobbySound)
-          setSelectedSoundId(firstActiveLobbySound.sound_id);
-      }
+    if (liveGameState?.status === "LOBBY" &&
+      Object.keys(liveGameState.players ?? {}).filter(pId => pId !== liveGameState.hostUserId).length > 0 &&
+      isAutoStartEnabled && // from autoStartManager
+      autoStartCountdown === null && // from autoStartManager
+      autoStartTimeSeconds > 0) { // from autoStartManager
+      setAutoStartCountdown(autoStartTimeSeconds); // Call stable setter from autoStartManager
     }
   }, [
-    assetsLoading,
-    assetsError,
-    backgrounds,
-    sounds,
-    selectedBackgroundId,
-    selectedSoundId,
+    liveGameState?.players, liveGameState?.status, liveGameState?.hostUserId, // From coordinator
+    isAutoStartEnabled, autoStartCountdown, autoStartTimeSeconds, setAutoStartCountdown // From autoStartManager
   ]);
 
-  useEffect(() => {
-    if (uiState === 'INITIAL' && isQuizDataLoading) return;
-    if (wsConnectionStatus === "CONNECTING") setUiState("CONNECTING");
-    else if (wsConnectionStatus === "CONNECTED") setUiState("CONNECTED");
-    else if (wsConnectionStatus === "DISCONNECTED") {
-      if (uiState !== "INITIAL" && uiState !== "ERROR") {
-        setUiState("DISCONNECTED");
-      }
-    } else if (wsConnectionStatus === "ERROR") {
-      setApiError(wsError ?? "Unknown WebSocket error.");
-      setUiState("ERROR");
-    }
-  }, [wsConnectionStatus, wsError, uiState, isQuizDataLoading]);
-
+  // CRITICAL EFFECT: Sends WebSocket messages based on liveGameState changes.
+  // This MUST use the most current state values.
   useEffect(() => {
     if (!liveGameState) return;
+    // Use uiState directly from the uiManager hook's destructured state
     if (uiState !== "CONNECTED" || wsConnectionStatus !== "CONNECTED") return;
 
-    const { status, gamePin, players, hostUserId, currentQuestionIndex } =
-      liveGameState;
+    const { status, gamePin, players, hostUserId, currentQuestionIndex } = liveGameState;
 
     if (status === "QUESTION_SHOW" || status === "QUESTION_GET_READY") {
       if (
-        currentBlock &&
+        currentBlock && // from coordinator
         currentBlock.questionIndex === currentQuestionIndex &&
         lastSentQuestionIndexRef.current !== currentQuestionIndex
       ) {
-        const messageBody = prepareQuestionMessage(); // prepareQuestionMessage now returns the body string
+        const messageBody = prepareQuestionMessage(); // from coordinator
         if (messageBody && gamePin) {
-          const destination = `${TOPIC_PREFIX}/player/${gamePin}`; // Public topic for questions
-          sendMessage(destination, messageBody);
+          const destination = `${TOPIC_PREFIX}/player/${gamePin}`;
+          sendMessage(destination, messageBody); // from useHostWebSocket
           lastSentQuestionIndexRef.current = currentQuestionIndex;
         }
       }
     }
-    else if (status === "SHOWING_STATS" || status === "PODIUM" || status === "ENDED") { // Results or Podium
-      // The check `lastSentQuestionIndexRef.current === currentQuestionIndex` ensures results are sent once per question end.
-      // For podium/end, currentQuestionIndex might be the last question's index or -1 if game ended abruptly.
-      // The logic here focuses on sending to each player.
+    else if (status === "SHOWING_STATS" || status === "PODIUM" || status === "ENDED") {
       const isFinalMessage = status === "PODIUM" || status === "ENDED";
-      // Only send if we haven't sent for this specific question's results OR if it's a final message
-      if (lastSentQuestionIndexRef.current === currentQuestionIndex || isFinalMessage) {
+      // Check if we haven't sent messages for this question's results yet, or if it's a final message
+      if (lastSentQuestionIndexRef.current === currentQuestionIndex || (isFinalMessage && lastSentQuestionIndexRef.current !== -999)) {
         if (players && Object.keys(players).length > 0 && gamePin) {
           Object.keys(players).forEach((playerId) => {
-            if (playerId !== hostUserId) { // Don't send results to host itself
-
-              // +++ START MODIFICATION FOR PHASE 1 (Corrected) +++
-              const preparedMsg = prepareResultMessage(playerId); // Returns { messageString, messageDataId }
-
+            if (playerId !== hostUserId) {
+              const preparedMsg = prepareResultMessage(playerId); // from coordinator
               if (preparedMsg.messageString && preparedMsg.messageDataId !== null) {
                 let destinationChannel: string;
-                // Determine destination based on messageDataId
+                // Original logic for different channels based on message ID
                 if (preparedMsg.messageDataId === 8 || preparedMsg.messageDataId === 13) {
-                  destinationChannel = `${APP_PREFIX}/controller/${gamePin}`; // Private channel
-                  console.log(`[HostPage] Sending private result (ID: ${preparedMsg.messageDataId}) for player ${playerId} to ${destinationChannel}`);
+                  destinationChannel = `${APP_PREFIX}/controller/${gamePin}`;
                 } else {
-                  // Fallback for other types (should not happen if prepareResultMessage is only for results)
-                  destinationChannel = `${TOPIC_PREFIX}/player/${gamePin}`; // Public channel
-                  console.warn(`[HostPage] Unexpected messageDataId ${preparedMsg.messageDataId} from prepareResultMessage, sending to public topic.`);
+                  destinationChannel = `${TOPIC_PREFIX}/player/${gamePin}`;
                 }
-                sendMessage(destinationChannel, preparedMsg.messageString);
+                sendMessage(destinationChannel, preparedMsg.messageString); // from useHostWebSocket
               } else {
                 console.warn(`Could not prepare result/final message for player ${playerId}.`);
               }
-              // +++ END MODIFICATION FOR PHASE 1 (Corrected) +++
             }
           });
         }
-        if (!isFinalMessage) { // For intermediate question results
-          lastSentQuestionIndexRef.current = null; // Reset after sending results for the question
-        } else if (isFinalMessage && lastSentQuestionIndexRef.current !== -999) { // Arbitrary value to ensure final messages are sent once
-          lastSentQuestionIndexRef.current = -999; // Mark final messages as sent
+        if (!isFinalMessage) {
+          // Reset to allow next question's messages. If it was QUESTION_SHOW/GET_READY, it gets set to currentQuestionIndex.
+          // If it was already null (e.g. from LOBBY state), it stays null.
+          // This ensures that if we were showing stats for Q1 (index 0), lastSentQuestionIndexRef was 0.
+          // After sending results for Q1, it should be reset so Q2 (index 1) can be sent.
+          lastSentQuestionIndexRef.current = null;
+        } else if (isFinalMessage && lastSentQuestionIndexRef.current !== -999) {
+          // Mark that final messages (like podium) have been sent.
+          lastSentQuestionIndexRef.current = -999;
         }
       }
     }
     else if (status === "LOBBY") {
+      // Reset when returning to lobby to allow sending messages for the first question again
       if (lastSentQuestionIndexRef.current !== null) {
         lastSentQuestionIndexRef.current = null;
       }
     }
   }, [
-    liveGameState,
-    currentBlock,
-    uiState,
-    wsConnectionStatus,
-    sendMessage,
-    prepareQuestionMessage,
-    prepareResultMessage,
+    liveGameState, // Direct from coordinator
+    currentBlock,  // Direct from coordinator
+    uiState,       // Direct from uiManager
+    wsConnectionStatus, // Direct from useHostWebSocket
+    sendMessage,        // Stable sendMessage from useHostWebSocket
+    prepareQuestionMessage, // Stable function from coordinator
+    prepareResultMessage,   // Stable function from coordinator
+    // lastSentQuestionIndexRef is a ref, its change doesn't trigger re-run, but its .current is used.
   ]);
 
-  useEffect(() => {
-    if (autoStartIntervalRef.current) {
-      clearInterval(autoStartIntervalRef.current);
-      autoStartIntervalRef.current = null;
-    }
-    if (
-      isAutoStartEnabled &&
-      autoStartTimeSeconds !== null &&
-      typeof autoStartCountdown === "number" &&
-      liveGameState?.status === "LOBBY"
-    ) {
-      autoStartIntervalRef.current = setInterval(() => {
-        setAutoStartCountdown((prevCountdown) => {
-          if (prevCountdown === null) {
-            if (autoStartIntervalRef.current) clearInterval(autoStartIntervalRef.current);
-            autoStartIntervalRef.current = null;
-            return null;
-          }
-          if (prevCountdown <= 1) {
-            clearInterval(autoStartIntervalRef.current!);
-            autoStartIntervalRef.current = null;
-            handleNext();
-            return 0;
-          }
-          return prevCountdown - 1;
-        });
-      }, 1000);
-    } else if (autoStartCountdown !== null) {
-      setAutoStartCountdown(null);
-    }
-    return () => {
-      if (autoStartIntervalRef.current) clearInterval(autoStartIntervalRef.current);
-    };
-  }, [isAutoStartEnabled, autoStartTimeSeconds, autoStartCountdown, liveGameState?.status, handleNext]);
-
+  // Effect for WebSocket disconnect on unmount
   useEffect(() => {
     return () => {
-      disconnectWebSocket();
+      disconnectWebSocket(); // from useHostWebSocket (stable)
     };
   }, [disconnectWebSocket]);
 
+  // Effect for fullscreen state
   useEffect(() => {
-    const handleFullscreenChange = () => setIsFullScreen(!!document.fullscreenElement);
-    document.addEventListener("fullscreenchange", handleFullscreenChange);
-    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
-  }, []);
+    const handleFullscreenChangeCb = () => setIsFullScreen(!!document.fullscreenElement);
+    document.addEventListener("fullscreenchange", handleFullscreenChangeCb);
+    return () => document.removeEventListener("fullscreenchange", handleFullscreenChangeCb);
+  }, []); // Empty dependency: runs once on mount, cleans up on unmount
 
-  useEffect(() => {
-    if (
-      liveGameState &&
-      quizData &&
-      (liveGameState.status === "PODIUM" || liveGameState.status === "ENDED") &&
-      isAuthenticated &&
-      !isFinalizingSession
-    ) {
-      setIsFinalizingSession(true);
-      const finalPayload = transformLiveStateToFinalizationDto(liveGameState, quizData);
-      const sendFinalizationRequest = async () => {
-        try {
-          await saveSessionResults(finalPayload);
-          toast({
-            title: "Session Results Saved",
-            description: "The game results have been successfully recorded.",
-          });
-        } catch (error: any) {
-          toast({
-            variant: "destructive",
-            title: "Error Saving Results",
-            description: error.message || "An unexpected error occurred.",
-          });
-        }
-      };
-      sendFinalizationRequest();
-    }
-  }, [
-    liveGameState,
-    quizData,
-    isAuthenticated,
-    isFinalizingSession,
-    toast,
-    // setIsFinalizingSession // Only if you set it back to false
-  ]);
-
-  const handleStartGameClick = async () => {
-    if (uiState !== 'INITIAL' || isQuizDataLoading || !quizData) {
-      return;
-    }
-    setUiState("FETCHING_PIN");
-    setApiError(null);
-    try {
-      const response = await fetch(`${API_BASE_URL}/create`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) });
-      const data = await response.json();
-      if (response.ok && data.gamePin) {
-        setFetchedGamePin(data.gamePin);
-        connectWebSocket(data.gamePin, (clientId) => {
-          initializeSession(data.gamePin, clientId);
-        });
-      } else {
-        throw new Error(data.error || `Failed to create session (Status: ${response.status})`);
-      }
-    } catch (error: any) {
-      setApiError(error.message || "Failed to start game session.");
-      setUiState('ERROR');
-    }
-  };
-
-  const handleResetAndGoToInitial = () => {
-    disconnectWebSocket();
-    resetGameState();
-    setApiError(null);
-    setFetchedGamePin(null);
-    lastSentQuestionIndexRef.current = null;
-    setQuizData(null);
-    setIsQuizDataLoading(true);
-    setSelectedBackgroundId(null);
-    setSelectedSoundId(null);
-    setIsSettingsOpen(false);
-    setIsAutoStartEnabled(false);
-    setAutoStartTimeSeconds(DEFAULT_AUTO_START_SECONDS);
-    setAutoStartCountdown(null);
-    if (autoStartIntervalRef.current) clearInterval(autoStartIntervalRef.current);
-    autoStartIntervalRef.current = null;
-    setUiState("INITIAL");
-    window.location.reload();
-  };
-
-  const handleReconnect = () => {
-    if (fetchedGamePin) {
-      connectWebSocket(fetchedGamePin, (clientId) => {
-        initializeSession(fetchedGamePin, clientId);
-        setIsAutoStartEnabled(false);
-        setAutoStartTimeSeconds(DEFAULT_AUTO_START_SECONDS);
-        setAutoStartCountdown(null);
-      });
-    } else {
-      handleResetAndGoToInitial();
-    }
-  };
-
-  const handleOpenSettings = () => setIsSettingsOpen(true);
-  const handleSoundSelect = (soundId: string) => { setSelectedSoundId(soundId); setIsSettingsOpen(false); };
-  const handleBackgroundSelect = (backgroundId: string) => {
-    setSelectedBackgroundId(backgroundId);
-    setIsSettingsOpen(false);
-    const currentPin = liveGameState?.gamePin ?? fetchedGamePin;
-    if (currentPin && wsConnectionStatus === "CONNECTED") {
-      const contentPayload = { background: { id: backgroundId } };
-      const contentString = JSON.stringify(contentPayload);
-      // Background changes are typically broadcast to all players
-      const wsMessageEnvelope = {
-        channel: `${TOPIC_PREFIX}/player/${currentPin}`, // Public channel for background
-        data: { gameid: currentPin, id: 35, type: "message", host: "VuiQuiz.com", content: contentString },
-        ext: { timetrack: Date.now() },
-      };
-      sendMessage(wsMessageEnvelope.channel, JSON.stringify([wsMessageEnvelope]));
-    }
-  };
-
-  const handleAutoStartToggle = (enabled: boolean) => {
-    setIsAutoStartEnabled(enabled);
-    if (!enabled) {
-      setAutoStartCountdown(null);
-      if (autoStartIntervalRef.current) clearInterval(autoStartIntervalRef.current);
-      autoStartIntervalRef.current = null;
-    } else if (autoStartTimeSeconds !== null && liveGameStateRef.current?.status === 'LOBBY' && Object.keys(liveGameStateRef.current.players).length > 0) {
-      setAutoStartCountdown(autoStartTimeSeconds);
-    }
-  };
-
-  const handleAutoStartTimeChange = (seconds: number | null) => {
-    setAutoStartTimeSeconds(seconds);
-    if (isAutoStartEnabled && seconds !== null) {
-      setAutoStartCountdown(seconds);
-      if (autoStartIntervalRef.current) clearInterval(autoStartIntervalRef.current);
-      autoStartIntervalRef.current = null;
-    } else if (seconds === null) {
-      setAutoStartCountdown(null);
-      if (autoStartIntervalRef.current) clearInterval(autoStartIntervalRef.current);
-      autoStartIntervalRef.current = null;
-    }
-  };
-
-  const handleToggleFullScreen = () => {
-    if (!document.fullscreenEnabled) {
-      toast({ variant: "destructive", title: "Error", description: "Fullscreen not supported." });
-      return;
-    }
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().catch(err => toast({ variant: "destructive", title: "Error", description: "Could not enter fullscreen." }));
-    } else {
-      if (document.exitFullscreen) document.exitFullscreen();
-    }
-  };
-
-  const handleKickPlayer = (playerIdToKick: string) => {
-    // Logic to send kick message via WebSocket
-    const currentPin = liveGameState?.gamePin ?? fetchedGamePin;
-    if (currentPin && wsConnectionStatus === "CONNECTED") {
-      const kickPayload = { kickCode: 1 }; // Example kick code
-      const contentString = JSON.stringify(kickPayload);
-      const wsMessageEnvelope = {
-        // For kicking, send to the PRIVATE controller channel,
-        // the backend will then dispatch to the specific player's private queue.
-        channel: `${APP_PREFIX}/controller/${currentPin}`,
-        data: {
-          gameid: currentPin,
-          id: 10, // ID for Player Kicked (as per docs/websocket_message_structure.txt)
-          type: "message",
-          host: "VuiQuiz.com",
-          content: contentString,
-          cid: playerIdToKick, // The player to be kicked
-        },
-        ext: { timetrack: Date.now() },
-      };
-      sendMessage(wsMessageEnvelope.channel, JSON.stringify([wsMessageEnvelope]));
-      toast({ title: "Player Kicked", description: `Attempted to kick player ${playerIdToKick}.` });
-
-      // Optimistically update UI or wait for backend confirmation if preferred
-      if (kickPlayerCid) { // Check if the function exists
-        kickPlayerCid(playerIdToKick);
-      }
-    } else {
-      toast({ variant: "destructive", title: "Error", description: "Cannot kick player, not connected." });
-    }
-  };
 
   const renderPageActualContent = () => {
-    if (!quizId && uiState !== 'ERROR') {
-      return <ErrorHostView errorMessage="No Quiz ID specified in URL." onRetry={() => window.location.reload()} />;
-    }
+    // Use states directly from their respective hook outputs
     switch (uiState) {
       case "INITIAL":
-        return (
-          <InitialHostView
-            onStartGameClick={handleStartGameClick}
-            isQuizLoading={isQuizDataLoading || assetsLoading}
-            isDisabled={isQuizDataLoading || assetsLoading || !quizData}
-          />
-        );
+        return (<InitialHostView onStartGameClick={handleStartGameClick} isQuizLoading={isQuizDataLoading || assetsLoading} isDisabled={isQuizDataLoading || assetsLoading || (!quizData && !isQuizDataLoading) || !!quizApiError} />);
+      case "ERROR":
+        return <ErrorHostView errorMessage={pageApiError || "An unknown error occurred."} onRetry={handleResetAndGoToInitial} />;
       case "FETCHING_PIN":
         return <ConnectingHostView message="Creating Game Session..." />;
       case "CONNECTING":
         return <ConnectingHostView message={`Connecting WebSocket (Pin: ${fetchedGamePin})...`} />;
-      case "ERROR":
-        return <ErrorHostView errorMessage={apiError || assetsError || "An unknown error occurred."} onRetry={handleResetAndGoToInitial} />;
       case "DISCONNECTED":
         return <DisconnectedHostView onStartNewGame={handleResetAndGoToInitial} onReconnect={handleReconnect} gamePin={fetchedGamePin} />;
       case "CONNECTED":
+        if (assetsLoading && !quizData && !isQuizDataLoading) return <ConnectingHostView message="Loading assets and quiz..." />;
         if (assetsLoading) return <ConnectingHostView message="Loading assets..." />;
-        if (assetsError) return <ErrorHostView errorMessage={assetsError} onRetry={handleResetAndGoToInitial} />;
+        if (isQuizDataLoading) return <ConnectingHostView message="Loading quiz data..." />;
         if (!liveGameState) return <ConnectingHostView message="Initializing game state..." />;
+        if (!quizData) {
+          setPageApiError("Quiz data is unexpectedly missing after loading."); // Use setter from uiManager
+          setUiState("ERROR"); // Use setter from uiManager
+          return <ConnectingHostView message="Error: Quiz data missing..." />; // Temp until re-render
+        }
+
         return (
           <>
             {liveGameState.status === "LOBBY" ? (
               <HostLobbyView
-                quizTitle={quizData?.title ?? "Quiz"}
-                gamePin={liveGameState.gamePin}
-                accessUrl={"VuiQuiz.com"}
-                participants={Object.values(liveGameState.players ?? {}).filter(p => p.cid !== liveGameState.hostUserId)} // Filter out host from participant list
-                selectedBackgroundId={selectedBackgroundId}
-                onStartGame={handleNext}
-                onEndGame={handleResetAndGoToInitial}
-                onKickPlayer={handleKickPlayer}
-                isAutoStartEnabled={isAutoStartEnabled}
-                onAutoStartToggle={handleAutoStartToggle}
-                autoStartTimeSeconds={autoStartTimeSeconds}
-                onAutoStartTimeChange={handleAutoStartTimeChange}
-                autoStartCountdown={autoStartCountdown}
-                onSettingsClick={handleOpenSettings}
-                isMuted={isMuted}
-                onToggleMute={toggleMute}
-                isFullScreen={isFullScreen}
-                onToggleFullScreen={handleToggleFullScreen}
+                quizTitle={quizData.title} gamePin={liveGameState.gamePin} accessUrl={"VuiQuiz.com"}
+                participants={Object.values(liveGameState.players ?? {}).filter(p => p.cid !== liveGameState.hostUserId)}
+                selectedBackgroundId={selectedBackgroundId} // From gameSettings
+                onStartGame={handleNext} // From coordinator
+                onEndGame={handleResetAndGoToInitial} // From pageActions
+                onKickPlayer={handleKickPlayer} // From pageActions
+                isAutoStartEnabled={isAutoStartEnabled} // From autoStartManager
+                onAutoStartToggle={handleAutoStartToggle} // From autoStartManager
+                autoStartTimeSeconds={autoStartTimeSeconds} // From autoStartManager
+                onAutoStartTimeChange={handleAutoStartTimeChange} // From autoStartManager
+                autoStartCountdown={autoStartCountdown} // From autoStartManager
+                onSettingsClick={handleOpenSettings} // From gameSettings
+                isMuted={isMuted} // Local state via useHostAudioManager
+                onToggleMute={toggleMute} // From useHostAudioManager
+                isFullScreen={isFullScreen} // Local state
+                onToggleFullScreen={handleToggleFullScreen} // From pageActions
               />
             ) : (
               <HostView
-                liveGameState={liveGameState}
-                quizData={quizData}
-                currentBlock={currentBlock}
-                timerKey={timerKey}
-                currentAnswerCount={currentQuestionAnswerCount}
-                totalPlayers={currentTotalPlayers}
-                gamePin={liveGameState.gamePin}
-                accessUrl={"VuiQuiz.com"}
-                onTimeUp={handleTimeUp}
-                onSkip={handleSkip}
-                onNext={handleNext}
+                liveGameState={liveGameState} quizData={quizData} currentBlock={currentBlock} timerKey={timerKey}
+                currentAnswerCount={currentQuestionAnswerCount} totalPlayers={currentTotalPlayers}
+                gamePin={liveGameState.gamePin} accessUrl={"VuiQuiz.com"}
+                onTimeUp={handleTimeUp} // From coordinator
+                onSkip={handleSkip}     // From coordinator
+                onNext={handleNext}     // From coordinator
                 isLoading={false}
-                selectedSoundId={selectedSoundId}
-                selectedBackgroundId={selectedBackgroundId}
-                onSettingsClick={handleOpenSettings}
-                isMuted={isMuted}
-                onToggleMute={toggleMute}
+                selectedSoundId={selectedSoundId} // From gameSettings
+                selectedBackgroundId={selectedBackgroundId} // From gameSettings
+                onSettingsClick={handleOpenSettings} // From gameSettings
+                isMuted={isMuted} // Local state via useHostAudioManager
+                onToggleMute={toggleMute} // From useHostAudioManager
               />
             )}
-            {process.env.NODE_ENV === "development" && false && ( // Disabled DevMockControls for now
+            {process.env.NODE_ENV === "development" && false && (
               <DevMockControls
                 simulatePlayerAnswer={(msgBody) => coordinatorRef.current?.handleWebSocketMessage(msgBody as any)}
                 simulateHostReceiveJoin={(msgBody) => coordinatorRef.current?.handleWebSocketMessage(msgBody as any)}
@@ -627,32 +362,27 @@ const HostPageContent = () => {
               />
             )}
             <GameSettingsDialog
-              open={isSettingsOpen}
-              onOpenChange={setIsSettingsOpen}
-              selectedBackgroundId={selectedBackgroundId}
-              onBackgroundSelect={handleBackgroundSelect}
-              selectedSoundId={selectedSoundId}
-              onSoundSelect={handleSoundSelect}
+              open={isSettingsOpen} // From gameSettings
+              onOpenChange={gameSettings.setIsSettingsOpen} // Setter from gameSettings
+              selectedBackgroundId={selectedBackgroundId} // From gameSettings
+              onBackgroundSelect={handleBackgroundSelect} // From gameSettings
+              selectedSoundId={selectedSoundId} // From gameSettings
+              onSoundSelect={handleSoundSelect} // From gameSettings
             />
           </>
         );
       default:
-        return <ErrorHostView errorMessage={`Invalid UI state: ${uiState}`} onRetry={handleResetAndGoToInitial} />;
+        const _exhaustiveCheck: never = uiState;
+        return <ErrorHostView errorMessage={`Invalid UI state: ${_exhaustiveCheck}`} onRetry={handleResetAndGoToInitial} />;
     }
   };
-
-  if (!quizId && uiState !== "ERROR") {
-    return <ErrorHostView errorMessage="No Quiz ID specified in URL." onRetry={() => window.location.reload()} />;
-  }
   return renderPageActualContent();
 };
 
 export default function HostPage() {
   return (
     <Suspense fallback={<ConnectingHostView message="Loading Host Page..." />}>
-      <GameAssetsProvider>
-        <HostPageContent />
-      </GameAssetsProvider>
+      <GameAssetsProvider><HostPageContent /></GameAssetsProvider>
     </Suspense>
   );
 }
