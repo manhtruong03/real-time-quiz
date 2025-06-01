@@ -125,3 +125,16 @@ export class AuthApiError extends Error {
     this.details = details;
   }
 }
+
+export interface UserSessionHistoryItemDto {
+  sessionId: string; // UUID of the game session.
+  name: string; // Name/Title of the quiz played in this session.
+  time: number; // Unix timestamp (milliseconds) when the session started.
+  endTime?: number | null; // Unix timestamp (milliseconds) when the session ended.
+  type: string; // Type of the game session (e.g., "LIVE").
+  playerCount: number; // Number of players who participated.
+  roleInSession: string; // Role of the current user (e.g., "HOST", "PLAYER").
+  sessionHostUserId: string; // UUID of the user who hosted.
+  sessionHostUsername: string; // Username of the host.
+  quizId: string; // UUID of the quiz used.
+}
