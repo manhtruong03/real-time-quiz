@@ -24,17 +24,14 @@ export const QuizMetadataSchema = z.object({
     .max(10, { message: "You can add a maximum of 10 tags." })
     .optional()
     .default([]),
-  // --- PHASE 4 FIELD ---
-  cover: z // This will store the URL (string) for preview, including object URLs
+  cover: z
     .string()
-    // .url({ message: "Please enter a valid URL." }) // Optional: Enable stricter URL validation if needed
-    .max(1024, { message: "Cover URL too long." }) // Example length limit
+    .max(1024, { message: "Cover URL too long." })
     .optional()
-    .nullable() // Allow null or undefined
-    .default(null), // Default to null
-
-  // ADDED FOR PHASE 1 FILE UPLOAD - RHF will manage this File object based on form type
+    .nullable()
+    .default(null),
   coverImageFile: z.custom<File>().nullable().optional().default(null),
+  coverImageUploadKey: z.string().nullable().optional().default(null),
 });
 
 export type QuizMetadataSchemaType = z.infer<typeof QuizMetadataSchema>;

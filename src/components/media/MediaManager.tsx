@@ -15,7 +15,7 @@ import {
     DialogHeader,
     DialogTitle,
     DialogDescription,
-    DialogTrigger,
+    // DialogTrigger, // Not directly used as trigger is manual via setIsDialogOpen
     DialogClose
 } from "@/src/components/ui/dialog";
 import { cn } from '@/src/lib/utils';
@@ -24,15 +24,23 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/src/components/ui/tabs";
 
+const generateUniqueImageKey = (prefix: string = "img_key"): string => {
+    const timestamp = Date.now();
+    const randomSuffix = Math.random().toString(36).substring(2, 9);
+    return `${prefix}_${timestamp}_${randomSuffix}`;
+};
+
 interface MediaManagerProps<TFieldValues extends FieldValues> {
-    name: Path<TFieldValues>; // This refers to the 'image' or 'cover' URL field (string)
-    fileFieldName: Path<TFieldValues>; // New prop for the File object field, e.g., 'imageFile' or 'coverImageFile'
+    name: Path<TFieldValues>;
+    fileFieldName: Path<TFieldValues>;
+    imageUploadKeyFieldName: Path<TFieldValues>;
     label?: string;
     aspectRatio?: number;
     placeholderText?: string;
     className?: string;
 }
 
+// MediaPlaceholder and MediaDisplayControls components remain as you provided
 const MediaPlaceholder: React.FC<{
     text: string;
     isError?: boolean;
@@ -80,143 +88,128 @@ const MediaDisplayControls: React.FC<{ onDelete?: () => void; onTriggerDialog: (
 const MediaManagerComponent = <TFieldValues extends FieldValues>({
     name: imageUrlFieldName,
     fileFieldName,
+    imageUploadKeyFieldName,
     label,
     aspectRatio = 16 / 9,
     placeholderText = 'Add media',
     className,
 }: MediaManagerProps<TFieldValues>) => {
-    const { control, setValue, watch } = useFormContext<TFieldValues>();
+    const { setValue, watch } = useFormContext<TFieldValues>();
 
-    const watchedImageUrlFieldValue = watch(imageUrlFieldName);
-    const watchedImageFileFieldValue: any = watch(fileFieldName);
+    const watchedImageFile: any = watch(fileFieldName);
+    const watchedImageUrl = watch(imageUrlFieldName); // Watch the RHF URL field
 
     const [isDialogOpen, setIsDialogOpen] = useState(false);
-    const [isLoading, setIsLoading] = useState(false);
+    // Initialize isLoading based on whether there's an initial URL to load
+    const [isLoading, setIsLoading] = useState(!!watchedImageUrl);
     const [hasError, setHasError] = useState(false);
     const [tempUrlInput, setTempUrlInput] = useState('');
     const fileInputRef = useRef<HTMLInputElement>(null);
-
-    // Ref to store the blob URL that this component created and is responsible for.
-    // This helps in explicitly revoking only the URLs created by this instance.
     const managedBlobUrlRef = useRef<string | null>(null);
 
+    // Effect 1: Manage Blob URL creation and revocation based on the selected file
     useEffect(() => {
-        const file = watchedImageFileFieldValue as File | null;
+        const currentFile = watchedImageFile as File | null;
 
-        // 1. If a new file is selected
-        if (file instanceof File) {
-            // Revoke any previously managed blob URL before creating a new one
-            if (managedBlobUrlRef.current) {
-                URL.revokeObjectURL(managedBlobUrlRef.current);
-                console.log(`[MediaManager Effect] Revoked old managed blob URL: ${managedBlobUrlRef.current}`);
-            }
-
-            const newObjectUrl = URL.createObjectURL(file);
-            managedBlobUrlRef.current = newObjectUrl; // Store new blob URL as managed
-
-            console.log(`[MediaManager Effect] Created new object URL ${newObjectUrl} for ${file.name}`);
-            setValue(imageUrlFieldName, newObjectUrl as any, { shouldValidate: true, shouldDirty: true });
-            // Note: fileFieldName is already set by handleFileSelectAndSet, which triggers this effect.
-
-            setIsLoading(true);
-            setHasError(false);
-        }
-        // 2. If the file is cleared (watchedImageFileFieldValue becomes null)
-        else if (!file && managedBlobUrlRef.current) {
-            // This case handles when the file is programmatically cleared (e.g., by handleDelete or handleUrlConfirm)
-            console.log(`[MediaManager Effect] File cleared. Revoking managed blob URL: ${managedBlobUrlRef.current}`);
+        // Cleanup previous blob URL if it exists
+        if (managedBlobUrlRef.current) {
             URL.revokeObjectURL(managedBlobUrlRef.current);
             managedBlobUrlRef.current = null;
-
-            // If the RHF URL field was showing our managed blob, clear it too.
-            if (watchedImageUrlFieldValue === managedBlobUrlRef.current) { // This check might be problematic due to timing.
-                // A safer check would be if watchedImageUrlFieldValue is a blob: URL
-                // and we know we just cleared the file.
-                if (typeof watchedImageUrlFieldValue === 'string' && watchedImageUrlFieldValue.startsWith('blob:')) {
-                    setValue(imageUrlFieldName, null as any, { shouldValidate: true, shouldDirty: true });
-                    console.log(`[MediaManager Effect] Cleared RHF URL field because it was a managed blob.`);
-                }
-            }
         }
 
-        // Cleanup for component unmount: revoke the currently managed blob URL if it exists.
+        if (currentFile instanceof File) {
+            const newObjectUrl = URL.createObjectURL(currentFile);
+            managedBlobUrlRef.current = newObjectUrl;
+            setValue(imageUrlFieldName, newObjectUrl as any, { shouldValidate: true, shouldDirty: true });
+            setIsLoading(true); // Start loading for the new blob
+            setHasError(false);
+        }
+        // Note: If currentFile is null (e.g., file cleared),
+        // and if imageUrlFieldName was pointing to the managedBlobUrl,
+        // it should be cleared by the handler (handleDelete, handleUrlConfirm).
+        // This effect focuses on creating/revoking its *own* blob.
+
+        // Cleanup on unmount or when watchedImageFile changes causing re-run
         return () => {
             if (managedBlobUrlRef.current) {
-                console.log(`[MediaManager UNMOUNT] Revoking managed blob URL: ${managedBlobUrlRef.current}`);
                 URL.revokeObjectURL(managedBlobUrlRef.current);
                 managedBlobUrlRef.current = null;
             }
         };
-    }, [watchedImageFileFieldValue, setValue, imageUrlFieldName]);
+    }, [watchedImageFile, setValue, imageUrlFieldName]); // Only depends on the file and RHF setters
+
+    // Effect 2: Manage loading/error state for external URLs or when image URL is cleared
+    useEffect(() => {
+        const currentDisplayUrl = typeof watchedImageUrl === 'string' ? watchedImageUrl : null;
+
+        if (currentDisplayUrl) {
+            // External HTTP/S URL
+            setIsLoading(true); // Expecting it to load
+            setHasError(false);
+        } else {
+            // No URL
+            setIsLoading(false);
+            setHasError(false);
+        }
+    }, [watchedImageUrl]); // Reacts to changes in the RHF URL field
 
     const handleFileSelectAndSet = (event: ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
-        if (fileInputRef.current) {
-            fileInputRef.current.value = "";
-        }
+        if (fileInputRef.current) fileInputRef.current.value = ""; // Clear file input
+
         if (file) {
             if (!file.type.startsWith('image/')) {
-                alert('Please select an image file.'); // Consider using toast for better UX
-                return;
+                alert('Please select an image file.'); return;
             }
-            if (file.size > 5 * 1024 * 1024) { // Example 5MB limit
-                alert('File is too large. Maximum 5MB allowed.'); // Consider using toast
-                return;
+            if (file.size > 5 * 1024 * 1024) { // 5MB limit
+                alert('File is too large. Maximum 5MB allowed.'); return;
             }
-            console.log(`[MediaManager] User selected file ${file.name}. Setting RHF field '${String(fileFieldName)}'.`);
+            const uniqueKey = generateUniqueImageKey();
+            // Order matters: Set file and key first. Effect 1 will create blob and set URL.
+            setValue(imageUploadKeyFieldName, uniqueKey as any, { shouldDirty: true, shouldValidate: true });
             setValue(fileFieldName, file as any, { shouldDirty: true, shouldValidate: true });
-            // The useEffect watching `fileFieldName` will handle object URL creation and setting `imageUrlFieldName`.
+            // `imageUrlFieldName` will be updated by Effect 1 reacting to `watchedImageFile` change.
+
             setIsDialogOpen(false);
-            setTempUrlInput(''); // Clear temporary URL input
+            setTempUrlInput('');
         }
     };
 
     const handleUrlConfirm = () => {
-        if (tempUrlInput.trim() && (tempUrlInput.startsWith('http://') || tempUrlInput.startsWith('https://'))) {
-            console.log(`[MediaManager] User confirmed URL ${tempUrlInput}. Setting RHF field '${String(imageUrlFieldName)}' and clearing '${String(fileFieldName)}'.`);
+        const trimmedUrl = tempUrlInput.trim();
+        if (trimmedUrl && (trimmedUrl.startsWith('http://') || trimmedUrl.startsWith('https://'))) {
+            // Order: Clear file-related fields first, then set the new URL.
+            setValue(fileFieldName, null as any, { shouldDirty: true, shouldValidate: true });
+            setValue(imageUploadKeyFieldName, null as any, { shouldDirty: true, shouldValidate: true });
+            setValue(imageUrlFieldName, trimmedUrl as any, { shouldDirty: true, shouldValidate: true });
+            // Effect 2 will set isLoading(true) for the new URL.
 
-            // If a file was previously selected and managed by this component, its blob URL needs to be revoked.
-            // Setting fileFieldName to null will trigger the useEffect to do this.
-            if (managedBlobUrlRef.current) {
-                console.log(`[MediaManager] Clearing existing file selection due to URL input.`);
-            }
-            setValue(fileFieldName, null as any, { shouldDirty: true, shouldValidate: true }); // Clear file
-
-            // Now set the new HTTP/S URL. The useEffect will handle cleanup of the old blob if `fileFieldName` changed.
-            setValue(imageUrlFieldName, tempUrlInput.trim() as any, { shouldDirty: true, shouldValidate: true });
-
-            setIsLoading(true);
-            setHasError(false);
             setIsDialogOpen(false);
         } else {
-            alert("Please enter a valid HTTP/HTTPS URL."); // Consider using toast
+            alert("Please enter a valid HTTP/HTTPS URL.");
         }
     };
 
     const handleDelete = () => {
-        console.log(`[MediaManager] Deleting image. Clearing RHF fields '${String(imageUrlFieldName)}' and '${String(fileFieldName)}'.`);
-        // Setting fileFieldName to null will trigger the useEffect to revoke the managed blob URL.
-        setValue(fileFieldName, null as any, { shouldDirty: true, shouldValidate: true });
         setValue(imageUrlFieldName, null as any, { shouldDirty: true, shouldValidate: true });
-        // No need to directly call URL.revokeObjectURL here; useEffect handles it via managedBlobUrlRef
-
+        setValue(fileFieldName, null as any, { shouldDirty: true, shouldValidate: true });
+        setValue(imageUploadKeyFieldName, null as any, { shouldDirty: true, shouldValidate: true });
+        // Effect 1 will revoke blob if one was managed. Effect 2 will set isLoading/hasError false.
         setTempUrlInput('');
-        setIsLoading(false);
-        setHasError(false);
     };
 
-    useEffect(() => {
+    useEffect(() => { // For pre-filling URL input in dialog
         if (isDialogOpen) {
-            if (typeof watchedImageUrlFieldValue === 'string' && !watchedImageUrlFieldValue.startsWith('blob:')) {
-                setTempUrlInput(watchedImageUrlFieldValue);
+            if (typeof watchedImageUrl === 'string' && !watchedImageUrl.startsWith('blob:')) {
+                setTempUrlInput(watchedImageUrl);
             } else {
-                setTempUrlInput(''); // Clear if it's a blob URL or null
+                setTempUrlInput('');
             }
         }
-    }, [isDialogOpen, watchedImageUrlFieldValue]);
+    }, [isDialogOpen, watchedImageUrl]);
 
-    const displayUrl = typeof watchedImageUrlFieldValue === 'string' ? watchedImageUrlFieldValue : null;
-    const showPlaceholder = !displayUrl || hasError;
+    const displayUrl = typeof watchedImageUrl === 'string' ? watchedImageUrl : null;
+    const showPlaceholder = (!displayUrl && !isLoading) || hasError;
     const currentPlaceholderText = hasError ? "Error loading image." : placeholderText;
 
     return (
@@ -228,37 +221,35 @@ const MediaManagerComponent = <TFieldValues extends FieldValues>({
                             text={currentPlaceholderText}
                             isError={hasError}
                             onTriggerDialog={() => setIsDialogOpen(true)}
-                            onAiClick={() => console.log("AI Generate (MediaManager) - Not implemented")}
                         />
                     ) : (
                         <div className="relative w-full h-full group">
-                            {isLoading && <Skeleton className="absolute inset-0 w-full h-full" />}
+                            {/* Show Skeleton only when loading AND there's a URL we are trying to display */}
+                            {isLoading && displayUrl && <Skeleton className="absolute inset-0 w-full h-full" />}
                             {displayUrl && (
                                 <Image
-                                    key={displayUrl} // Re-render if URL changes, helps with Next/Image caching
+                                    key={displayUrl} // Re-render if URL changes
                                     src={displayUrl}
                                     alt={label || 'Media preview'}
                                     fill
                                     className={cn(
                                         'object-contain transition-opacity duration-300',
-                                        isLoading ? 'opacity-0' : 'opacity-100'
+                                        isLoading ? 'opacity-0' : 'opacity-100' // Image is transparent while loading
                                     )}
-                                    priority={false}
+                                    priority={false} // Typically false unless critical above-the-fold image
                                     sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                                     onLoad={() => {
-                                        console.log("[MediaManager] Image loaded:", displayUrl);
                                         setIsLoading(false);
                                         setHasError(false);
                                     }}
                                     onError={() => {
-                                        console.error(`[MediaManager] Image failed to load: ${displayUrl}`);
+                                        // Don't revoke blob here, source might be external
                                         setIsLoading(false);
                                         setHasError(true);
-                                        // No need to clear RHF fields here; let user decide or backend handle invalid URLs.
-                                        // If it was our blob, useEffect would ideally catch it if the file reference was bad.
                                     }}
                                 />
                             )}
+                            {/* Show controls if not loading, no error, and there's a URL */}
                             {!isLoading && !hasError && displayUrl && (
                                 <MediaDisplayControls onDelete={handleDelete} onTriggerDialog={() => setIsDialogOpen(true)} />
                             )}
@@ -266,6 +257,7 @@ const MediaManagerComponent = <TFieldValues extends FieldValues>({
                     )}
                 </AspectRatio>
             </Card>
+            {/* DialogContent remains the same as your provided code */}
             <DialogContent className="sm:max-w-[480px]">
                 <DialogHeader>
                     <DialogTitle>{displayUrl && !hasError && !isLoading ? "Replace" : "Add"} Media</DialogTitle>
@@ -275,7 +267,7 @@ const MediaManagerComponent = <TFieldValues extends FieldValues>({
                 </DialogHeader>
                 <input
                     type="file"
-                    accept="image/*" // Standard image/* accept
+                    accept="image/*"
                     ref={fileInputRef}
                     onChange={handleFileSelectAndSet}
                     className="hidden"
@@ -298,10 +290,10 @@ const MediaManagerComponent = <TFieldValues extends FieldValues>({
                             <span className="text-sm font-medium">Click to browse or drag & drop</span>
                             <span className="text-xs mt-1">PNG, JPG, GIF, WEBP up to 5MB</span>
                         </Label>
-                        {watchedImageFileFieldValue instanceof File && (
+                        {watchedImageFile instanceof File && (
                             <div className="text-sm text-muted-foreground flex items-center gap-2 p-2 border rounded-md bg-muted/30">
                                 <FileText className="h-4 w-4" />
-                                <span>Selected: {watchedImageFileFieldValue.name} ({(watchedImageFileFieldValue.size / (1024 * 1024)).toFixed(2)} MB)</span>
+                                <span>Selected: {watchedImageFile.name} ({(watchedImageFile.size / (1024 * 1024)).toFixed(2)} MB)</span>
                             </div>
                         )}
                     </TabsContent>

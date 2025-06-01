@@ -72,6 +72,7 @@ export interface QuestionDTO {
   video?: VideoDetailDTO | null;
   media?: string[]; // Array of URLs or structured objects (simple strings for now as per openapi)
   position: number; // 0-based index
+  questionImageUploadKey?: string | null;
 }
 
 // Based on components.schemas.QuizDTO
@@ -83,6 +84,7 @@ export interface QuizDTO {
   status?: string; // e.g., "DRAFT", "PUBLISHED". Defaults to DRAFT if not sent.
   tags?: string[];
   cover?: string | null; // URL (file_path)
+  coverImageUploadKey?: string | null;
   lobby_video?: {
     // Optional lobby video container
     youtube?: VideoDetailDTO; // Assuming structure matches VideoDetailDTO based on mock data

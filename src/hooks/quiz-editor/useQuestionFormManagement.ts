@@ -4,27 +4,27 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useForm, SubmitHandler, SubmitErrorHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useToast } from "@/src/components/ui/use-toast"; // Ensure this path is correct
+import { useToast } from "@/src/components/ui/use-toast";
 import type {
   QuizStructureHost,
   QuestionHost,
   ChoiceHost,
-} from "@/src/lib/types/quiz-structure"; // QuestionHost now includes imageFile
+} from "@/src/lib/types/quiz-structure";
 import {
   QuestionHostSchema,
-  QuestionHostSchemaType, // Infers to include imageFile
-  QuestionFormContextType, // Infers to include imageFile
+  // QuestionHostSchemaType, // Not directly used in this function
+  QuestionFormContextType,
   ChoiceHostSchemaType,
   VideoSchemaType,
   MediaItemSchemaType,
-} from "@/src/lib/schemas/quiz-question.schema"; // Zod schemas
+} from "@/src/lib/schemas/quiz-question.schema";
 import {
   createDefaultQuestion,
   DEFAULT_TIME_LIMIT,
 } from "@/src/lib/game-utils/quiz-creation";
 import { transformQuestionDataForType } from "@/src/lib/game-utils/question-type-transformer";
 
-// Utility function for simple deep comparison (can be moved to a utils file if used elsewhere)
+// simpleDeepCompare function (as provided by you)
 function simpleDeepCompare(obj1: any, obj2: any): boolean {
   if (
     obj1 === null ||
@@ -34,8 +34,6 @@ function simpleDeepCompare(obj1: any, obj2: any): boolean {
   ) {
     return obj1 === obj2;
   }
-  // For File objects, compare names and sizes as a proxy for content identity for this use case.
-  // A more robust comparison would involve reading file contents, which is too heavy here.
   if (obj1 instanceof File && obj2 instanceof File) {
     return (
       obj1.name === obj2.name &&
@@ -53,6 +51,7 @@ const getDefaultValuesForEditor = (
   const questionData = quizData?.questions?.[currentSlideIndex];
 
   const defaultVideoSchemaValue: VideoSchemaType | null = null;
+  // After schema fix, MediaItemSchemaType is the object, so MediaItemSchemaType[] is correct for default.
   const defaultMediaSchemaValue: MediaItemSchemaType[] = [];
 
   if (questionData) {
@@ -77,8 +76,10 @@ const getDefaultValuesForEditor = (
         }
       : defaultVideoSchemaValue;
 
+    // This mapping should now work correctly with the fixed MediaItemSchema
     const mediaValue =
       questionData.media?.map((m) => ({
+        // m is MediaItemHost here
         type: m.type,
         url: m.url,
         id: m.id,
@@ -93,15 +94,40 @@ const getDefaultValuesForEditor = (
         height: m.height,
       })) ?? defaultMediaSchemaValue;
 
+    // MODIFICATION START: Safely access question, title, description
+    let formQuestion = "";
+    let formTitle = "";
+    let formDescription = "";
+
+    // questionData is QuestionHost here
+    if (questionData.type === "content") {
+      formTitle = questionData.title ?? "";
+      formDescription = questionData.description ?? "";
+      // 'question' field is usually not primary for 'content'
+    } else if (
+      questionData.type === "quiz" ||
+      questionData.type === "jumble" ||
+      questionData.type === "open_ended" ||
+      questionData.type === "survey"
+    ) {
+      formQuestion = questionData.question ?? "";
+      // 'title' and 'description' are usually omitted for these types in their specific QuestionHost variants,
+      // but BaseQuestionSchema allows them as optional, so we default to empty string if not present.
+      formTitle = (questionData as any).title ?? ""; // Use 'as any' if direct access is problematic after narrowing
+      formDescription = (questionData as any).description ?? "";
+    }
+    // MODIFICATION END
+
     return {
       type: questionData.type,
-      image: questionData.image ?? null, // This is the URL string (or objectURL)
-      imageFile: questionData.imageFile || null, // This is the File object
+      image: questionData.image ?? null,
+      imageFile: questionData.imageFile || null,
+      questionImageUploadKey: questionData.questionImageUploadKey || null,
       video: videoValue,
-      media: mediaValue,
-      question: questionData.question ?? "",
-      title: questionData.title ?? "",
-      description: questionData.description ?? "",
+      media: mediaValue, // Should be fine now
+      question: formQuestion,
+      title: formTitle,
+      description: formDescription,
       time: questionData.time ?? DEFAULT_TIME_LIMIT,
       pointsMultiplier:
         questionData.pointsMultiplier ??
@@ -112,24 +138,30 @@ const getDefaultValuesForEditor = (
       correctChoiceIndex: correctIdx === -1 ? -1 : correctIdx,
     };
   } else {
-    // Create a default new question structure, ensuring imageFile is initialized
-    const defaultNewQuestion = createDefaultQuestion("quiz");
+    // Fallback for new question
+    const defaultNewQuestion = createDefaultQuestion("quiz") as QuestionHost; // Assume default is 'quiz'
+    // createDefaultQuestion should provide a QuestionHost with relevant fields initialized
+    // For "quiz" type, it will have 'question', and 'title'/'description' would be undefined/empty.
+    // QuestionFormContextType (BaseQuestionSchema) allows all three as optional.
+
     return {
-      type: defaultNewQuestion.type,
+      type: defaultNewQuestion.type, // "quiz"
       image: defaultNewQuestion.image ?? null,
-      imageFile: (defaultNewQuestion as QuestionHost).imageFile || null, // Initialize imageFile
+      imageFile: defaultNewQuestion.imageFile || null,
+      questionImageUploadKey: defaultNewQuestion.questionImageUploadKey || null,
       video: defaultNewQuestion.video
         ? {
-            id: defaultNewQuestion.video.id,
+            /* video mapping */ id: defaultNewQuestion.video.id,
             startTime: defaultNewQuestion.video.startTime ?? 0.0,
             endTime: defaultNewQuestion.video.endTime ?? 0.0,
             service: defaultNewQuestion.video.service ?? "youtube",
             fullUrl: defaultNewQuestion.video.fullUrl ?? "",
           }
         : defaultVideoSchemaValue,
+      // This mapping should also be fine now
       media:
         defaultNewQuestion.media?.map((m) => ({
-          type: m.type,
+          /* media mapping */ type: m.type,
           url: m.url,
           id: m.id,
           altText: m.altText,
@@ -142,9 +174,9 @@ const getDefaultValuesForEditor = (
           width: m.width,
           height: m.height,
         })) ?? defaultMediaSchemaValue,
-      question: defaultNewQuestion.question ?? "",
-      title: defaultNewQuestion.title ?? "",
-      description: defaultNewQuestion.description ?? "",
+      question: defaultNewQuestion.question ?? "", // Should exist for 'quiz' type from createDefaultQuestion
+      title: (defaultNewQuestion as any).title ?? "", // Initialize to empty if not present
+      description: (defaultNewQuestion as any).description ?? "", // Initialize to empty if not present
       time: defaultNewQuestion.time ?? DEFAULT_TIME_LIMIT,
       pointsMultiplier: defaultNewQuestion.pointsMultiplier ?? 1,
       choices: defaultNewQuestion.choices.map((c) => ({
@@ -158,12 +190,69 @@ const getDefaultValuesForEditor = (
   }
 };
 
+// ... The rest of your useQuestionFormManagement hook remains the same ...
+// Ensure that onValidSubmit correctly maps from validatedRHFData (QuestionFormContextType)
+// back to QuestionHost, respecting the same logic for question/title/description.
+// The onValidSubmit method in your previous version looked reasonable in how it constructed
+// finalQuestionData by spreading validatedRHFData and then mapping choices.
+// The crucial part is that validatedRHFData (which is QuestionFormContextType)
+// already has question, title, description as optional fields from BaseQuestionSchema.
+
+// Example of how onValidSubmit would ensure correct fields for QuestionHost:
+// const onValidSubmit: SubmitHandler<QuestionFormContextType> = useCallback(
+//   (validatedRHFData) => {
+//     const currentIndex = currentSlideIndex;
+//     let finalQuestionDataAsHost: Partial<QuestionHost> & Pick<QuestionHost, 'type' | 'choices'> = { // Start with a base
+//         id: quizData?.questions?.[currentIndex]?.id,
+//         type: validatedRHFData.type,
+//         image: validatedRHFData.image || null,
+//         imageFile: validatedRHFData.imageFile || null,
+//         questionImageUploadKey: validatedRHFData.imageFile ? validatedRHFData.questionImageUploadKey : null,
+//         video: validatedRHFData.video ? { ...validatedRHFData.video } : null,
+//         media: validatedRHFData.media || [], // This should be fine due to schema fix
+//         time: validatedRHFData.time,
+//         pointsMultiplier: validatedRHFData.pointsMultiplier,
+//         choices: [], // Will be populated below
+//     };
+
+//     // Add type-specific fields (question, title, description)
+//     if (validatedRHFData.type === "content") {
+//         finalQuestionDataAsHost.title = validatedRHFData.title;
+//         finalQuestionDataAsHost.description = validatedRHFData.description;
+//     } else {
+//         finalQuestionDataAsHost.question = validatedRHFData.question;
+//         // title & description are typically not on QuestionHost for other types
+//     }
+
+//     // Map choices (your existing logic for choices is generally okay, ensure correctness for quiz type)
+//     if (validatedRHFData.type === "quiz") {
+//       const selectedIndex = validatedRHFData.correctChoiceIndex ?? -1;
+//       finalQuestionDataAsHost.choices = (validatedRHFData.choices || []).map((choice, idx) => ({
+//         answer: choice.answer,
+//         image: choice.image ? { ...choice.image } : undefined,
+//         correct: idx === selectedIndex,
+//       }));
+//     } else {
+//       finalQuestionDataAsHost.choices = (validatedRHFData.choices || []).map((choice) => ({
+//         answer: choice.answer,
+//         image: choice.image ? { ...choice.image } : undefined,
+//         correct: choice.correct ?? true,
+//       }));
+//     }
+
+//     onQuestionChange(currentIndex, finalQuestionDataAsHost as QuestionHost);
+//     // ... rest of submit logic
+//   },
+//   // ... dependencies
+// );
+
+// Your existing useQuestionFormManagement structure:
 interface UseQuestionFormManagementProps {
   quizData: QuizStructureHost | null;
   currentSlideIndex: number;
   onQuestionChange: (
     index: number,
-    updatedQuestion: QuestionHost | null // Updated type to QuestionHost which includes imageFile
+    updatedQuestion: QuestionHost | null
   ) => void;
   triggerSaveRef?: React.MutableRefObject<(() => Promise<boolean>) | null>;
 }
@@ -176,9 +265,8 @@ export function useQuestionFormManagement({
 }: UseQuestionFormManagementProps) {
   const { toast } = useToast();
   const methods = useForm<QuestionFormContextType>({
-    // QuestionFormContextType now includes imageFile
-    resolver: zodResolver(QuestionHostSchema), // QuestionHostSchema now includes imageFile
-    mode: "onBlur", // Or "onChange" if preferred for more immediate feedback
+    resolver: zodResolver(QuestionHostSchema),
+    mode: "onBlur",
     defaultValues: getDefaultValuesForEditor(quizData, currentSlideIndex),
   });
   const {
@@ -188,18 +276,14 @@ export function useQuestionFormManagement({
     handleSubmit,
     trigger,
     watch,
-    formState: { errors, isDirty: rhfIsDirty }, // Renamed to avoid conflict
+    formState: { errors, isDirty: rhfIsDirty },
   } = methods;
 
   const watchedType = watch("type");
-  const watchedImage = watch("image"); // Watch the image URL field
-  const watchedImageFile = watch("imageFile"); // Watch the image File field
-
+  // ... (other watched fields and refs from your code) ...
   const prevSlideIndexRef = useRef(currentSlideIndex);
   const prevWatchedTypeRef = useRef(watchedType);
   const isHandlingTypeChange = useRef(false);
-
-  // Track initial form values to compare for true dirtiness including File objects
   const [initialFormValues, setInitialFormValues] =
     useState<QuestionFormContextType | null>(null);
 
@@ -210,19 +294,18 @@ export function useQuestionFormManagement({
         currentSlideIndex
       );
       reset(newDefaultValues);
-      setInitialFormValues(newDefaultValues); // Store initial values for comparison
+      setInitialFormValues(newDefaultValues);
       prevWatchedTypeRef.current = newDefaultValues.type;
     } else {
-      setInitialFormValues(null); // Clear if no slide is selected
+      setInitialFormValues(null);
     }
     prevSlideIndexRef.current = currentSlideIndex;
   }, [currentSlideIndex, quizData, reset]);
 
-  // Custom isDirty check considering File objects
   const isFormTrulyDirty = useCallback(() => {
+    // This function implementation from your code
     if (currentSlideIndex < 0 || !initialFormValues) return false;
     const currentValues = getValues();
-    // Compare relevant fields, including special handling for File objects
     const fieldsToCompare: (keyof QuestionFormContextType)[] = [
       "type",
       "question",
@@ -233,77 +316,117 @@ export function useQuestionFormManagement({
       "choices",
       "correctChoiceIndex",
       "image",
-      // "video", "media" // Add these if they can be edited and need dirty checking
+      "questionImageUploadKey", // Ensure this is part of your comparison
+      // "video", "media"
     ];
-
     for (const key of fieldsToCompare) {
-      if (!simpleDeepCompare(currentValues[key], initialFormValues[key])) {
+      if (!simpleDeepCompare(currentValues[key], initialFormValues[key]))
         return true;
-      }
     }
-    // Specifically compare File objects
     if (
       !simpleDeepCompare(currentValues.imageFile, initialFormValues.imageFile)
-    ) {
+    )
       return true;
-    }
-
     return false;
   }, [getValues, initialFormValues, currentSlideIndex]);
 
   const onValidSubmit: SubmitHandler<QuestionFormContextType> = useCallback(
     (validatedRHFData) => {
-      // validatedRHFData includes image and imageFile
       const currentIndex = currentSlideIndex;
-      let finalQuestionData: QuestionHost;
+      // Construct finalQuestionData (QuestionHost) from validatedRHFData (QuestionFormContextType)
+      // This needs to carefully map fields, especially question/title/description based on type.
 
-      // Base data, including image (URL) and imageFile (File object)
-      const baseDataFromForm = {
-        ...validatedRHFData,
-        image: validatedRHFData.image, // This is the URL or objectURL
-        imageFile: validatedRHFData.imageFile, // This is the File object
+      const baseHostData: Omit<QuestionHost, "choices" | "id"> & {
+        id?: string;
+      } = {
+        // id will be QuestionHost['id'], not QuestionFormContextType['id']
+        type: validatedRHFData.type,
+        image: validatedRHFData.image || null,
+        imageFile: validatedRHFData.imageFile || null,
+        questionImageUploadKey: validatedRHFData.imageFile
+          ? validatedRHFData.questionImageUploadKey
+          : null,
+        video: validatedRHFData.video ? { ...validatedRHFData.video } : null,
+        media: (validatedRHFData.media || []).map((m) => ({ ...m })), // Ensure deep copy of media items
+        time: validatedRHFData.time,
+        pointsMultiplier: validatedRHFData.pointsMultiplier,
       };
 
-      if (validatedRHFData.type === "quiz") {
-        const selectedIndex = validatedRHFData.correctChoiceIndex ?? -1;
-        finalQuestionData = {
-          ...baseDataFromForm,
-          choices: (validatedRHFData.choices || []).map((choice, idx) => ({
-            answer: choice.answer,
-            image: choice.image, // This is ChoiceHostImage, should be fine
-            correct: idx === selectedIndex,
-          })),
-        } as unknown as QuestionHost; // Cast needed as RHF type might slightly differ from strict QuestionHost
+      let questionSpecificFields: Partial<
+        Pick<QuestionHost, "question" | "title" | "description">
+      > = {};
+      if (validatedRHFData.type === "content") {
+        questionSpecificFields.title = validatedRHFData.title;
+        questionSpecificFields.description = validatedRHFData.description;
       } else {
-        finalQuestionData = {
-          ...baseDataFromForm,
-          choices: (validatedRHFData.choices || []).map((choice) => ({
-            answer: choice.answer,
-            image: choice.image,
-            correct: choice.correct ?? true,
-          })),
-        } as unknown as QuestionHost;
+        questionSpecificFields.question = validatedRHFData.question;
+        // For non-content, title/description are not primary QuestionHost fields
+        // but BaseQuestionSchema allows them as optional. If you want to pass them through:
+        // questionSpecificFields.title = validatedRHFData.title;
+        // questionSpecificFields.description = validatedRHFData.description;
       }
 
-      // Remove the temporary RHF-specific correctChoiceIndex if it exists on the final object
-      if ("correctChoiceIndex" in finalQuestionData) {
-        delete (finalQuestionData as any).correctChoiceIndex;
+      let finalChoices: ChoiceHost[] = [];
+      if (validatedRHFData.type === "quiz") {
+        const selectedIndex = validatedRHFData.correctChoiceIndex ?? -1;
+        finalChoices = (validatedRHFData.choices || []).map((choice, idx) => ({
+          answer: choice.answer,
+          image: choice.image ? { ...choice.image } : undefined,
+          correct: idx === selectedIndex,
+        }));
+      } else {
+        finalChoices = (validatedRHFData.choices || []).map((choice) => ({
+          answer: choice.answer,
+          image: choice.image ? { ...choice.image } : undefined,
+          correct: choice.correct ?? true, // For non-quiz types
+        }));
+      }
+
+      const finalQuestionData: QuestionHost = {
+        id: quizData?.questions?.[currentIndex]?.id, // Preserve existing ID
+        ...baseHostData,
+        ...questionSpecificFields,
+        choices: finalChoices,
+      };
+
+      // Consistency check (as added in previous correct version)
+      if (
+        finalQuestionData.imageFile &&
+        !finalQuestionData.questionImageUploadKey
+      ) {
+        console.error(
+          `[useQuestionFormManagement onValidSubmit] Inconsistency: imageFile present for question but questionImageUploadKey is missing.`
+        );
+      } else if (
+        !finalQuestionData.imageFile &&
+        finalQuestionData.questionImageUploadKey
+      ) {
+        finalQuestionData.questionImageUploadKey = null;
       }
 
       onQuestionChange(currentIndex, finalQuestionData);
-      // Reset RHF state to new "clean" state AFTER successfully updating parent
-      const newDefaults = getDefaultValuesForEditor(quizData, currentIndex); // Get fresh defaults which should include the just saved data
+
+      const newDefaults = getDefaultValuesForEditor(quizData, currentIndex);
       reset(newDefaults, {
         keepValues: false,
         keepDirty: false,
         keepErrors: false,
       });
-      setInitialFormValues(newDefaults); // Update initial values for dirty checking
+      setInitialFormValues(newDefaults);
       prevWatchedTypeRef.current = validatedRHFData.type;
     },
-    [currentSlideIndex, onQuestionChange, reset, quizData, setInitialFormValues]
+    [
+      currentSlideIndex,
+      onQuestionChange,
+      reset,
+      quizData,
+      setInitialFormValues,
+      getValues,
+    ] // getValues if used inside
   );
 
+  // ... rest of your hook: onInvalidSubmit, triggerSave, handleTypeChange, useEffects ...
+  // These should generally remain the same, ensure they use the corrected data structures.
   const onInvalidSubmit: SubmitErrorHandler<QuestionFormContextType> =
     useCallback(
       (errors) => {
@@ -325,12 +448,11 @@ export function useQuestionFormManagement({
 
   const triggerSave = useCallback(async (): Promise<boolean> => {
     const currentIndex = currentSlideIndex;
-    if (currentIndex < 0) return true; // No slide selected, nothing to save
+    if (currentIndex < 0) return true;
 
     const currentValues = getValues();
     const currentType = currentValues.type;
 
-    // Determine if it's a True/False variant for transformation
     const isCurrentTF =
       currentType === "quiz" &&
       currentValues.choices?.length === 2 &&
@@ -341,16 +463,12 @@ export function useQuestionFormManagement({
         (c: ChoiceHostSchemaType) => c.answer?.toLowerCase() === "false"
       );
 
-    // Transform data just before validation (if needed, e.g. for quiz correctness)
-    // This transformation should mainly ensure data structure consistency for validation.
     const transformedDataForValidation = transformQuestionDataForType(
       currentValues,
       currentType,
       isCurrentTF
     );
 
-    // Reset the form with potentially transformed data to ensure RHF validates the correct structure
-    // Keep dirty state if it was dirty, to ensure handleSubmit still processes.
     const needsResetForValidation = !simpleDeepCompare(
       currentValues,
       transformedDataForValidation
@@ -358,49 +476,31 @@ export function useQuestionFormManagement({
     if (needsResetForValidation) {
       reset(transformedDataForValidation, {
         keepDefaultValues: false,
-        keepDirty: isFormTrulyDirty(),
+        keepDirty: isFormTrulyDirty(), // Use your custom dirty check
         keepErrors: false,
       });
-      // Wait for reset to apply before handleSubmit
       await new Promise((resolve) => setTimeout(resolve, 0));
     }
 
     if (!isFormTrulyDirty() && !needsResetForValidation) {
-      console.log(
-        "[triggerSave] Form is not dirty, and no transformation needed. Skipping submit."
-      );
-      return true; // Form is not dirty, consider it "saved"
+      return true;
     }
 
-    console.log(
-      "[triggerSave] Form is dirty or transformed, attempting handleSubmit."
-    );
     await handleSubmit(onValidSubmit, onInvalidSubmit)();
-
-    // Give RHF time to update its internal error state after submit
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     const finalErrors = methods.formState.errors;
     const isValid = Object.keys(finalErrors).length === 0;
-    if (isValid) {
-      // After successful validation and submission logic (onValidSubmit),
-      // the form's defaultValues and isDirty state should be updated to reflect the new "clean" state.
-      // onValidSubmit now handles resetting and updating initialFormValues.
-    } else {
-      console.log("[triggerSave] Validation failed. Errors:", finalErrors);
-    }
     return isValid;
   }, [
     currentSlideIndex,
-    isFormTrulyDirty, // Use custom dirty check
+    isFormTrulyDirty,
     handleSubmit,
     onValidSubmit,
     onInvalidSubmit,
-    methods.formState.errors, // Use methods.formState for current errors
+    methods.formState.errors,
     reset,
     getValues,
-    initialFormValues, // Include for comparison logic
-    setInitialFormValues,
   ]);
 
   useEffect(() => {
@@ -442,33 +542,29 @@ export function useQuestionFormManagement({
 
       const currentValues = getValues();
       const transformedData = transformQuestionDataForType(
+        // This is QuestionFormContextType
         currentValues,
         newType,
         isTrueFalseOverride
       );
 
-      // When changing type, imageFile should be preserved if the new type supports images.
-      // If the new type is 'content', imageFile might need to be cleared or handled.
-      // transformQuestionDataForType should ideally handle this.
-      // For now, assume transformQuestionDataForType correctly manages imageFile.
-      if (newType === "content" && transformedData.imageFile) {
-        // Example: if content slides shouldn't have a file, clear it
-        // transformedData.imageFile = null;
-        // transformedData.image = null;
+      // Preserve imageFile and questionImageUploadKey if they exist in currentValues
+      if (currentValues.imageFile) {
+        transformedData.imageFile = currentValues.imageFile;
+        transformedData.image = currentValues.image; // Also preserve objectURL
+        transformedData.questionImageUploadKey =
+          currentValues.questionImageUploadKey;
       }
 
       reset(transformedData, {
-        keepDefaultValues: false, // Important: we are setting new defaults
-        keepDirty: true, // Consider it dirty after type change
-        keepErrors: false, // Clear previous errors
+        keepDefaultValues: false,
+        keepDirty: true,
+        keepErrors: false,
       });
-      setInitialFormValues(transformedData); // Update initial values for dirty checking
+      setInitialFormValues(transformedData);
       prevWatchedTypeRef.current = newType;
 
-      // Wait for RHF to process the reset
       await new Promise((resolve) => setTimeout(resolve, 0));
-
-      // Trigger validation after reset and transformation
       const isValidAfterReset = await trigger();
       if (!isValidAfterReset) {
         toast({
@@ -481,47 +577,78 @@ export function useQuestionFormManagement({
         return;
       }
 
-      // Logic to convert RHF data (QuestionFormContextType) to QuestionHost
-      // This should be similar to what's in onValidSubmit
-      const parseResult = QuestionHostSchema.safeParse(transformedData);
+      // Re-parse and map to QuestionHost for onQuestionChange
+      const parseResult = QuestionHostSchema.safeParse(transformedData); // transformedData is QuestionFormContextType
       let finalQuestionHostData: QuestionHost | null = null;
+
       if (parseResult.success) {
-        const validatedData = parseResult.data; // This is QuestionHostSchemaType
-        if (validatedData.type === "quiz") {
-          const selectedIndex = transformedData.correctChoiceIndex ?? -1; // Use correctChoiceIndex from transformedData for quiz
-          finalQuestionHostData = {
-            ...validatedData, // Spread validated data which includes type, image, imageFile etc.
-            choices: (validatedData.choices || []).map((choice, idx) => ({
-              answer: choice.answer,
-              image: choice.image, // from ChoiceHostObjectSchema
-              correct: idx === selectedIndex,
-            })),
-          } as unknown as QuestionHost;
+        const validatedDataFromParse = parseResult.data; // This is QuestionHostSchemaType (discriminated union)
+
+        // Map QuestionHostSchemaType to QuestionHost
+        const baseHostPortion: Omit<QuestionHost, "choices" | "id"> & {
+          id?: string;
+        } = {
+          type: validatedDataFromParse.type,
+          image: validatedDataFromParse.image,
+          imageFile: validatedDataFromParse.imageFile,
+          questionImageUploadKey: validatedDataFromParse.imageFile
+            ? validatedDataFromParse.questionImageUploadKey
+            : null,
+          video: validatedDataFromParse.video,
+          media: (validatedDataFromParse.media || []).map((m) => ({ ...m })),
+          time: validatedDataFromParse.time,
+          pointsMultiplier: validatedDataFromParse.pointsMultiplier,
+        };
+
+        let questionSpecificPortion: Partial<
+          Pick<QuestionHost, "question" | "title" | "description">
+        > = {};
+        if (validatedDataFromParse.type === "content") {
+          questionSpecificPortion.title = validatedDataFromParse.title;
+          questionSpecificPortion.description =
+            validatedDataFromParse.description;
         } else {
-          finalQuestionHostData = {
-            ...validatedData,
-            choices: (validatedData.choices || []).map((choice) => ({
+          // For quiz, jumble, open_ended, survey
+          questionSpecificPortion.question = validatedDataFromParse.question;
+        }
+
+        let hostChoices: ChoiceHost[] = [];
+        if (validatedDataFromParse.type === "quiz") {
+          const selectedIndex =
+            (transformedData as QuestionFormContextType).correctChoiceIndex ??
+            -1; // Use correctChoiceIndex from RHF data before it's lost
+          hostChoices = (validatedDataFromParse.choices || []).map(
+            (choice, idx) => ({
               answer: choice.answer,
-              image: choice.image,
-              correct: choice.correct ?? true, // For non-quiz, correct is usually true or not applicable for scoring
-            })),
-          } as unknown as QuestionHost;
+              image: choice.image ? { ...choice.image } : undefined,
+              correct: idx === selectedIndex,
+            })
+          );
+        } else if (validatedDataFromParse.choices) {
+          // For jumble, survey, open_ended (acceptable answers)
+          hostChoices = (validatedDataFromParse.choices || []).map(
+            (choice) => ({
+              answer: choice.answer,
+              image: choice.image ? { ...choice.image } : undefined,
+              correct: choice.correct ?? true,
+            })
+          );
         }
-        if (
-          finalQuestionHostData &&
-          "correctChoiceIndex" in finalQuestionHostData
-        ) {
-          delete (finalQuestionHostData as any).correctChoiceIndex;
-        }
+
+        finalQuestionHostData = {
+          id: quizData?.questions?.[currentIndex]?.id, // Preserve existing ID
+          ...baseHostPortion,
+          ...questionSpecificPortion,
+          choices: hostChoices,
+        };
       } else {
         console.error(
-          "Zod parsing failed after type change:",
+          "Zod parsing failed after type change (handleTypeChange):",
           parseResult.error.flatten()
         );
         toast({
           title: "Internal Error",
-          description:
-            "Could not prepare default data structure after type change.",
+          description: "Could not prepare data structure after type change.",
           variant: "destructive",
         });
       }
@@ -537,14 +664,13 @@ export function useQuestionFormManagement({
       toast,
       trigger,
       setInitialFormValues,
+      quizData?.questions,
     ]
   );
 
   useEffect(() => {
     if (isHandlingTypeChange.current) return;
-
     const currentRhfType = getValues("type");
-
     if (currentRhfType && currentRhfType !== prevWatchedTypeRef.current) {
       const choices = getValues("choices");
       const isCurrentlyTF =
@@ -558,14 +684,13 @@ export function useQuestionFormManagement({
         );
       handleTypeChange(currentRhfType, isCurrentlyTF);
     } else if (currentRhfType && !prevWatchedTypeRef.current) {
-      // Initialize prevWatchedTypeRef if it's the first render with a type
       prevWatchedTypeRef.current = currentRhfType;
     }
-  }, [watchedType, getValues, handleTypeChange]); // RHF's `watch` is stable
+  }, [watchedType, getValues, handleTypeChange]); // watchedType from RHF
 
   return {
     methods,
-    isDirty: isFormTrulyDirty(), // Use custom dirty check
+    isDirty: isFormTrulyDirty(),
     errors,
     watchedType,
     triggerSave,
