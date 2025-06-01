@@ -15,10 +15,25 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Alert, AlertDescription, AlertTitle } from '@/src/components/ui/alert';
 import { Skeleton } from '@/src/components/ui/skeleton';
 import { Badge } from '@/src/components/ui/badge';
-import { fetchMyQuizzes } from '@/src/lib/api/quizzes';
+// Import the deleteQuizById function
+import { fetchMyQuizzes, deleteQuizById } from '@/src/lib/api/quizzes';
 import type { QuizDTO, Page } from '@/src/lib/types/api';
 import { ListChecks, AlertCircle, Loader2, PlusCircle, Eye, Pencil, Trash2, Play, Brain, Clock, ImageOff } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
+import { useToast } from '@/src/components/ui/use-toast'; // Import useToast
+// Import AlertDialog components
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from "@/src/components/ui/alert-dialog";
+import { buttonVariants } from '@/src/components/ui/button';
 
 const formatMillisecondsToMinutes = (ms: number | undefined | null): string | null => {
     if (ms === undefined || ms === null || ms <= 0) {
@@ -31,8 +46,10 @@ const formatMillisecondsToMinutes = (ms: number | undefined | null): string | nu
 
 const MyQuizzesPageContent: React.FC = () => {
     const { user } = useAuth();
+    const { toast } = useToast(); // Initialize toast
     const [quizzes, setQuizzes] = useState<QuizDTO[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [isDeleting, setIsDeleting] = useState<string | null>(null); // Track which quiz is being deleted
     const [error, setError] = useState<string | null>(null);
     const currentYear = new Date().getFullYear();
 
@@ -40,7 +57,7 @@ const MyQuizzesPageContent: React.FC = () => {
         setIsLoading(true);
         setError(null);
         try {
-            const quizPage: Page<QuizDTO> = await fetchMyQuizzes({ page: 0, size: 20, sort: 'desc' });
+            const quizPage: Page<QuizDTO> = await fetchMyQuizzes({ page: 0, size: 20, sort: 'modifiedAt,desc' }); // Sort by modifiedAt
             setQuizzes(quizPage.content || []);
         } catch (err: any) {
             console.error("Failed to fetch quizzes:", err);
@@ -54,12 +71,28 @@ const MyQuizzesPageContent: React.FC = () => {
         loadQuizzes();
     }, [loadQuizzes]);
 
-    const handleDeleteQuiz = (quizId: string | undefined) => {
+    const handleDeleteQuiz = async (quizId: string | undefined, quizTitle: string | undefined) => {
         if (!quizId) return;
-        console.warn(`[My Quizzes] Delete quiz requested: ${quizId} (Actual API call not implemented)`);
+        setIsDeleting(quizId);
+        try {
+            await deleteQuizById(quizId);
+            setQuizzes((prevQuizzes) => prevQuizzes.filter((quiz) => quiz.uuid !== quizId));
+            toast({
+                title: "Quiz Deleted",
+                description: `"${quizTitle || 'The quiz'}" has been successfully deleted.`,
+            });
+        } catch (err: any) {
+            console.error(`Failed to delete quiz ${quizId}:`, err);
+            toast({
+                variant: "destructive",
+                title: "Delete Failed",
+                description: err.message || `Could not delete "${quizTitle || 'the quiz'}". Please try again.`,
+            });
+        } finally {
+            setIsDeleting(null);
+        }
     };
 
-    // Define icon button style based on screen-05-my-quiz.html and image_81483a.png
     const iconButtonStyle = "h-9 w-9 p-0 rounded-full bg-secondary text-muted-foreground hover:bg-primary hover:text-primary-foreground focus-visible:ring-primary flex items-center justify-center";
 
     return (
@@ -77,7 +110,6 @@ const MyQuizzesPageContent: React.FC = () => {
                         </Link>
                     </div>
 
-                    {/* Loading, Error, Empty States */}
                     {isLoading && (
                         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                             {[...Array(3)].map((_, i) => (
@@ -96,9 +128,9 @@ const MyQuizzesPageContent: React.FC = () => {
                                         </div>
                                     </CardContent>
                                     <CardFooter className="flex justify-end gap-2 pt-3 pb-3 border-t border-border/50">
-                                        <Skeleton className="h-9 w-9 rounded-full bg-muted/70" /> {/* Circular skeleton for icon buttons */}
                                         <Skeleton className="h-9 w-9 rounded-full bg-muted/70" />
-                                        <Skeleton className="h-9 w-[100px] rounded-md bg-muted/70" /> {/* Adjusted Host button skeleton size */}
+                                        <Skeleton className="h-9 w-9 rounded-full bg-muted/70" />
+                                        <Skeleton className="h-9 w-[100px] rounded-md bg-muted/70" />
                                     </CardFooter>
                                 </Card>
                             ))}
@@ -185,7 +217,7 @@ const MyQuizzesPageContent: React.FC = () => {
                                                     className={cn(
                                                         "font-medium rounded-md px-2.5 py-1",
                                                         quiz.visibility === 1
-                                                            ? "bg-primary/25 border-primary/40 text-primary-foreground"
+                                                            ? "bg-primary/25 border-primary/40 text-primary-foreground" // Assuming primary text color is light
                                                             : "bg-muted/60 border-border/60 text-foreground/90"
                                                     )}
                                                 >
@@ -204,9 +236,32 @@ const MyQuizzesPageContent: React.FC = () => {
                                                     <Pencil className="h-4 w-4" />
                                                 </Button>
                                             </Link>
-                                            <Button variant="ghost" title="Xoá Quiz" onClick={() => handleDeleteQuiz(quiz.uuid)} className={cn(iconButtonStyle, "hover:bg-destructive/20 hover:text-destructive")}>
-                                                <Trash2 className="h-4 w-4" />
-                                            </Button>
+                                            {/* AlertDialog for Delete Confirmation */}
+                                            <AlertDialog>
+                                                <AlertDialogTrigger asChild>
+                                                    <Button variant="ghost" title="Xoá Quiz" disabled={isDeleting === quiz.uuid} className={cn(iconButtonStyle, "hover:bg-destructive/20 hover:text-destructive")}>
+                                                        {isDeleting === quiz.uuid ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                                                    </Button>
+                                                </AlertDialogTrigger>
+                                                <AlertDialogContent>
+                                                    <AlertDialogHeader>
+                                                        <AlertDialogTitle>Bạn có chắc chắn muốn xóa?</AlertDialogTitle>
+                                                        <AlertDialogDescription>
+                                                            Hành động này không thể hoàn tác. Quiz "<span className="font-semibold">{quiz.title || 'Không tiêu đề'}</span>" sẽ bị xóa vĩnh viễn.
+                                                        </AlertDialogDescription>
+                                                    </AlertDialogHeader>
+                                                    <AlertDialogFooter>
+                                                        <AlertDialogCancel>Hủy</AlertDialogCancel>
+                                                        <AlertDialogAction
+                                                            onClick={() => handleDeleteQuiz(quiz.uuid, quiz.title)}
+                                                            className={cn(buttonVariants({ variant: "destructive" }))}
+                                                        >
+                                                            Xóa Quiz
+                                                        </AlertDialogAction>
+                                                    </AlertDialogFooter>
+                                                </AlertDialogContent>
+                                            </AlertDialog>
+                                            {/* End AlertDialog */}
                                             <Link href={`/game/host?quizId=${quiz.uuid}`} passHref>
                                                 <Button variant="default" size="sm" title="Tổ chức Game" className="h-9 px-4 text-sm bg-primary text-primary-foreground hover:bg-primary/90 focus-visible:ring-primary rounded-md">
                                                     <Play className="mr-1.5 h-4 w-4" /> Tổ chức

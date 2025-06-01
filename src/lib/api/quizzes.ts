@@ -172,3 +172,37 @@ export async function updateQuiz(
     throw error;
   }
 }
+
+/**
+ * Deletes a quiz by its ID.
+ * @param quizId - The ID of the quiz to delete.
+ * @returns A promise that resolves when the quiz is successfully deleted.
+ * @throws {Error} If the deletion fails or a network error occurs.
+ */
+export async function deleteQuizById(quizId: string): Promise<void> {
+  if (!quizId) {
+    throw new Error("Quiz ID is required to delete a quiz.");
+  }
+  const endpoint = `${API_BASE_URL}/api/quizzes/${quizId}`; // Or use API_ENDPOINTS.QUIZZES.DELETE_BY_ID(quizId)
+  console.log(
+    `[API Quizzes] Attempting to delete quiz ${quizId} from ${endpoint}`
+  );
+
+  const options: FetchOptions = {
+    method: "DELETE",
+    includeAuthHeader: true, // Deletion requires authentication
+  };
+
+  try {
+    // fetchWithAuth should handle non-JSON responses (like 204 No Content) gracefully.
+    // If it expects JSON by default, we might need to adjust it or handle the response here.
+    // Assuming fetchWithAuth handles 204 correctly or we modify it if needed.
+    await fetchWithAuth<void>(endpoint, options); // Expecting no content on successful delete
+    console.log(`[API Quizzes] Quiz ${quizId} deleted successfully.`);
+  } catch (error) {
+    // fetchWithAuth should ideally throw an HttpError or similar custom error
+    // containing status and potential message from the backend.
+    console.error(`[API Quizzes] Failed to delete quiz ${quizId}:`, error);
+    throw error; // Re-throw the error to be caught by the calling component
+  }
+}
