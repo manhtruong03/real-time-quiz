@@ -10,29 +10,22 @@ import QuizEditorLayout from '@/src/components/quiz-editor/layout/QuizEditorLayo
 import QuizEditorHeader from '@/src/components/quiz-editor/layout/QuizEditorHeader';
 import SlideNavigationSidebar from '@/src/components/quiz-editor/sidebar/SlideNavigationSidebar';
 import { useToast } from '@/src/components/ui/use-toast';
-
-// Views
-import QuizSettingsView from '@/src/components/quiz-editor/views/QuizSettingsView';
-import AddSlideView from '@/src/components/quiz-editor/views/AddSlideView';
-import QuestionEditorView from '@/src/components/quiz-editor/views/QuestionEditorView';
+import { QuizEditorContentArea } from '@/src/components/quiz-editor/QuizEditorContentArea'; // Import the new component
 
 // Types & Hooks
 import type { QuestionHost } from '@/src/lib/types/quiz-structure';
 import { useQuizCreator } from '@/src/hooks/quiz-editor/useQuizCreator';
-import type { QuizDTO } from '@/src/lib/types/api';
 import { AuthApiError } from '@/src/lib/types/auth';
-import { useQuizViewManager, QuizEditorViewMode } from '@/src/hooks/quiz-editor/useQuizViewManager'; // Import the new hook
+import { useQuizViewManager } from '@/src/hooks/quiz-editor/useQuizViewManager';
 
 // API Utils
 import { createQuiz } from '@/src/lib/api/quizzes';
-import { transformQuizStateToDTO } from '@/src/lib/api-utils/quiz-transformer';
-import { QuizVisibilityEnum } from '@/src/lib/schemas/quiz-settings.schema';
-import { cn } from '@/src/lib/utils';
+import { cn } from '@/src/lib/utils'; //
 import { Loader2 } from 'lucide-react';
 
 export default function CreateQuizPage() {
     const triggerQuestionSaveRef = useRef<(() => Promise<boolean>) | null>(null);
-    const { toast } = useToast();
+    const { toast } = useToast(); //
     const router = useRouter();
     const [isSaving, setIsSaving] = useState(false);
 
@@ -40,32 +33,31 @@ export default function CreateQuizPage() {
         quizData,
         currentSlideIndex,
         setCurrentSlideIndex,
-        formMethods, // RHF methods for settings form
-        updateQuizMetadata,
-        handleMetadataSubmit, // RHF's handleSubmit for settings form, bound to updateQuizMetadata
+        formMethods,
+        handleMetadataSubmit,
+        updateQuizMetadataDirectly,
         addQuestion,
         updateQuestion,
         deleteQuestion,
         duplicateQuestion,
-    } = useQuizCreator();
+    } = useQuizCreator(); //
 
     const latestQuizDataRef = useRef(quizData);
     useEffect(() => {
         latestQuizDataRef.current = quizData;
     }, [quizData]);
 
-    // Integrate the new view manager hook
     const {
         viewMode,
-        setViewMode, // Keep direct access if specific non-standard transitions are needed
+        setViewMode,
         navigateToSettings,
         navigateToAddSlide,
         navigateToEditorSlide,
-    } = useQuizViewManager({
+    } = useQuizViewManager({ //
         initialQuizData: quizData,
         currentSlideIndex,
         setCurrentSlideIndex,
-        saveCurrentQuestionIfNeeded: useCallback(async () => { // Pass the save function for questions
+        saveCurrentQuestionIfNeeded: useCallback(async () => { //
             if (triggerQuestionSaveRef.current) {
                 const success = await triggerQuestionSaveRef.current();
                 if (!success) {
@@ -79,33 +71,31 @@ export default function CreateQuizPage() {
             }
             return true;
         }, [currentSlideIndex, toast]),
-        settingsFormMethods: formMethods,
-        updateQuizMetadata: updateQuizMetadata,
+        settingsFormMethods: formMethods, //
+        updateQuizMetadata: updateQuizMetadataDirectly, //
     });
 
-    const { watch } = formMethods;
+    const { watch } = formMethods; //
     const watchedQuizTitle = watch("title");
 
-    const handleSaveQuiz = useCallback(async () => {
+    const handleSaveQuiz = useCallback(async () => { //
         setIsSaving(true);
-        const currentViewMode = viewMode; // Capture current viewMode
+        const currentViewMode = viewMode;
 
         try {
-            // Save quiz settings if dirty (and in settings view, or if about to leave settings view implicitly)
             if (formMethods.formState.isDirty) {
                 const settingsAreValid = await formMethods.trigger();
                 if (settingsAreValid) {
-                    await handleMetadataSubmit(updateQuizMetadata)();
+                    await handleMetadataSubmit();
                     await new Promise(resolve => setTimeout(resolve, 50));
                 } else {
                     toast({ title: "Validation Error", description: "Please fix errors in Quiz Settings before saving.", variant: "destructive" });
                     setIsSaving(false);
-                    if (currentViewMode !== 'settings') setViewMode('settings'); // Switch to settings view if errors
+                    if (currentViewMode !== 'settings') setViewMode('settings');
                     return;
                 }
             }
 
-            // Save current question if in editor mode
             if (currentViewMode === 'editor') {
                 const questionSaveSuccess = await triggerQuestionSaveRef.current?.();
                 if (!questionSaveSuccess) {
@@ -124,19 +114,14 @@ export default function CreateQuizPage() {
                 toast({ title: "Validation Error", description: "Quiz title must be at least 3 characters.", variant: "destructive" });
                 setIsSaving(false);
                 if (currentViewMode !== 'settings') setViewMode('settings');
-                // Also ensure the RHF form for settings shows the error if not already.
-                // This might be redundant if formMethods.trigger() above already did this.
                 formMethods.setError("title", { type: "manual", message: "Quiz title must be at least 3 characters." });
                 return;
             }
             if (!currentQuizState.questions || currentQuizState.questions.length === 0) {
                 toast({ title: "Empty Quiz", description: "Your quiz has no slides. Please add at least one slide.", variant: "default" });
-                // Allowing save of empty quiz, so no 'return' here
             }
 
-            // Call createQuiz with the QuizStructureHost state.
-            // The transformation to FormData will happen inside createQuiz.
-            const savedQuiz = await createQuiz(currentQuizState);
+            const savedQuiz = await createQuiz(currentQuizState); //
             toast({
                 title: "Quiz Saved!",
                 description: `Quiz "${savedQuiz.title}" has been saved successfully.`,
@@ -145,7 +130,7 @@ export default function CreateQuizPage() {
         } catch (error: unknown) {
             let errorMessage = "An unexpected error occurred. Please try again.";
             let errorTitle = "Save Failed";
-            if (error instanceof AuthApiError) {
+            if (error instanceof AuthApiError) { //
                 errorTitle = `API Error (${error.status})`;
                 errorMessage = error.message || errorMessage;
             } else if (error instanceof Error) {
@@ -156,21 +141,19 @@ export default function CreateQuizPage() {
             setIsSaving(false);
         }
     }, [
-        viewMode, // Use the viewMode from useQuizViewManager
+        viewMode,
         formMethods,
         handleMetadataSubmit,
-        updateQuizMetadata,
         toast,
         router,
-        setViewMode // from useQuizViewManager
+        setViewMode
     ]);
 
-    const handleAddQuestionAndEdit = useCallback(async (type: QuestionHost['type'], isTrueFalseOverride: boolean = false) => {
-        // Logic to save settings if dirty (similar to navigateToAddSlide)
+    const handleAddQuestionAndEdit = useCallback(async (type: QuestionHost['type'], isTrueFalseOverride: boolean = false) => { //
         if (viewMode === 'settings' && formMethods.formState.isDirty) {
             const settingsValid = await formMethods.trigger();
             if (settingsValid) {
-                await handleMetadataSubmit(updateQuizMetadata)();
+                await handleMetadataSubmit();
                 await new Promise(resolve => setTimeout(resolve, 50));
             } else {
                 toast({ title: "Unsaved Settings", description: "Please fix errors in quiz settings before adding a slide.", variant: "destructive" });
@@ -180,10 +163,17 @@ export default function CreateQuizPage() {
         const newIndex = addQuestion(type, isTrueFalseOverride);
         setCurrentSlideIndex(newIndex);
         setViewMode('editor');
-    }, [addQuestion, setCurrentSlideIndex, setViewMode, viewMode, formMethods, handleMetadataSubmit, updateQuizMetadata, toast]);
+    }, [
+        addQuestion,
+        setCurrentSlideIndex,
+        setViewMode,
+        viewMode,
+        formMethods,
+        handleMetadataSubmit,
+        toast
+    ]);
 
-
-    const handleQuestionChange = useCallback((index: number, updatedQuestion: QuestionHost | null) => {
+    const handleQuestionChange = useCallback((index: number, updatedQuestion: QuestionHost | null) => { //
         if (updatedQuestion === null) {
             toast({ title: "Save Error", description: `Failed to save changes for Slide ${index + 1}.`, variant: "destructive" });
             return;
@@ -191,15 +181,14 @@ export default function CreateQuizPage() {
         updateQuestion(index, updatedQuestion);
     }, [updateQuestion, toast]);
 
-    const handleDeleteCurrentSlideConfirmed = useCallback(async () => {
+    const handleDeleteCurrentSlideConfirmed = useCallback(async () => { //
         if (currentSlideIndex < 0) return;
         const deletedIndex = currentSlideIndex;
         deleteQuestion(currentSlideIndex);
         toast({ title: "Slide Deleted", description: `Slide ${deletedIndex + 1} has been removed.` });
-        // viewMode will be handled by the useEffect in useQuizViewManager
     }, [currentSlideIndex, deleteQuestion, toast]);
 
-    const handleDuplicateCurrentSlideConfirmed = useCallback(async () => {
+    const handleDuplicateCurrentSlideConfirmed = useCallback(async () => { //
         if (currentSlideIndex < 0) {
             toast({ title: "Action Failed", description: "No slide selected to duplicate.", variant: "destructive" });
             return;
@@ -209,46 +198,13 @@ export default function CreateQuizPage() {
 
         const originalSlideIndexForToast = currentSlideIndex + 1;
         const newSlideIndex = duplicateQuestion(currentSlideIndex);
-        setCurrentSlideIndex(newSlideIndex); // Ensure local state is also updated
+        setCurrentSlideIndex(newSlideIndex);
         setViewMode('editor');
         toast({ title: "Slide Duplicated", description: `Slide ${originalSlideIndexForToast} duplicated as new Slide ${newSlideIndex + 1}.` });
     }, [currentSlideIndex, duplicateQuestion, triggerQuestionSaveRef, toast, setViewMode, setCurrentSlideIndex]);
 
 
-    const renderMainContentArea = () => {
-        const mainContentAreaClasses = "flex-grow overflow-y-auto custom-scrollbar-dark dark:bg-[var(--editor-content-bg)]";
-        switch (viewMode) {
-            case 'settings':
-                return (
-                    <div className={cn(mainContentAreaClasses, "p-4 md:p-6")}>
-                        <QuizSettingsView />
-                    </div>
-                );
-            case 'add-slide':
-                return (
-                    <div className={cn("flex flex-col", mainContentAreaClasses, "p-4 md:p-6")}>
-                        <AddSlideView onAddQuestion={handleAddQuestionAndEdit} onBackToSettings={navigateToSettings} />
-                    </div>
-                );
-            case 'editor':
-                return (
-                    <QuestionEditorView
-                        quizData={quizData}
-                        currentSlideIndex={currentSlideIndex}
-                        onSlideSelect={navigateToEditorSlide}
-                        onQuestionChange={handleQuestionChange}
-                        onConfirmDeleteSlide={handleDeleteCurrentSlideConfirmed}
-                        onConfirmDuplicateSlide={handleDuplicateCurrentSlideConfirmed}
-                        triggerSaveRef={triggerQuestionSaveRef}
-                        className="flex-grow"
-                    />
-                );
-            default:
-                return <div className={cn("flex-grow flex items-center justify-center", mainContentAreaClasses)}>Error: Invalid View State.</div>;
-        }
-    };
-
-    if (!quizData && viewMode !== 'settings') {
+    if (!quizData && viewMode !== 'settings') { //
         return (
             <QuizEditorLayout>
                 <QuizEditorHeader quizTitle="Loading Quiz..." isSaving={isSaving} />
@@ -261,7 +217,7 @@ export default function CreateQuizPage() {
     }
 
     return (
-        <FormProvider {...formMethods}>
+        <FormProvider {...formMethods}> {/* */}
             <QuizEditorLayout>
                 <QuizEditorHeader
                     quizTitle={watchedQuizTitle || quizData?.title || "Quiz Chưa Có Tên"}
@@ -275,11 +231,23 @@ export default function CreateQuizPage() {
                     <SlideNavigationSidebar
                         slides={quizData?.questions ?? []}
                         currentSlideIndex={currentSlideIndex}
-                        onSelectSlide={navigateToEditorSlide} // Use new handler
-                        onAddSlide={navigateToAddSlide}    // Use new handler
+                        onSelectSlide={navigateToEditorSlide}
+                        onAddSlide={navigateToAddSlide}
                     />
                     <div className="flex-grow flex flex-col overflow-hidden">
-                        {renderMainContentArea()}
+                        {/* Use the new QuizEditorContentArea component */}
+                        <QuizEditorContentArea
+                            viewMode={viewMode}
+                            quizData={quizData}
+                            currentSlideIndex={currentSlideIndex}
+                            onAddQuestionAndEdit={handleAddQuestionAndEdit}
+                            onBackToSettings={navigateToSettings}
+                            onNavigateToEditorSlide={navigateToEditorSlide}
+                            onQuestionChange={handleQuestionChange}
+                            onConfirmDeleteSlide={handleDeleteCurrentSlideConfirmed}
+                            onConfirmDuplicateSlide={handleDuplicateCurrentSlideConfirmed}
+                            triggerSaveRef={triggerQuestionSaveRef}
+                        />
                     </div>
                 </div>
             </QuizEditorLayout>
