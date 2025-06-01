@@ -17,7 +17,7 @@ export async function saveSessionResults(
   payload: SessionFinalizationDto
 ): Promise<any> {
   // *** Replace with the actual backend endpoint ***
-  const endpoint = `${API_BASE_URL}/api/sessions/finalize-game-results`;
+  const endpoint = `${API_BASE_URL}/api/session/finalize`;
   // Alternative if gamePin is part of the path:
   // const endpoint = `${API_BASE_URL}/api/game-sessions/${payload.gamePin}/results`;
 
@@ -30,7 +30,7 @@ export async function saveSessionResults(
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify(payload),
+    body: payload,
     includeAuthHeader: true, // This action requires authentication
   };
 
