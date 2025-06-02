@@ -4,24 +4,26 @@
 
 import { useParams } from 'next/navigation';
 import { useState } from 'react';
-import { AppHeader } from '@/src/components/layout/AppHeader'; //
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/src/components/ui/tabs'; //
-import { Container } from '@/src/components/ui/container'; //
-import { Skeleton } from '@/src/components/ui/skeleton'; //
-import { Button } from '@/src/components/ui/button'; //
-import { Alert, AlertDescription, AlertTitle } from '@/src/components/ui/alert'; //
-import { FileWarning, Info, Users, HelpCircle } from 'lucide-react'; // Added Users, HelpCircle for tab icons option
+import { AppHeader } from '@/src/components/layout/AppHeader';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/src/components/ui/tabs';
+import { Container } from '@/src/components/ui/container';
+import { Skeleton } from '@/src/components/ui/skeleton';
+import { Button } from '@/src/components/ui/button';
+import { Alert, AlertDescription, AlertTitle } from '@/src/components/ui/alert';
+import { FileWarning, Info, Users, HelpCircle } from 'lucide-react';
 
-import { useSessionSummaryData } from './hooks/useSessionSummaryData'; ///hooks/useSessionSummaryData.ts]
-import { AccuracyChartCard } from './components/overview/AccuracyChartCard'; ///components/overview/AccuracyChartCard.tsx]
-import { QuizMetaInfoCard } from './components/overview/QuizMetaInfoCard'; ///components/overview/QuizMetaInfoCard.tsx]
+import { useSessionSummaryData } from './hooks/useSessionSummaryData';
+import { AccuracyChartCard } from './components/overview/AccuracyChartCard';
+import { QuizMetaInfoCard } from './components/overview/QuizMetaInfoCard';
 
 // Import PlayersTabContent
 import PlayersTabContent from '../../components/players/PlayersTabContent';
 
-// Remove PlayersTabPlaceholder as it's being replaced
-// const PlayersTabPlaceholder = () => <div className="p-6 text-muted-foreground">Players tab content will be implemented in Phase 2.</div>;
-const QuestionsTabPlaceholder = () => <div className="p-6 text-muted-foreground">Questions tab content will be implemented in Phase 3.</div>;
+// Import QuestionsTabContent
+import QuestionsTabContent from './components/questions/QuestionsTabContent'; // Added this import
+
+// Remove QuestionsTabPlaceholder as it's being replaced
+// const QuestionsTabPlaceholder = () => <div className="p-6 text-muted-foreground">Questions tab content will be implemented in Phase 3.</div>;
 
 type ReportPageParams = {
     sessionId: string;
@@ -46,6 +48,7 @@ export default function ReportSessionPage() {
     } = useSessionSummaryData(sessionId);
 
     const OverviewTabContent = () => {
+        // ... (OverviewTabContent remains unchanged - content from your provided file)
         if (isLoadingSummary) {
             return (
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
@@ -107,26 +110,23 @@ export default function ReportSessionPage() {
         }
 
         return [
-            { value: 'overview', label: 'Tóm tắt' },
+            { value: 'overview', label: 'Tóm tắt', icon: Info }, // Changed Icon for Overview for consistency
             { value: 'players', label: playersLabel, icon: Users },
             { value: 'questions', label: questionsLabel, icon: HelpCircle },
         ];
     };
 
-    const tabs: TabDetail[] = getTabDetails();
+    const tabs: TabDetail[] = getTabDetails(); // This will now correctly update when summaryData changes
 
 
     if (!sessionId && !isLoadingSummary && !summaryError) {
-        // Fallback for missing session ID, though usually covered by router or parent logic
-        // For now, this path might lead to useSessionSummaryData(undefined) which should be handled in the hook
-        // Or, more robustly, redirect or show a page-level error if sessionId is critical and missing.
-        // The current hook useSessionSummaryData(sessionId) will likely handle sessionId being undefined by not fetching.
+        // ... (Fallback logic remains unchanged)
     }
 
 
     return (
         <div className="flex flex-col min-h-screen">
-            <AppHeader />
+            <AppHeader /> {/* Assuming AppHeader does not need specific title from this page directly */}
             <main className="flex-grow bg-background text-foreground">
                 <Container className="py-8 md:py-10">
                     <div className="mb-2">
@@ -138,7 +138,7 @@ export default function ReportSessionPage() {
                         {isLoadingSummary && !summaryData ? (
                             <Skeleton className="h-10 w-3/4" />
                         ) : summaryData?.quizInfo?.title ? (
-                            <h1 className="text-4xl font-bold tracking-tight text-primary-foreground">
+                            <h1 className="text-4xl font-bold tracking-tight text-primary-foreground"> {/* Assuming text-primary-foreground is for dark text on light bg or vice versa */}
                                 {summaryData.quizInfo.title}
                             </h1>
                         ) : summaryData?.name ? (
@@ -155,14 +155,14 @@ export default function ReportSessionPage() {
                     </div>
 
                     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                        <TabsList className="grid w-full grid-cols-3 md:w-auto md:inline-flex mb-8 bg-muted p-1 rounded-md"> {/* Adjusted width for dynamic content */}
+                        <TabsList className="grid w-full grid-cols-3 md:w-auto md:inline-flex mb-8 bg-muted p-1 rounded-md">
                             {tabs.map((tab) => (
                                 <TabsTrigger
                                     key={tab.value}
                                     value={tab.value}
-                                    className="capitalize data-[state=active]:bg-accent data-[state=active]:text-accent-foreground data-[state=active]:shadow-md rounded-sm py-2.5 px-4 text-sm font-medium flex items-center justify-center gap-2" // Added px-4, gap-2
+                                    className="capitalize data-[state=active]:bg-accent data-[state=active]:text-accent-foreground data-[state=active]:shadow-md rounded-sm py-2.5 px-4 text-sm font-medium flex items-center justify-center gap-2"
                                 >
-                                    {tab.icon && <tab.icon className="h-4 w-4" />} {/* Optional icon */}
+                                    {tab.icon && <tab.icon className="h-4 w-4" />}
                                     {tab.label}
                                 </TabsTrigger>
                             ))}
@@ -172,16 +172,19 @@ export default function ReportSessionPage() {
                             <OverviewTabContent />
                         </TabsContent>
                         <TabsContent value="players" className="outline-none ring-0 focus-visible:ring-0 focus-visible:ring-offset-0">
-                            {/* Replace PlayersTabPlaceholder with PlayersTabContent */}
                             {sessionId ? (
                                 <PlayersTabContent sessionId={sessionId} />
                             ) : (
-                                // Fallback if sessionId is somehow not available at this point
                                 <div className="p-6 text-muted-foreground">Session ID is missing. Cannot load players.</div>
                             )}
                         </TabsContent>
                         <TabsContent value="questions" className="outline-none ring-0 focus-visible:ring-0 focus-visible:ring-offset-0">
-                            <QuestionsTabPlaceholder />
+                            {/* Replace QuestionsTabPlaceholder with QuestionsTabContent */}
+                            {sessionId ? (
+                                <QuestionsTabContent /> // QuestionsTabContent uses useParams internally
+                            ) : (
+                                <div className="p-6 text-muted-foreground">Session ID is missing. Cannot load questions.</div>
+                            )}
                         </TabsContent>
                     </Tabs>
                 </Container>

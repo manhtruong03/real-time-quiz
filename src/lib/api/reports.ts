@@ -10,10 +10,11 @@ import type {
 import type {
   SessionSummaryDto,
   PlayerReportItemDto,
+  QuestionReportItemDto,
 } from "@/src/lib/types/reports"; //
 import { API_BASE_URL } from "./client";
 
-const REPORTS_API_URL = `${API_BASE_URL}/api/reports`;
+const REPORTS_BASE_URL = `${API_BASE_URL}/api/reports`;
 
 /**
  * Fetches the current authenticated user's game session history.
@@ -38,7 +39,7 @@ export const fetchUserSessionHistory = async (
 
   // Directly return the promise from fetchWithAuth, as it handles JSON parsing and errors.
   return fetchWithAuth<Page<UserSessionHistoryItemDto>>(
-    `${REPORTS_API_URL}/users/sessions?${queryParams.toString()}`,
+    `${REPORTS_BASE_URL}/users/sessions?${queryParams.toString()}`,
     { method: "GET" } // Explicit method is good practice
   );
 };
@@ -55,7 +56,7 @@ export const getSessionSummary = async (
 ): Promise<SessionSummaryDto> => {
   // Directly return the promise from fetchWithAuth.
   return fetchWithAuth<SessionSummaryDto>(
-    `${REPORTS_API_URL}/sessions/${sessionId}/summary`,
+    `${REPORTS_BASE_URL}/sessions/${sessionId}/summary`,
     { method: "GET" }
   );
 };
@@ -87,7 +88,44 @@ export const getSessionPlayersReport = async (
 
   // Directly return the promise from fetchWithAuth.
   return fetchWithAuth<Page<PlayerReportItemDto>>(
-    `${REPORTS_API_URL}/sessions/${sessionId}/players?${queryParams.toString()}`,
+    `${REPORTS_BASE_URL}/sessions/${sessionId}/players?${queryParams.toString()}`,
     { method: "GET" }
   );
+};
+
+// --- START: New function for Question Reports ---
+
+/**
+ * Fetches the detailed questions report for a specific quiz session.
+ * Corresponds to API: GET /api/reports/sessions/{sessionId}/questions
+ * @param sessionId - The ID of the quiz session.
+ * @param params - Pageable parameters (page, size, sort).
+ * @returns A promise that resolves to a paginated list of question report items.
+ */
+export const getSessionQuestionsReport = async (
+  sessionId: string,
+  params?: PageableParams // Optional params
+): Promise<Page<QuestionReportItemDto>> => {
+  const queryParams = new URLSearchParams();
+  if (params?.page !== undefined) {
+    queryParams.append("page", String(params.page));
+  }
+  if (params?.size !== undefined) {
+    queryParams.append("size", String(params.size));
+  }
+  // Default sort by slideIndex if not provided, or handle multiple sort params
+  if (params?.sort && params.sort.length > 0) {
+    params.sort.forEach((sortOption) => queryParams.append("sort", sortOption));
+  } else {
+    queryParams.append("sort", "slideIndex,asc"); // Default sort
+  }
+
+  const queryString = queryParams.toString();
+  const url = `${REPORTS_BASE_URL}/sessions/${sessionId}/questions${
+    queryString ? `?${queryString}` : ""
+  }`;
+
+  return fetchWithAuth<Page<QuestionReportItemDto>>(url, {
+    method: "GET",
+  });
 };

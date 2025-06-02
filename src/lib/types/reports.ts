@@ -1,5 +1,8 @@
-// File: @/src/lib/types/reports.ts
+// Existing content of src/lib/types/reports.ts
+// Path: @/src/lib/types/reports.ts
 // Purpose: Defines TypeScript types for report-related data structures.
+
+import type { ChoiceDTO, VideoDetailDTO } from "@/src/lib/types/api"; // Import necessary types
 
 export interface QuizInfoFromSummary {
   quizId: string;
@@ -45,4 +48,32 @@ export interface PlayerReportItemDto {
   clientId: string; // WebSocket client ID
   answersCount: number; // Total number of questions the player answered
   correctAnswersCount: number;
+}
+
+/**
+ * Represents the distribution of answers for a specific choice in a question report.
+ */
+export interface AnswerDistributionDto {
+  answerText: string;
+  choiceIndex: number;
+  status: "CORRECT" | "INCORRECT" | "NO_ANSWER" | string; // Allow for other statuses if API provides
+  count: number;
+}
+
+/**
+ * Represents a single question's report details from a session.
+ * This will utilize ChoiceDTO and VideoDetailDTO from '@/src/lib/types/api'.
+ */
+export interface QuestionReportItemDto {
+  slideIndex: number;
+  title: string;
+  type: string; // e.g., 'content', 'jumble', 'quiz', 'open_ended', 'survey'
+  choices: ChoiceDTO[]; // Reusing ChoiceDTO from api.ts
+  imageUrl?: string | null;
+  video?: VideoDetailDTO | null; // Reusing VideoDetailDTO from api.ts
+  totalAnswers: number;
+  totalAnsweredControllers: number;
+  averageAccuracy?: number | null; // e.g., for quiz, jumble
+  averageTime?: number | null; // e.g., for quiz, jumble
+  answersDistribution: AnswerDistributionDto[];
 }

@@ -10,7 +10,7 @@ interface MiniDonutChartProps {
     emptyColor?: string;
 }
 
-const MiniDonutChart: React.FC<MiniDonutChartProps> = ({
+export const MiniDonutChart: React.FC<MiniDonutChartProps> = ({
     percentage,
     size = 24, // Default size from visual reference
     className,
