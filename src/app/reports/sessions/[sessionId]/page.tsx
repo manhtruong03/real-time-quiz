@@ -4,19 +4,23 @@
 
 import { useParams } from 'next/navigation';
 import { useState } from 'react';
-import { AppHeader } from '@/src/components/layout/AppHeader';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/src/components/ui/tabs';
-import { Container } from '@/src/components/ui/container';
-import { Skeleton } from '@/src/components/ui/skeleton';
-import { Button } from '@/src/components/ui/button';
-import { Alert, AlertDescription, AlertTitle } from '@/src/components/ui/alert';
+import { AppHeader } from '@/src/components/layout/AppHeader'; //
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/src/components/ui/tabs'; //
+import { Container } from '@/src/components/ui/container'; //
+import { Skeleton } from '@/src/components/ui/skeleton'; //
+import { Button } from '@/src/components/ui/button'; //
+import { Alert, AlertDescription, AlertTitle } from '@/src/components/ui/alert'; //
 import { FileWarning, Info, Users, HelpCircle } from 'lucide-react'; // Added Users, HelpCircle for tab icons option
 
-import { useSessionSummaryData } from './hooks/useSessionSummaryData';
-import { AccuracyChartCard } from './components/overview/AccuracyChartCard';
-import { QuizMetaInfoCard } from './components/overview/QuizMetaInfoCard';
+import { useSessionSummaryData } from './hooks/useSessionSummaryData'; ///hooks/useSessionSummaryData.ts]
+import { AccuracyChartCard } from './components/overview/AccuracyChartCard'; ///components/overview/AccuracyChartCard.tsx]
+import { QuizMetaInfoCard } from './components/overview/QuizMetaInfoCard'; ///components/overview/QuizMetaInfoCard.tsx]
 
-const PlayersTabPlaceholder = () => <div className="p-6 text-muted-foreground">Players tab content will be implemented in Phase 2.</div>;
+// Import PlayersTabContent
+import PlayersTabContent from '../../components/players/PlayersTabContent';
+
+// Remove PlayersTabPlaceholder as it's being replaced
+// const PlayersTabPlaceholder = () => <div className="p-6 text-muted-foreground">Players tab content will be implemented in Phase 2.</div>;
 const QuestionsTabPlaceholder = () => <div className="p-6 text-muted-foreground">Questions tab content will be implemented in Phase 3.</div>;
 
 type ReportPageParams = {
@@ -113,7 +117,10 @@ export default function ReportSessionPage() {
 
 
     if (!sessionId && !isLoadingSummary && !summaryError) {
-        // ... (content remains the same)
+        // Fallback for missing session ID, though usually covered by router or parent logic
+        // For now, this path might lead to useSessionSummaryData(undefined) which should be handled in the hook
+        // Or, more robustly, redirect or show a page-level error if sessionId is critical and missing.
+        // The current hook useSessionSummaryData(sessionId) will likely handle sessionId being undefined by not fetching.
     }
 
 
@@ -165,7 +172,13 @@ export default function ReportSessionPage() {
                             <OverviewTabContent />
                         </TabsContent>
                         <TabsContent value="players" className="outline-none ring-0 focus-visible:ring-0 focus-visible:ring-offset-0">
-                            <PlayersTabPlaceholder />
+                            {/* Replace PlayersTabPlaceholder with PlayersTabContent */}
+                            {sessionId ? (
+                                <PlayersTabContent sessionId={sessionId} />
+                            ) : (
+                                // Fallback if sessionId is somehow not available at this point
+                                <div className="p-6 text-muted-foreground">Session ID is missing. Cannot load players.</div>
+                            )}
                         </TabsContent>
                         <TabsContent value="questions" className="outline-none ring-0 focus-visible:ring-0 focus-visible:ring-offset-0">
                             <QuestionsTabPlaceholder />

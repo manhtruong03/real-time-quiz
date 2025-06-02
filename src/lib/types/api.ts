@@ -34,6 +34,16 @@ export interface Page<T> {
   empty: boolean;
 }
 
+/**
+ * Parameters for paginated API requests.
+ * Based on components.schemas.Pageable from api-docs.json
+ */
+export interface PageableParams {
+  page?: number; // 0-indexed page number
+  size?: number; // Number of items per page
+  sort?: string[]; // Array of sort strings, e.g., ["property,asc", "anotherProperty,desc"]
+}
+
 // --- Image/Video Details ---
 // Based on components.schemas.ImageDetailDTO
 export interface ImageDetailDTO {

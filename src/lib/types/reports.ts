@@ -26,3 +26,23 @@ export interface SessionSummaryDto {
   averageScore?: number; // Not directly used in Overview card yet (API doesn't have this directly, maybe needs calculation from player scores later)
   // sessionId is implicitly known by the page, but can be added if needed globally
 }
+
+/**
+ * Report details for a single player in a game session.
+ * Based on components.schemas.PlayerReportItemDto from api-docs.json
+ */
+export interface PlayerReportItemDto {
+  nickname: string;
+  rank: number;
+  unansweredCount: number;
+  averageAccuracy: number; // Represented as a fraction (e.g., 0.75 for 75%)
+  averagePoints: number;
+  totalPoints: number;
+  totalTime: number; // Total reaction time in milliseconds
+  averageTime: number; // Average reaction time per answered question in milliseconds
+  streakCount: number;
+  playerId: string; // Internal Player UUID
+  clientId: string; // WebSocket client ID
+  answersCount: number; // Total number of questions the player answered
+  correctAnswersCount: number;
+}
