@@ -70,7 +70,7 @@ export const SessionReportCard: React.FC<SessionReportCardProps> = ({ report }) 
                 )}
             </div>
 
-            <Link href={`/reports/sessions/${report.sessionId}/summary`} passHref>
+            <Link href={`/reports/sessions/${report.sessionId}`} passHref>
                 <Button variant="outline" size="sm" className="w-full mt-auto">
                     <FileText className="mr-2 h-4 w-4" /> Xem chi tiết
                 </Button>

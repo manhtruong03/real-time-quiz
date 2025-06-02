@@ -6,6 +6,7 @@ import type {
   SortObject,
 } from "@/src/lib/types/api"; // Changed Pageable to PageableObject
 import { fetchWithAuth, API_BASE_URL, FetchOptions } from "./client";
+import type { SessionSummaryDto } from "@/src/lib/types/reports";
 
 /**
  * Fetches the current authenticated user's game session history.
@@ -76,4 +77,28 @@ export async function fetchUserSessionHistoryWithPageableObject(
     includeAuthHeader: true,
   };
   return fetchWithAuth<Page<UserSessionHistoryItemDto>>(endpoint, options);
+}
+
+/**
+ * Fetches the summary data for a specific quiz session.
+ * @param sessionId - The ID of the session to fetch the summary for.
+ * @returns A promise that resolves to the SessionSummaryDto.
+ * @throws If sessionId is not provided or if the API request fails.
+ */
+export async function getSessionSummary(
+  sessionId: string
+): Promise<SessionSummaryDto> {
+  if (!sessionId) {
+    // This check can also be valuable if the hook calls it with a potentially null/undefined ID initially.
+    console.error("[getSessionSummary] Session ID is required.");
+    throw new Error("Session ID is required to fetch session summary.");
+  }
+  // Construct the full endpoint URL
+  const endpoint = `${API_BASE_URL}/api/reports/sessions/${sessionId}/summary`;
+  console.log(`[getSessionSummary] Fetching from endpoint: ${endpoint}`);
+
+  return fetchWithAuth<SessionSummaryDto>(endpoint, {
+    method: "GET", // Explicitly stating method, though GET is default
+    includeAuthHeader: true, // Assuming summary reports require auth
+  });
 }
