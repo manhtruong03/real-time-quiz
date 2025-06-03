@@ -148,3 +148,15 @@ export interface UserSessionHistoryItemDto {
   sessionHostUsername: string; // Username of the host.
   quizId: string; // UUID of the quiz used.
 }
+
+export interface UserAccountAdminViewDTO {
+  userId: string; // Unique identifier of the user account.
+  username: string; // Username of the user.
+  email: string; // Email address of the user.
+  role: string; // Role assigned to the user (e.g., 'ADMIN', 'TEACHER', 'USER').
+  storageUsed: number; // Storage space used by the user in bytes.
+  storageLimit: number; // Maximum storage space allocated to the user in bytes.
+  createdAt: string; // Timestamp of when the user account was created (ISO 8601 string).
+  updatedAt: string; // Timestamp of the last update to the user account (ISO 8601 string).
+  deletedAt: string | null; // Timestamp of when the user account was soft-deleted. Null if not deleted (ISO 8601 string).
+}

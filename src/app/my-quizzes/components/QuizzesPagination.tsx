@@ -18,7 +18,7 @@ interface QuizzesPaginationProps {
     onPageChange: (page: number) => void; // Expects 0-indexed page
 }
 
-const QuizzesPagination: React.FC<QuizzesPaginationProps> = ({
+export const QuizzesPagination: React.FC<QuizzesPaginationProps> = ({
     currentPage,
     totalPages,
     onPageChange,
