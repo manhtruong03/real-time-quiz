@@ -5,16 +5,12 @@ import QuestionReportCard from './QuestionReportCard';
 
 interface QuestionListProps {
     questions: QuestionReportItemDto[];
-    currentPageZeroIndexed: number;
-    pageSize: number;
-    totalPlayersInSession: number; // <-- Add this prop
+    totalPlayersInSession: number;
 }
 
 const QuestionList: React.FC<QuestionListProps> = ({
     questions,
-    currentPageZeroIndexed,
-    pageSize,
-    totalPlayersInSession, // <-- Use this prop
+    totalPlayersInSession,
 }) => {
     if (!questions || questions.length === 0) {
         return null;
@@ -26,7 +22,6 @@ const QuestionList: React.FC<QuestionListProps> = ({
                 <QuestionReportCard
                     key={question.slideIndex + '-' + question.title}
                     questionReport={question}
-                    questionNumber={currentPageZeroIndexed * pageSize + indexInPage + 1}
                     totalPlayersInSession={totalPlayersInSession} // Pass it down
                 />
             ))}

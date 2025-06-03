@@ -243,6 +243,11 @@
   }
 }
 
+.max-w-xs_report_custom_1 {
+  max-width: 24rem;
+  /* Adjust as needed, e.g., 384px */
+}
+
 @layer base {
   * {
     @apply border-border;

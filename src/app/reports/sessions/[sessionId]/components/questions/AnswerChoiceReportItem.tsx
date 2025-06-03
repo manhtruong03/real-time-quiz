@@ -8,6 +8,7 @@ import {
     Square as IconSquare,
     Circle as IconCircle,
     MinusCircleIcon,
+    VoteIcon as IconVoter,
 } from 'lucide-react';
 import { Progress } from '@/src/components/ui/progress';
 import { cn } from '@/src/lib/utils';
@@ -16,6 +17,7 @@ import { ShapeIcon } from '@/src/components/ui/ShapeIcon'; // Import the new Sha
 
 interface AnswerChoiceReportItemProps {
     answerDistribution: AnswerDistributionDto;
+    questionType: string;
     totalPlayersInSession: number; // Changed from totalAnsweredForQuestion
     choiceIndexInQuestion: number;
     isCorrectChoiceInDefinition?: boolean;
@@ -37,6 +39,7 @@ const choiceIconsAndStyles = [
 
 const AnswerChoiceReportItem: React.FC<AnswerChoiceReportItemProps> = ({
     answerDistribution,
+    questionType,
     totalPlayersInSession, // Use total players for "No Answer" percentage
     choiceIndexInQuestion,
     isCorrectChoiceInDefinition,
@@ -78,7 +81,17 @@ const AnswerChoiceReportItem: React.FC<AnswerChoiceReportItemProps> = ({
     const correctnessIconSizeClass = "w-7 h-7";
     const correctnessIconStrokeWidth = 2.5;
 
-    if (isCorrectChoiceInDefinition === true) {
+
+    if (questionType === 'poll' || questionType === 'survey') {
+        itemTextColor = '';
+        progressIndicatorColor = 'bg-sky-500';
+        StatCorrectnessIconComponent = (
+            <IconVoter
+                className={cn(correctnessIconSizeClass, "text-sky-500 dark:text-sky-400")}
+                strokeWidth={correctnessIconStrokeWidth}
+            />
+        );
+    } else if (isCorrectChoiceInDefinition === true) {
         itemTextColor = 'text-constructive dark:text-constructive-dark font-semibold';
         progressIndicatorColor = 'bg-constructive dark:bg-constructive';
         StatCorrectnessIconComponent = (

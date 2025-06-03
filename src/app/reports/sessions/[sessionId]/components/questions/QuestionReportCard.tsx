@@ -22,13 +22,11 @@ const getQuestionTypeName = (type: string): string => {
 
 interface QuestionReportCardProps {
     questionReport: QuestionReportItemDto;
-    questionNumber: number;
     totalPlayersInSession: number;
 }
 
 const QuestionReportCard: React.FC<QuestionReportCardProps> = ({
     questionReport,
-    questionNumber,
     totalPlayersInSession, // Use this for AnswerChoiceReportItem
 }) => {
     const overallAccuracy =
@@ -71,7 +69,7 @@ const QuestionReportCard: React.FC<QuestionReportCardProps> = ({
         <Card className="overflow-hidden shadow-lg bg-card dark:bg-card">
             {/* Row 1: Question Header */}
             <div className="p-4 md:p-5 border-b border-border grid grid-cols-[auto_1fr_auto_auto] gap-x-3 md:gap-x-4 items-center">
-                <div className="text-sm md:text-base font-semibold text-primary dark:text-primary">{questionNumber}</div>
+                <div className="text-sm md:text-base font-semibold text-primary dark:text-primary">{questionReport.slideIndex + 1}</div>
                 <div className="min-w-0"><h3 className="text-base md:text-lg font-bold text-card-foreground leading-tight break-words" title={questionReport.title}>{questionReport.title}</h3></div>
                 <div className="flex-shrink-0"><Badge variant={isContentSlide ? "secondary" : "outline"} className="mr-4 text-xs py-0.5 px-1.5 whitespace-nowrap">{questionTypeName}</Badge></div>
                 <div className="flex-shrink-0">
@@ -105,7 +103,7 @@ const QuestionReportCard: React.FC<QuestionReportCardProps> = ({
                                     fill
                                     className="object-contain"
                                     sizes="(max-width: 768px) 100vw, (max-width: 1200px) 40vw, 33vw"
-                                    priority={questionNumber <= 2}
+                                    priority={questionReport.slideIndex + 1 <= 2}
                                     onError={(e) => { (e.target as HTMLImageElement).src = 'https://placehold.co/400x300/e2e8f0/94a3b8?text=Image+Error'; (e.target as HTMLImageElement).srcset = ''; }}
                                 />
                             ) : (
@@ -140,6 +138,7 @@ const QuestionReportCard: React.FC<QuestionReportCardProps> = ({
                                                 <AnswerChoiceReportItem
                                                     key={isNoAnswer ? 'no-answer-entry' : `${distItem.choiceIndex}-${distItem.answerText.slice(0, 10)}`}
                                                     answerDistribution={distItem}
+                                                    questionType={questionReport.type.toLowerCase()}
                                                     totalPlayersInSession={totalPlayersInSession}
                                                     choiceIndexInQuestion={distItem.choiceIndex}
                                                     isCorrectChoiceInDefinition={originalChoice?.correct}
