@@ -1,0 +1,16 @@
+[
+    {
+        "ext": {
+            "timetrack": 1745286636262
+        },
+        "data": {
+            "gameid": "6681947",
+            "host": "play.kahoot.it",
+            "id": 8,
+            "type": "message",
+            "content": "{\"rank\":1,\"totalScore\":0,\"pointsData\":{\"totalPointsWithBonuses\":0,\"questionPoints\":0,\"answerStreakPoints\":{\"streakLevel\":0,\"previousStreakLevel\":0},\"lastGameBlockIndex\":1},\"hasAnswer\":true,\"choice\":[1,0,3,2],\"correctChoices\":[1,3,0,2],\"points\":0,\"isCorrect\":false,\"text\":\"Food grown in space eaten|NASA announces International Space Station will open to  tourists|Soft landing on the far side of the moon|All female space walk\",\"type\":\"jumble\"}",
+            "cid": "576520963"
+        },
+        "channel": "/service/player"
+    }
+]

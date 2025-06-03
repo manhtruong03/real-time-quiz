@@ -1,0 +1,25 @@
+{
+    "uuid": "000054c5-8aa0-4b20-9d67-36eeb42ebca1",
+    "creator": "39567e72-f833-4bcc-80b0-0c2b02d6c921",
+    "creator_username": "Trivia",
+    "visibility": 1,
+    "title": "Ultimate trivia of 2019!",
+    "description": "How much did you pay attention in 2019? Try our ultimate trivia quiz of 2019!",
+    "quizType": "quiz",
+    "cover": "https://media.kahoot.it/0689fc9f-c36d-4fba-b0e4-856b332b6788",
+    "lobby_video": {
+        "youtube": {
+            "id": "",
+            "startTime": 0.0,
+            "endTime": 0.0,
+            "service": "youtube",
+            "fullUrl": ""
+        }
+    },
+    "questions": [],
+    "isValid": true,
+    "playAsGuest": false,
+    "type": "quiz",
+    "created": 1572350841857,
+    "modified": 1741775174112
+}

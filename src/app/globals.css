@@ -1,0 +1,373 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /*
+     * Base Theme (Light Theme) CSS Custom Properties.
+     *
+     * Semantic color variables (e.g., --background, --primary) are defined
+     * with HSL components (Hue Saturation Lightness, space-separated).
+     * This format is required by Tailwind's `hsl(var(...))` utility function
+     * used in `tailwind.config.js`.
+     * Example: `hsl(var(--background))` in Tailwind becomes `hsl(0 0% 100%)`.
+     *
+     * Other variables (e.g. general theme variables, editor-specific variables not
+     * directly used with `hsl(var())` in Tailwind config) can be defined with any
+     * valid CSS color value (HEX, rgb(), full hsl() string, etc.).
+     */
+
+    /* Semantic HSL Component Variables for Tailwind's hsl(var()) */
+    --background: 0 0% 100%;
+    --foreground: 240 10% 3.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 3.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 3.9%;
+    --primary: 263 70% 50%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 240 4.8% 95.9%;
+    --secondary-foreground: 240 5.9% 10%;
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+    --accent: 191 97% 77%;
+    --accent-foreground: 240 5.9% 10%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
+    --ring: 263 70% 50%;
+    --radius: 0.5rem;
+
+    /*
+     * General Dark Theme Variables (Defaults/Fallbacks for :root if .dark is not applied but dark mode is desired).
+     * These are defined as direct HEX values.
+     * They are not directly consumed by Tailwind's `hsl(var())` for semantic colors,
+     * but could be used by `var()` in Tailwind config or custom CSS.
+     * Note: The editor-specific variables below are more consistently used.
+     */
+    --primary-bg: #1E1E24;
+    --secondary-bg: #2D2D34;
+    --content-bg: #25252B;
+    --text-primary: #EAEAEA;
+    --text-secondary: #B0B0B0;
+    --text-placeholder: #707075;
+    --accent-color: #8A3FFC;
+    --accent-hover: #7A2ECC;
+    --border-color: #404048;
+    --input-bg: #2D2D34;
+    --danger-color: #DA1E28;
+    --danger-hover: #b91c25;
+    --answer-option-bg: #17171A;
+    --correct-answer-highlight: #2ECC71;
+
+    /*
+     * Editor-specific variables & Answer Icons (Can be HEX, HSL string, RGB string etc.).
+     * These are typically used with `var(--variable-name)` in `tailwind.config.js` or custom CSS.
+     * Their values are directly applied by the browser.
+     */
+    --editor-primary-bg: #1E1E24;
+    --editor-secondary-bg: #2D2D34;
+    --editor-content-bg: #25252B;
+    --editor-text-primary: #EAEAEA;
+    --editor-text-secondary: #B0B0B0;
+    --editor-text-placeholder: #707075;
+    --editor-accent-color: #8A3FFC;
+    --editor-accent-hover: #7A2ECC;
+    --editor-border-color: #404048;
+    --editor-input-bg: #2D2D34;
+    --editor-danger-color: #DA1E28;
+    --editor-danger-hover: #b91c25;
+    --editor-answer-option-bg: #17171A;
+    --editor-correct-answer-highlight: #2ECC71;
+
+    --answer-icon-triangle: #E74C3C;
+    --answer-icon-diamond: #3498DB;
+    --answer-icon-circle: #F1C40F;
+    --answer-icon-square: #2ECC71;
+
+    --constructive: 142.1 76.2% 36.3%;
+    --constructive-foreground: 0 0% 98%;
+  }
+
+  .dark {
+    /*
+     * REFINED Dark Theme CSS Custom Properties.
+     * Adjustments made to be less "intensely dark" and improve element distinction.
+     * HEX equivalents in comments are approximate for HSL components.
+     * Old values are commented out for comparison.
+     */
+
+    /* Semantic Colors for Dark Mode */
+    /* --background: 240 3% 12%; */
+    /* Old #1F1F21 */
+    --background: 240 4% 16%;
+    /* Approx #25272B - Lightened base background */
+    /* --foreground: 0 0% 92%; */
+    /* Old #EAEAEA */
+    --foreground: 0 0% 90%;
+    /* #E6E6E6 - Slightly softened foreground */
+
+    /* --card: 240 3% 18%; */
+    /* Old #2D2D30 */
+    --card: 240 4% 22%;
+    /* Approx #33363D - Lightened cards */
+    --card-foreground: 0 0% 90%;
+    /* #E6E6E6 - Matches new foreground */
+
+    /* --popover: 240 3% 18%; */
+    /* Old #2D2D30 */
+    --popover: 240 4% 22%;
+    /* Approx #33363D - Lightened popovers */
+    --popover-foreground: 0 0% 90%;
+    /* #E6E6E6 - Matches new foreground */
+
+    /* --primary: 262 93% 72%; */
+    /* Old #A076F9 */
+    --primary: 262 85% 70%;
+    /* Approx #9D72EE - Slightly desaturated and adjusted for dark mode */
+    --primary-foreground: 0 0% 100%;
+    /* #FFFFFF - Kept for strong contrast on primary elements */
+
+    /* --secondary: 240 2% 29%; */
+    /* Old #4A4A4D */
+    --secondary: 240 3% 33%;
+    /* Approx #505259 - Lightened for more differentiation */
+    /* --secondary-foreground: 0 0% 92%; */
+    /* Old #EAEAEA */
+    --secondary-foreground: 0 0% 85%;
+    /* #D9D9D9 - Softened secondary text */
+
+    /* --muted: 240 2% 24%; */
+    /* Old #3C3C3E */
+    --muted: 240 3% 28%;
+    /* Approx #43454A - Adjusted to be distinct */
+    /* --muted-foreground: 0 0% 69%; */
+    /* Old #B0B0B0 */
+    --muted-foreground: 0 0% 65%;
+    /* #A6A6A6 - Adjusted muted text */
+
+    /* --accent: 262 93% 72%; */
+    /* Old (same as primary) */
+    --accent: 262 85% 70%;
+    /* Follows new primary */
+    --accent-foreground: 0 0% 100%;
+    /* Kept */
+
+    /* --destructive: 0 70% 55%; */
+    --destructive: 0 75% 60%;
+    /* Approx #DB4D4D - Increased lightness & saturation for better visibility */
+    --destructive-foreground: 0 0% 98%;
+    /* Kept */
+
+    /* --border: 240 6% 27%; */
+    /* Old approx #404048 */
+    --border: 240 5% 30%;
+    /* Approx #4A4D52 - Adjusted for new surface colors */
+
+    /* --input: 240 7% 19%; */
+    /* Old approx #2D2D34 */
+    --input: 240 5% 20%;
+    /* Approx #2E3035 - Adjusted input background */
+
+    /* --ring: 262 85% 75%; */
+    --ring: 262 80% 72%;
+    /* Approx #A57DF1 - Adjusted based on new primary */
+
+    /*
+     * REFINED Editor-specific variables for Dark Theme.
+     * These aim for better visual hierarchy and reduced overall darkness within editor components.
+     */
+    /* --editor-primary-bg: #1E1E24; */
+    --editor-primary-bg: #2D2E33;
+    /* Main workspace area for editor, e.g., overall container */
+
+    /* --editor-secondary-bg: #2D2D34; */
+    --editor-secondary-bg: #383A42;
+    /* Toolbars, less prominent panels within the editor */
+
+    /* --editor-content-bg: #25252B; */
+    --editor-content-bg: #25272B;
+    /* Actual text editing area or focused content, can be darker for focus */
+
+    --editor-text-primary: #EAEAEA;
+    /* Kept - Primary text in editor */
+    --editor-text-secondary: #B0B0B0;
+    /* Kept - Secondary text in editor */
+
+    /* --editor-text-placeholder: #707075; */
+    --editor-text-placeholder: #626469;
+    /* Subtler placeholder text */
+
+    /* --editor-accent-color: #8A3FFC; */
+    --editor-accent-color: #9D72EE;
+    /* Aligned with new primary/accent color */
+
+    /* --editor-accent-hover: #7A2ECC; */
+    --editor-accent-hover: #8B64D5;
+    /* Hover for new accent color */
+
+    /* --editor-border-color: #404048; */
+    --editor-border-color: #4A4D52;
+    /* Aligned with new semantic border color */
+
+    /* --editor-input-bg: #2D2D34; */
+    --editor-input-bg: #2E3035;
+    /* Aligned with new semantic input background */
+
+    /* --editor-danger-color: #DA1E28; */
+    --editor-danger-color: #DB4D4D;
+    /* Aligned with new semantic destructive color */
+
+    /* --editor-danger-hover: #b91c25; */
+    --editor-danger-hover: #C33A3A;
+    /* Hover for new danger color */
+
+    /* --editor-answer-option-bg: #17171A; */
+    /* Was very dark */
+    --editor-answer-option-bg: #2E3035;
+    /* Lighter answer option background, matches input bg */
+
+    --editor-correct-answer-highlight: #2ECC71;
+    /* Kept - Standard green for correct answers */
+
+    /* Answer Icons can remain consistent, they are not typically affected by lightness/darkness of theme as much */
+    --answer-icon-triangle: #E74C3C;
+    --answer-icon-diamond: #3498DB;
+    --answer-icon-circle: #F1C40F;
+    --answer-icon-square: #2ECC71;
+
+    --constructive: 142.1 70% 45%;
+    --constructive-foreground: 0 0% 100%;
+  }
+}
+
+.max-w-xs_report_custom_1 {
+  max-width: 24rem;
+  /* Adjust as needed, e.g., 384px */
+}
+
+@layer base {
+  * {
+    @apply border-border;
+    /* Uses `hsl(var(--border))` due to Tailwind config */
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    /* Uses `hsl(var(--background))` and `hsl(var(--foreground))` */
+  }
+}
+
+/* Default quiz background (if no custom background is set) */
+.default-quiz-background {
+  background: linear-gradient(to left, rgb(118, 107, 135), rgb(43, 19, 49));
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  height: 100%;
+}
+
+@keyframes animStar {
+  from {
+    transform: translateY(0px);
+  }
+
+  to {
+    transform: translateY(-2000px);
+    /* Adjust based on expected screen height */
+  }
+}
+
+/* --- ADDED STYLES --- */
+.quiz-card {
+  @apply relative overflow-hidden;
+}
+
+.quiz-card::before {
+  content: "";
+  @apply absolute -right-4 -bottom-4 w-24 h-24 rounded-full bg-accent/30 blur-xl;
+  /* bg-accent uses hsl(var(--accent)) */
+}
+
+.quiz-card::after {
+  content: "";
+  @apply absolute -left-4 -top-4 w-16 h-16 rounded-full bg-primary/20 blur-xl;
+  /* bg-primary uses hsl(var(--primary)) */
+}
+
+.animate-bounce-slow {
+  animation: bounce 3s infinite;
+}
+
+@keyframes bounce {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-15px);
+  }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+@keyframes float {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-20px);
+  }
+}
+
+/* Custom scrollbar for webkit browsers */
+.custom-scrollbar-dark::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.custom-scrollbar-dark::-webkit-scrollbar-track {
+  background: var(--editor-secondary-bg, #2D2D34);
+  /* Fallback color */
+  border-radius: 4px;
+}
+
+.custom-scrollbar-dark::-webkit-scrollbar-thumb {
+  background: var(--editor-border-color, #404048);
+  /* Fallback color */
+  border-radius: 4px;
+}
+
+.custom-scrollbar-dark::-webkit-scrollbar-thumb:hover {
+  background: var(--editor-text-placeholder, #707075);
+  /* Fallback color */
+}
+
+/* For Firefox - might need more specific styling if default is not good */
+.custom-scrollbar-dark {
+  scrollbar-width: thin;
+  scrollbar-color: var(--editor-border-color, #404048) var(--editor-secondary-bg, #2D2D34);
+}
+
+.stars-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 2px;
+  height: 2px;
+  background: transparent;
+  box-shadow:
+    /* Inset multiple shadows to create stars */
+    1457px 4267px #fff, 1341px 442px #fff, 717px 95px #fff, 844px 962px #fff, 481px 1802px #fff, 242px 735px #fff, 10px 648px #fff, 1913px 1194px #fff, 69px 145px #fff, 121px 1497px #fff, 1003px 1530px #fff, 1963px 1095px #fff, 344px 653px #fff, 187px 728px #fff, 1231px 1259px #fff, 403px 828px #fff, 408px 1658px #fff, 1px 690px #fff, 1278px 1353px #fff, 1214px 475px #fff, 1979px 356px #fff, 1800px 1047px #fff, 756px 1018px #fff, 212px 1385px #fff, 1534px 1867px #fff, 696px 1813px #fff, 1194px 1229px #fff, 568px 365px #fff, 943px 854px #fff, 175px 1883px #fff, 1971px 995px #fff, 784px 894px #fff, 543px 1314px #fff, 569px 1252px #fff, 398px 921px #fff, 1584px 398px #fff, 1984px 1586px #fff, 696px 220px #fff, 847px 1979px #fff, 1942px 689px #fff, 725px 1149px #fff, 526px 1721px #fff, 1594px 558px #fff, 1506px 966px #fff, 339px 169px #fff, 1446px 1902px #fff, 1173px 1340px #fff, 1717px 625px #fff, 929px 664px #fff, 1353px 955px #fff, 62px 1154px #fff, 678px 1736px #fff, 1313px 1023px #fff, 237px 645px #fff, 1240px 1934px #fff, 1853px 1970px #fff, 1235px 138px #fff, 428px 302px #fff, 76px 547px #fff, 279px 1220px #fff, 1579px 815px #fff, 1413px 176px #fff, 45px 1323px #fff, 1185px 671px #fff, 486px 1804px #fff, 1474px 1113px #fff, 768px 1841px #fff, 1850px 282px #fff, 1142px 835px #fff, 771px 1230px #fff, 840px 677px #fff, 1001px 357px #fff, 1407px 1142px #fff, 287px 960px #fff, 721px 753px #fff, 1529px 1223px #fff, 360px 1389px #fff, 1821px 1902px #fff, 1233px 237px #fff, 456px 153px #fff, 1833px 750px #fff, 1825px 81px #fff, 1631px 1109px #fff, 39px 552px #fff, 949px 967px #fff, 1587px 1px #fff, 553px 1444px #fff, 324px 82px #fff, 1179px 173px #fff, 1341px 1265px #fff, 227px 293px #fff, 867px 1634px #fff, 296px 1555px #fff, 238px 1635px #fff, 1802px 421px #fff, 1119px 1453px #fff, 1150px 691px #fff, 1540px 52px #fff, 938px 1157px #fff, 1536px 787px #fff, 538px 241px #fff, 263px 912px #fff, 671px 934px #fff, 1671px 1127px #fff, 1537px 446px #fff, 1481px 1406px #fff, 218px 462px #fff, 1110px 1779px #fff, 534px 1274px #fff, 30px 119px #fff, 137px 408px #fff, 400px 1091px #fff, 1878px 117px #fff, 431px 175px #fff, 825px 1234px #fff, 1116px 1302px #fff, 551px 1606px #fff, 1173px 1228px #fff, 132px 658px #fff, 1228px 296px #fff, 307px 1569px #fff, 1042px 444px #fff, 1320px 485px #fff, 495px 1265px #fff, 1524px 11px #fff, 689px 1128px #fff, 1057px 1879px #fff, 658px 354px #fff, 471px 733px #fff, 1505px 1238px #fff, 1370px 469px #fff, 1332px 962px #fff, 1900px 998px #fff, 1974px 888px #fff, 1194px 1414px #fff, 432px 1394px #fff, 1481px 922px #fff, 1095px 1602px #fff, 415px 920px #fff, 500px 1966px #fff, 1290px 182px #fff, 154px 1892px #fff, 1575px 824px #fff, 987px 455px #fff, 623px 1715px #fff, 433px 948px #fff, 1035px 71px #fff, 178px 1994px #fff, 476px 1109px #fff, 129px 1832px #fff, 1832px 807px #fff, 1301px 1073px #fff, 1796px 1270px #fff, 740px 872px #fff, 773px 1781px #fff, 1170px 1330px #fff, 297px 1704px #fff, 1314px 1218px #fff, 1046px 67px #fff, 1235px 968px #fff, 1506px 1361px #fff, 1034px 1649px #fff, 1035px 922px #fff, 36px 662px #fff, 1570px 1654px #fff, 567px 1753px #fff, 596px 695px #fff, 245px 944px #fff, 1309px 762px #fff, 1364px 1546px #fff, 1310px 252px #fff, 1800px 1399px #fff, 869px 1238px #fff, 349px 1221px #fff, 1809px 519px #fff, 1633px 985px #fff, 1447px 5px #fff, 564px 732px #fff, 901px 730px #fff, 1567px 149px #fff, 207px 188px #fff, 156px 1994px #fff, 823px 290px #fff, 342px 1598px #fff, 1280px 257px #fff, 1929px 179px #fff, 850px 928px #fff, 1145px 912px #fff, 1162px 1187px #fff, 1472px 1596px #fff, 1526px 1030px #fff, 293px 1088px #fff, 1626px 1461px #fff, 1240px 1847px #fff, 1227px 1819px #fff, 499px 1276px #fff, 624px 1724px #fff, 103px 1200px #fff, 456px 1607px #fff, 75px 830px #fff;
+
+  animation: animStar 100s linear infinite;
+}

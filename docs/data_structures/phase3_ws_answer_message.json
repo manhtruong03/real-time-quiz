@@ -1,0 +1,15 @@
+[
+    {
+        "ext": {
+            "timetrack": 1745286630637
+        },
+        "data": {
+            "gameid": "6681947",
+            "id": 6,
+            "type": "message",
+            "content": "{\"type\":\"jumble\",\"choice\":[0,1,3,2],\"questionIndex\":1}",
+            "cid": "576520963"
+        },
+        "channel": "/controller/6681947"
+    }
+]

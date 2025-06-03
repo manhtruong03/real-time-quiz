@@ -1,0 +1,15 @@
+[
+    {
+        "id": "19",
+        "channel": "/service/player",
+        "data": {
+            "gameid": "1480287",
+            "type": "message",
+            "host": "play.kahoot.it",
+            "id": 2,
+            "content": "{\"gameBlockIndex\":0,\"totalGameBlockCount\":20,\"layout\":\"CLASSIC\",\"title\":\"Find the flag of <b>Switzerland.</b>\",\"video\":{\"startTime\":0,\"endTime\":0,\"service\":\"youtube\",\"fullUrl\":\"\"},\"image\":\"https://media.kahoot.it/53154f05-eab7-4c56-8772-866b131ee2c4\",\"imageMetadata\":{\"id\":\"53154f05-eab7-4c56-8772-866b131ee2c4\",\"altText\":\"Thun cityspace with Alps mountain and lake in Switzerland\",\"contentType\":\"image/jpeg\",\"origin\":\"Getty Images\",\"externalRef\":\"945092130\",\"resources\":\"Travel and Still life photography/iStock/Getty Images\",\"width\":2121,\"height\":1414},\"media\":[],\"extensiveMode\":true,\"type\":\"quiz\",\"timeRemaining\":19998,\"timeAvailable\":20000,\"numberOfAnswersAllowed\":1,\"currentQuestionAnswerCount\":0,\"pointsMultiplier\":1,\"numberOfChoices\":4,\"choices\":[{\"image\":{\"id\":\"588f9aff-82f1-473d-ac0b-560511c71fe5\",\"altText\":\"swiss flag\",\"contentType\":\"image/jpeg\",\"origin\":\"Getty Images\",\"externalRef\":\"186294962\",\"resources\":\"flowgraph/iStock/Getty Images\",\"width\":4000,\"height\":2400}},{\"image\":{\"id\":\"72f30900-7645-4eaa-8b41-353f41992716\",\"altText\":\"austrian flag\",\"contentType\":\"image/jpeg\",\"origin\":\"Getty Images\",\"externalRef\":\"458891415\",\"resources\":\"flowgraph/iStock/Getty Images\",\"width\":4000,\"height\":2400}},{\"image\":{\"id\":\"b9f8a9fb-4002-437e-9aae-097e1a3a776e\",\"altText\":\"Graphic of the blue and yellow Swedish national flag\",\"contentType\":\"image/jpeg\",\"origin\":\"Getty Images\",\"externalRef\":\"459675087\",\"resources\":\"flowgraph/iStock/Getty Images\",\"width\":4000,\"height\":2400}},{\"image\":{\"id\":\"999be536-7566-445b-a695-ec203049382f\",\"altText\":\"Flat Flag of Albania\",\"contentType\":\"image/jpeg\",\"origin\":\"Getty Images\",\"externalRef\":\"607745642\",\"resources\":\"MicroStockHub/iStock/Getty Images\",\"width\":2048,\"height\":1463}}]}"
+        },
+        "clientId": "1cqat1q6g73qhx7hp91di773fpuif8r",
+        "ext": {}
+    }
+]

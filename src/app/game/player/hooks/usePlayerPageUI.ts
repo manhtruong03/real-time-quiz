@@ -1,0 +1,216 @@
+// src/app/game/player/hooks/usePlayerPageUI.ts
+import { useState, useCallback, useEffect } from "react";
+import { PlayerConnectionStatus } from "@/src/hooks/game/usePlayerWebSocket"; //
+
+export type PageUiState =
+  | "PIN_INPUT"
+  | "CONNECTING"
+  | "NICKNAME_INPUT"
+  | "PLAYING"
+  | "DISCONNECTED"
+  | "ERROR";
+
+interface UsePlayerPageUIProps {
+  // WebSocket related functions and states
+  wsConnectionStatus: PlayerConnectionStatus;
+  wsError: string | null;
+  connectFn: (pin: string) => void;
+  joinGameFn: (
+    nickname: string,
+    gamePin: string,
+    avatarId: string | null
+  ) => Promise<boolean>;
+
+  // Game manager related functions
+  setPlayerNicknameInGameManagerFn: (name: string) => void;
+  currentAvatarIdFromGameManager: string | null;
+  // Note: resetCoreGameStateFn and disconnectFn are called from page.tsx wrappers or directly
+}
+
+export interface UsePlayerPageUIReturn {
+  uiState: PageUiState;
+  gamePin: string;
+  nicknameInput: string;
+  pageError: string | null;
+  isProcessingPin: boolean;
+
+  setGamePinInput: React.Dispatch<React.SetStateAction<string>>;
+  setNicknameInputFieldValue: React.Dispatch<React.SetStateAction<string>>;
+
+  submitPin: () => void;
+  submitNickname: () => Promise<boolean>; // Returns success status
+  resetToPinInputState: (
+    disconnectFn: () => void,
+    resetCoreGameStateFn: () => void
+  ) => void; // Renamed and takes dependencies
+  processPlayerKick: (disconnectFn: () => void) => void; // For external kick trigger
+}
+
+export function usePlayerPageUI({
+  wsConnectionStatus,
+  wsError,
+  connectFn,
+  joinGameFn,
+  setPlayerNicknameInGameManagerFn,
+  currentAvatarIdFromGameManager,
+}: UsePlayerPageUIProps): UsePlayerPageUIReturn {
+  const [uiState, setUiState] = useState<PageUiState>("PIN_INPUT");
+  const [gamePin, setGamePinInput] = useState<string>("");
+  const [nicknameInput, setNicknameInputFieldValue] = useState<string>("");
+  const [pageError, setPageErrorInternal] = useState<string | null>(null); // Internal error state
+  const [joinAttempted, setJoinAttempted] = useState(false);
+
+  const isProcessingPin = wsConnectionStatus === "CONNECTING";
+
+  // Sync internal pageError with wsError from the WebSocket hook
+  useEffect(() => {
+    if (wsError) {
+      setPageErrorInternal(wsError);
+    }
+  }, [wsError]);
+
+  const resetToPinInputState = useCallback(
+    (disconnectFn: () => void, resetCoreGameStateFn: () => void) => {
+      disconnectFn();
+      resetCoreGameStateFn();
+      setPlayerNicknameInGameManagerFn("");
+      setGamePinInput("");
+      setNicknameInputFieldValue("");
+      setPageErrorInternal(null);
+      setJoinAttempted(false);
+      setUiState("PIN_INPUT");
+    },
+    [setPlayerNicknameInGameManagerFn]
+  );
+
+  // Effect for UI state transitions based on WebSocket status
+  useEffect(() => {
+    // Don't override specific errors set by submitPin or processPlayerKick immediately
+    // if (wsError) setPageErrorInternal(wsError); // Moved above to be more general
+
+    switch (wsConnectionStatus) {
+      case "CONNECTING":
+        if (uiState !== "CONNECTING") setUiState("CONNECTING");
+        break;
+      case "NICKNAME_INPUT": // PIN successfully connected to WebSocket server
+        if (
+          uiState !== "PLAYING" &&
+          !joinAttempted &&
+          uiState !== "NICKNAME_INPUT"
+        ) {
+          setPageErrorInternal(null); // Clear PIN errors
+          setUiState("NICKNAME_INPUT");
+        }
+        break;
+      // 'CONNECTED' status is more about STOMP layer. Actual game join confirmed by joinGameFn success.
+      case "DISCONNECTED":
+        if (
+          uiState !== "PIN_INPUT" &&
+          uiState !== "ERROR" &&
+          uiState !== "DISCONNECTED"
+        ) {
+          // Avoid setting pageError if already set by kick
+          if (!pageError)
+            setPageErrorInternal(
+              (prev) => prev || "You have been disconnected."
+            );
+          setUiState("DISCONNECTED");
+          setJoinAttempted(false);
+        }
+        break;
+      case "ERROR": // WebSocket layer error
+        if (uiState !== "ERROR") {
+          // wsError would have already setPageErrorInternal via the other useEffect
+          setUiState("ERROR");
+          setJoinAttempted(false);
+        }
+        break;
+      case "INITIAL":
+        // If reset externally or on load and not in PIN_INPUT, go to PIN_INPUT.
+        // This specific `resetToPinInputState` might be too aggressive here if called without its dependencies.
+        // This case needs careful handling, often managed by the caller (`PlayerPageInternal`).
+        // For now, we assume if wsConnection becomes INITIAL and uiState is not PIN_INPUT, a reset is implied.
+        // However, resetToPinInputState needs disconnectFn and resetCoreGameStateFn.
+        // This effect is tricky. Let PlayerPageInternal handle the INITIAL->PIN_INPUT via resetToPinInputState.
+        break;
+      default:
+        // const _exhaustiveCheck: never = wsConnectionStatus;
+        console.warn(
+          "Unhandled WebSocket connection status in usePlayerPageUI:",
+          wsConnectionStatus
+        );
+        break;
+    }
+  }, [wsConnectionStatus, uiState, joinAttempted, pageError]); // Removed resetToPinInputState from deps to avoid loop, wsError already handled
+
+  const submitPin = useCallback(() => {
+    const pinRegex = /^\d{6,7}$/;
+    if (!pinRegex.test(gamePin)) {
+      setPageErrorInternal("Please enter a valid 6 or 7 digit Game PIN.");
+      // setUiState('PIN_INPUT'); // No need, already there or will remain
+      return;
+    }
+    setPageErrorInternal(null);
+    setJoinAttempted(false);
+    connectFn(gamePin); // Call the connect function passed from props
+  }, [gamePin, connectFn]);
+
+  const submitNickname = useCallback(async () => {
+    if (!nicknameInput.trim()) {
+      setPageErrorInternal("Nickname cannot be empty.");
+      return false;
+    }
+    setPageErrorInternal(null);
+    setJoinAttempted(true);
+
+    const success = await joinGameFn(
+      nicknameInput.trim(),
+      gamePin,
+      currentAvatarIdFromGameManager
+    );
+
+    if (success) {
+      setPlayerNicknameInGameManagerFn(nicknameInput.trim());
+      setUiState("PLAYING"); // Explicitly set to PLAYING on successful join
+    } else {
+      setJoinAttempted(false); // Reset if join failed
+      // wsError from usePlayerWebSocket might set pageErrorInternal via useEffect,
+      // or joinGameFn might throw an error that should be caught and set here.
+      // For now, assume wsError handles specific join failure messages.
+      if (!wsError) {
+        // If joinGameFn fails but wsError is not set, provide a generic error.
+        setPageErrorInternal(
+          (prev) => prev || "Failed to join the game. Please try again."
+        );
+      }
+    }
+    return success;
+  }, [
+    nicknameInput,
+    gamePin,
+    currentAvatarIdFromGameManager,
+    joinGameFn,
+    setPlayerNicknameInGameManagerFn,
+    wsError, // to check if an error was already set by ws communications
+  ]);
+
+  const processPlayerKick = useCallback((disconnectFn: () => void) => {
+    setPageErrorInternal("You have been kicked from the game by the host.");
+    setUiState("ERROR");
+    disconnectFn(); // Call the disconnect function passed from props
+  }, []);
+
+  return {
+    uiState,
+    gamePin,
+    nicknameInput,
+    pageError, // Expose the internal error state
+    isProcessingPin,
+    setGamePinInput,
+    setNicknameInputFieldValue,
+    submitPin,
+    submitNickname,
+    resetToPinInputState,
+    processPlayerKick,
+  };
+}
