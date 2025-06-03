@@ -68,6 +68,7 @@ export interface QuestionReportItemDto {
   slideIndex: number;
   title: string;
   type: string; // e.g., 'content', 'jumble', 'quiz', 'open_ended', 'survey'
+  description?: string;
   choices: ChoiceDTO[]; // Reusing ChoiceDTO from api.ts
   imageUrl?: string | null;
   video?: VideoDetailDTO | null; // Reusing VideoDetailDTO from api.ts

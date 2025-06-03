@@ -1,13 +1,15 @@
+// src/app/reports/sessions/[sessionId]/components/questions/QuestionsTabContent.tsx
 'use client';
 
 import React from 'react';
 import { useParams } from 'next/navigation';
 import useSessionQuestionsData from '@/src/app/reports/hooks/useSessionQuestionsData';
+import { useSessionSummaryData } from '../../hooks/useSessionSummaryData'; // Import summary hook
 import { ReportsPaginationComponent } from '@/src/app/reports/components/ReportsPagination';
 import { ReportsErrorState } from '@/src/app/reports/components/ReportsErrorState';
 import { ReportsEmptyState } from '@/src/app/reports/components/ReportsEmptyState';
 import QuestionsLoadingSkeleton from './QuestionsLoadingSkeleton';
-import QuestionList from './QuestionList'; // Ensure this path is correct relative to QuestionsTabContent.tsx
+import QuestionList from './QuestionList';
 
 const PAGE_SIZE = 5;
 
@@ -16,9 +18,15 @@ const QuestionsTabContent: React.FC = () => {
     const sessionId = typeof params.sessionId === 'string' ? params.sessionId : null;
 
     const {
+        summaryData, // Get summary data
+        isLoading: isLoadingSummary,
+        error: summaryError,
+    } = useSessionSummaryData(sessionId);
+
+    const {
         questionsData,
-        isLoading,
-        error,
+        isLoading: isLoadingQuestions,
+        error: questionsError,
         currentPage,
         totalPages,
         goToPage,
@@ -29,23 +37,26 @@ const QuestionsTabContent: React.FC = () => {
         goToPage(pageOneIndexed - 1);
     };
 
-    if (isLoading && !questionsData) {
+    const totalPlayersInSessionForCards = summaryData?.controllersCount ?? 0;
+
+
+    // Combined loading state
+    if ((isLoadingQuestions && !questionsData) || (isLoadingSummary && !summaryData && !questionsError)) {
         return <QuestionsLoadingSkeleton count={PAGE_SIZE} />;
     }
 
-    if (error) {
+    const displayError = questionsError || summaryError;
+    if (displayError) {
         return (
             <ReportsErrorState
-                error={error.message || 'Không thể tải dữ liệu câu hỏi.'}
-                onRetry={() => sessionId && loadQuestions(currentPage)}
+                error={displayError.message || 'Không thể tải dữ liệu.'}
+                onRetry={() => sessionId && loadQuestions(currentPage)} // Or a combined refetch
             />
         );
     }
 
     if (!questionsData || questionsData.content.length === 0) {
-        return (
-            <ReportsEmptyState />
-        );
+        return <ReportsEmptyState />;
     }
 
     return (
@@ -54,8 +65,8 @@ const QuestionsTabContent: React.FC = () => {
                 questions={questionsData.content}
                 currentPageZeroIndexed={questionsData.number}
                 pageSize={questionsData.size}
+                totalPlayersInSession={totalPlayersInSessionForCards} // Pass it down
             />
-
             {totalPages > 1 && (
                 <div className="mt-8 flex justify-center">
                     <ReportsPaginationComponent
@@ -68,5 +79,4 @@ const QuestionsTabContent: React.FC = () => {
         </div>
     );
 };
-
 export default QuestionsTabContent;
