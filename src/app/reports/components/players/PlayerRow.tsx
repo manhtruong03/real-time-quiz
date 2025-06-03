@@ -1,7 +1,7 @@
 // Path: @/src/app/reports/sessions/[sessionId]/components/players/PlayerRow.tsx
 import React from 'react';
 import { PlayerReportItemDto } from '@/src/lib/types/reports';
-import MiniDonutChart from '@/src/components/ui/mini-donut-chart'; // Corrected import path
+import { MiniDonutChart } from '@/src/components/ui/mini-donut-chart'; // Corrected import path
 import {
     TableRow,
     TableCell,
