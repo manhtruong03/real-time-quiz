@@ -1,3 +1,4 @@
+// src/app/reports/sessions/[sessionId]/components/questions/AnswerChoiceReportItem.tsx
 import React from 'react';
 import {
     CheckIcon,
@@ -6,97 +7,124 @@ import {
     Diamond as IconDiamond,
     Square as IconSquare,
     Circle as IconCircle,
-    MinusCircleIcon, // For the main icon of "No Answer"
+    MinusCircleIcon,
 } from 'lucide-react';
-import { Progress } from '@/src/components/ui/progress'; //
-import { cn } from '@/src/lib/utils'; //
-import type { AnswerDistributionDto } from '@/src/lib/types/reports'; //
+import { Progress } from '@/src/components/ui/progress';
+import { cn } from '@/src/lib/utils';
+import type { AnswerDistributionDto } from '@/src/lib/types/reports';
+import { ShapeIcon } from '@/src/components/ui/ShapeIcon'; // Import the new ShapeIcon
 
 interface AnswerChoiceReportItemProps {
     answerDistribution: AnswerDistributionDto;
-    totalAnsweredForQuestion: number;
+    totalPlayersInSession: number; // Changed from totalAnsweredForQuestion
     choiceIndexInQuestion: number;
     isCorrectChoiceInDefinition?: boolean;
     isNoAnswerEntry?: boolean;
 }
 
-const choiceIcons = [IconTriangle, IconDiamond, IconSquare, IconCircle];
+// Define the choice icon styles using ShapeIcon
+const choiceIconsAndStyles = [
+    // For Triangle: bg-yellow-500, icon (stroke) text-red-200, fill white
+    { Icon: IconTriangle, containerBg: 'bg-red-500', iconStroke: 'text-red-200', name: 'Triangle' },
+    // For Diamond: bg-blue-500, icon (stroke) text-blue-200, fill white
+    { Icon: IconDiamond, containerBg: 'bg-blue-500', iconStroke: 'text-blue-200', name: 'Diamond' },
+    // For Circle: bg-yellow-500 (as per example for triangle, but usually orange/yellow from AnswerButton), icon text-yellow-200, fill white
+    // Let's assume Circle should be yellow background, yellow-200 stroke based on AnswerButton analogy
+    { Icon: IconCircle, containerBg: 'bg-yellow-500', iconStroke: 'text-yellow-200', name: 'Circle' },
+    // For Square: bg-green-500, icon (stroke) text-green-200, fill white
+    { Icon: IconSquare, containerBg: 'bg-green-500', iconStroke: 'text-green-200', name: 'Square' },
+];
 
 const AnswerChoiceReportItem: React.FC<AnswerChoiceReportItemProps> = ({
     answerDistribution,
-    totalAnsweredForQuestion,
+    totalPlayersInSession, // Use total players for "No Answer" percentage
     choiceIndexInQuestion,
     isCorrectChoiceInDefinition,
     isNoAnswerEntry = false,
 }) => {
+    // Calculate percentage for the progress bar
+    // For "No answer", percentage is based on totalPlayersInSession
+    // For actual answers, percentage is based on totalPlayersInSession who answered (or all players if that's desired)
+    // Let's assume totalPlayersInSession is the base for all percentages for consistency in this view.
     const percentage =
-        !isNoAnswerEntry && totalAnsweredForQuestion > 0 && answerDistribution.count > 0
-            ? (answerDistribution.count / totalAnsweredForQuestion) * 100
+        totalPlayersInSession > 0 && answerDistribution.count > 0
+            ? (answerDistribution.count / totalPlayersInSession) * 100
             : 0;
 
-    const ChoiceListIconComponent = !isNoAnswerEntry ? choiceIcons[choiceIndexInQuestion % choiceIcons.length] : MinusCircleIcon;
-
-    let textColor = 'text-card-foreground/90 dark:text-card-foreground/80';
-    let progressBarColorClass = 'bg-slate-300 dark:bg-slate-600';
-    let StatCorrectnessIconComponent = <div className="w-5 h-5" />; // Default placeholder
+    let iconDetails;
+    let ListIconComponent;
 
     if (isNoAnswerEntry) {
-        textColor = 'text-muted-foreground italic';
-        // For "No Answer", StatCorrectnessIconComponent remains an empty div (no specific tick/X in this slot)
-    } else if (isCorrectChoiceInDefinition === true) {
-        textColor = 'text-constructive dark:text-constructive-dark font-semibold';
-        progressBarColorClass = 'bg-constructive dark:bg-constructive-dark';
-        StatCorrectnessIconComponent = <CheckIcon className="w-5 h-5 text-constructive dark:text-constructive-dark" />;
-    } else if (isCorrectChoiceInDefinition === false) { // Explicitly incorrect
-        if (answerDistribution.count > 0) { // And chosen by someone
-            progressBarColorClass = 'bg-destructive dark:bg-destructive-dark';
-            StatCorrectnessIconComponent = <XIcon className="w-5 h-5 text-destructive dark:text-destructive-dark" />;
-        } else { // Incorrect, but not chosen by anyone
-            // StatCorrectnessIconComponent remains a placeholder div (no X if not chosen, matches HTML)
-            // progressBarColorClass also remains default gray for unchosen incorrect options
-        }
+        ListIconComponent = <MinusCircleIcon className="w-8 h-8 text-muted-foreground" />;
+    } else {
+        iconDetails = choiceIconsAndStyles[choiceIndexInQuestion % choiceIconsAndStyles.length];
+        ListIconComponent = (
+            <ShapeIcon
+                IconComponent={iconDetails.Icon}
+                containerClassName={cn('w-7 h-77 rounded-sm', iconDetails.containerBg)} // Added rounded-sm for "slightly rounded corners"
+                iconProps={{
+                    className: cn('w-7 h-7', iconDetails.iconStroke), // Adjust size of icon itself
+                    fill: 'white', // Fill the inside of the shape with white
+                    strokeWidth: 1, // Adjust for desired border thickness
+                }}
+            />
+        );
     }
 
+    let itemTextColor = 'text-card-foreground/90 dark:text-card-foreground/80';
+    let progressIndicatorColor = 'bg-slate-300 dark:bg-slate-700'; // Default progress bar
+    let StatCorrectnessIconComponent = <div className="w-7 h-7" />; // Placeholder for alignment
+
+    const correctnessIconSizeClass = "w-7 h-7";
+    const correctnessIconStrokeWidth = 2.5;
+
+    if (isCorrectChoiceInDefinition === true) {
+        itemTextColor = 'text-constructive dark:text-constructive-dark font-semibold';
+        progressIndicatorColor = 'bg-constructive dark:bg-constructive';
+        StatCorrectnessIconComponent = (
+            <CheckIcon
+                className={cn(correctnessIconSizeClass, "text-constructive dark:text-constructive-dark")}
+                strokeWidth={correctnessIconStrokeWidth}
+            />
+        );
+    } else {
+        progressIndicatorColor = 'bg-destructive dark:bg-destructive';
+        StatCorrectnessIconComponent = (
+            <XIcon
+                className={cn(correctnessIconSizeClass, "text-destructive dark:text-destructive-dark")}
+                strokeWidth={correctnessIconStrokeWidth}
+            />
+        );
+    }
+
+
     return (
-        <div className="flex items-center space-x-2 py-2.5 border-b border-border/60 last:border-b-0 text-sm hover:bg-muted/50 dark:hover:bg-muted/30 -mx-2 px-2 rounded-md">
+        <div className="pl-4 flex items-center space-x-4 py-2.5 border-b border-border/60 last:border-b-0 text-sm hover:bg-muted/50 dark:hover:bg-muted/30 -mx-2 px-2 rounded-md">
             <div className="flex-shrink-0 w-5 h-5 flex items-center justify-center">
-                <ChoiceListIconComponent className={cn("w-full h-full", isNoAnswerEntry ? "text-muted-foreground" : "text-muted-foreground")} />
+                {ListIconComponent}
             </div>
 
             <div className="flex-grow min-w-0">
-                <p className={cn('truncate', textColor)} title={answerDistribution.answerText}>
+                <p className={cn('whitespace-normal break-words', itemTextColor)} title={answerDistribution.answerText}>
                     {answerDistribution.answerText}
                 </p>
             </div>
 
-            {!isNoAnswerEntry && (
-                <div className="flex items-center flex-shrink-0 space-x-2 md:space-x-3 ml-auto">
-                    <div className="w-5 flex items-center justify-center">
-                        {StatCorrectnessIconComponent}
-                    </div>
-                    <div className="w-20 md:w-24">
-                        <Progress
-                            value={percentage}
-                            className={cn(
-                                'h-2.5 rounded-full w-full',
-                                (answerDistribution.count > 0) ? progressBarColorClass : 'bg-slate-200 dark:bg-slate-700'
-                            )}
-                        />
-                    </div>
-                    <span className="w-7 text-sm font-medium text-muted-foreground text-right">
-                        {answerDistribution.count}
-                    </span>
+            <div className="flex items-center flex-shrink-0 space-x-2 md:space-x-3 ml-auto">
+                <div className={cn("flex items-center justify-center", correctnessIconSizeClass)}>
+                    {StatCorrectnessIconComponent}
                 </div>
-            )}
-            {isNoAnswerEntry && (
-                <div className="flex items-center flex-shrink-0 space-x-2 md:space-x-3 ml-auto">
-                    <div className="w-5"></div> {/* Placeholder for Tick/X alignment */}
-                    <div className="w-20 md:w-24"></div> {/* Placeholder for Progress alignment */}
-                    <span className="w-7 text-sm font-medium text-muted-foreground text-right">
-                        {answerDistribution.count}
-                    </span>
+                <div className="w-32 md:w-40">
+                    <Progress
+                        value={percentage}
+                        className={cn('h-2.5 rounded-full w-full')} // Base class for progress bar
+                        indicatorClassName={progressIndicatorColor} // Dynamic color for the indicator
+                    />
                 </div>
-            )}
+                <span className="w-2 text-sm font-medium text-right">
+                    {answerDistribution.count}
+                </span>
+            </div>
         </div>
     );
 };
