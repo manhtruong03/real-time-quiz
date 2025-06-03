@@ -14,7 +14,7 @@ import QuestionList from './QuestionList';
 import { Button } from '@/src/components/ui/button';
 import { Loader2 } from 'lucide-react'; // For loading spinner on the button
 
-const PAGE_SIZE_FOR_HOOK = 5; // Define the page size to be used by the hook
+const PAGE_SIZE_FOR_HOOK = 10; // Define the page size to be used by the hook
 
 const QuestionsTabContent: React.FC = () => {
     const params = useParams();

@@ -50,9 +50,6 @@ const QuestionReportCard: React.FC<QuestionReportCardProps> = ({
     // Logic for "No Answer" entry (ensure it uses totalPlayersInSession for calculation if needed)
     // This part assumes the logic for "No Answer" count has been addressed to use totalPlayersInSession if applicable.
     if (!isContentSlide && !hasNoAnswerEntryFromAPI) {
-        const answeredCountSum = questionReport.answersDistribution
-            .filter(ad => ad.status !== 'NO_ANSWER' && ad.choiceIndex !== -1)
-            .reduce((sum, ad) => sum + ad.count, 0);
         const noAnswerCount = Math.max(0, totalPlayersInSession - questionReport.totalAnsweredControllers);
 
         const noAnswerData: AnswerDistributionDto = {
@@ -133,7 +130,7 @@ const QuestionReportCard: React.FC<QuestionReportCardProps> = ({
                                     <div className="flex flex-col flex-grow justify-around">
                                         {displayedAnswerDistribution.map((distItem) => {
                                             const originalChoice = distItem.choiceIndex !== -1 ? originalChoicesMap.get(distItem.choiceIndex) : undefined;
-                                            const isNoAnswer = distItem.choiceIndex === -1 && distItem.status === "NO_ANSWER";
+                                            const isNoAnswer = distItem.choiceIndex < 0 || distItem.status === "NO_ANSWER" || distItem.status === "TIMEOUT";
                                             return (
                                                 <AnswerChoiceReportItem
                                                     key={isNoAnswer ? 'no-answer-entry' : `${distItem.choiceIndex}-${distItem.answerText.slice(0, 10)}`}

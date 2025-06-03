@@ -56,7 +56,7 @@ export interface PlayerReportItemDto {
 export interface AnswerDistributionDto {
   answerText: string;
   choiceIndex: number;
-  status: "CORRECT" | "INCORRECT" | "NO_ANSWER" | string; // Allow for other statuses if API provides
+  status: "CORRECT" | "INCORRECT" | "NO_ANSWER" | "TIMEOUT" | string; // Allow for other statuses if API provides
   count: number;
 }
 

@@ -16,23 +16,15 @@ import {
     CardHeader,
     CardTitle,
 } from '@/src/components/ui/card';
-// import { Input } from "@/src/components/ui/input"; // Use RHFTextField instead
-// import { Label } from "@/src/components/ui/label";
 import {
     Form,
-    // FormControl,
-    // FormDescription,
-    // FormField,
-    // FormItem,
-    // FormLabel,
-    // FormMessage,
 } from '@/src/components/ui/form'; // Import RHF Form component
 import { RHFTextField } from '@/src/components/rhf/RHFTextField'; // Assuming you have this wrapper
 import { Brain } from 'lucide-react';
 import { registerUser } from '@/src/lib/api/auth';
-// import { SignupRequest } from '@/src/lib/types/auth'; // Use SchemaType now
 import { SignupSchema, SignupSchemaType } from '@/src/lib/schemas/auth.schema'; // Import Zod schema
 import { useToast } from '@/src/components/ui/use-toast'; // Import useToast
+import { AppHeader } from '@/src/components/layout/AppHeader';
 
 export default function SignupPage() {
     const router = useRouter();
@@ -104,18 +96,7 @@ export default function SignupPage() {
         // Layout structure remains similar
         <div className="min-h-screen flex flex-col">
             {/* Header remains the same */}
-            <header className="border-b">
-                <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-                    <div className="flex items-center gap-2">
-                        <Link href="/">
-                            <div className="flex items-center gap-2">
-                                <Brain className="h-8 w-8 text-primary" />
-                                <h1 className="text-2xl font-bold">VUI QUIZ</h1>
-                            </div>
-                        </Link>
-                    </div>
-                </div>
-            </header>
+            <AppHeader />
 
             <main className="flex-1 flex items-center justify-center py-12">
                 <div className="w-full max-w-md px-4">

@@ -13,7 +13,7 @@ export interface SessionReportCardProps {
 
 export const SessionReportCard: React.FC<SessionReportCardProps> = ({ report }) => {
     const { user } = useAuth();
-    const playedAsHost = report.sessionHostUserId === user?.id;
+    const playedAsHost = report.roleInSession == "HOST";
     const roleText = playedAsHost ? 'Chủ phòng' : 'Người chơi';
     const roleIcon = playedAsHost ? <Landmark className="mr-1.5 h-3.5 w-3.5" /> : <User className="mr-1.5 h-3.5 w-3.5" />;
 

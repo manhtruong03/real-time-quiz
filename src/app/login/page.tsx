@@ -23,6 +23,7 @@ import { loginUser } from '@/src/lib/api/auth';
 import { LoginSchema, LoginSchemaType } from '@/src/lib/schemas/auth.schema';
 import { useToast } from '@/src/components/ui/use-toast';
 import { useAuth } from '@/src/context/AuthContext'; // Import useAuth
+import { AppHeader } from '@/src/components/layout/AppHeader';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -97,18 +98,7 @@ export default function LoginPage() {
     // Layout structure remains similar
     <div className="min-h-screen flex flex-col">
       {/* Header */}
-      <header className="border-b">
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <Link href="/">
-              <div className="flex items-center gap-2">
-                <Brain className="h-8 w-8 text-primary" />
-                <h1 className="text-2xl font-bold">VUI QUIZ</h1>
-              </div>
-            </Link>
-          </div>
-        </div>
-      </header>
+      <AppHeader />
 
       {/* Main Content */}
       <main className="flex-1 flex items-center justify-center py-12">
