@@ -86,6 +86,9 @@
     --answer-icon-diamond: #3498DB;
     --answer-icon-circle: #F1C40F;
     --answer-icon-square: #2ECC71;
+
+    --constructive: 142.1 76.2% 36.3%;
+    --constructive-foreground: 0 0% 98%;
   }
 
   .dark {
@@ -234,6 +237,9 @@
     --answer-icon-diamond: #3498DB;
     --answer-icon-circle: #F1C40F;
     --answer-icon-square: #2ECC71;
+
+    --constructive: 142.1 70% 45%;
+    --constructive-foreground: 0 0% 100%;
   }
 }
 

@@ -65,6 +65,10 @@ module.exports = {
           DEFAULT: "hsl(var(--card))", // Expects --card: H S% L%
           foreground: "hsl(var(--card-foreground))", // Expects --card-foreground: H S% L%
         },
+        constructive: {
+          DEFAULT: "hsl(var(--constructive))",
+          foreground: "hsl(var(--constructive-foreground))",
+        },
 
         // Editor-specific colors - use CSS variables directly (can be HEX, HSL string, etc. in CSS)
         // These variables are defined in `globals.css` (e.g., --editor-primary-bg: #1E1E24).
