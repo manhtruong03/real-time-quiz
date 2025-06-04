@@ -51,7 +51,10 @@ export const API_ENDPOINTS = {
         `${API_BASE_URL}/api/admin/users/${userId}/set-password`, // (for future password changes)
     },
     // TAGS: { ... },
-    // IMAGES: { ... },
+    IMAGES: {
+      GET_ALL: `${API_BASE_URL}/api/admin/images`,
+      UPLOAD: `${API_BASE_URL}/api/admin/images/upload`,
+    },
     REPORTS: {
       GET_ALL: `${API_BASE_URL}/api/admin/reports/sessions`,
     },

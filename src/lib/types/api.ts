@@ -190,3 +190,16 @@ export interface UserAccountUpdateRequestDTO {
   role?: string | null;
   storageLimit?: number | null; // int64
 }
+
+export interface ImageStorageAdminViewDTO {
+  imageId: string; // uuid
+  originalFileName: string;
+  storedFileName: string; // Not directly shown in table, but part of DTO
+  publicUrl: string;
+  contentType: string;
+  fileSize: number; // long in backend, maps to number in TS
+  creatorId?: string | null; // uuid
+  creatorUsername?: string | null;
+  createdAt: string; // date-time format
+  updatedAt: string; // date-time format
+}
