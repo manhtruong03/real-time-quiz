@@ -63,22 +63,22 @@ const MediaPlaceholder: React.FC<{
         <div className="flex flex-col sm:flex-row gap-2 w-full max-w-xs mt-2">
             <Button variant={isError ? "destructive" : "outline"} size="sm" className="w-full" type="button" onClick={onTriggerDialog}>
                 {isError ? <Replace className="mr-2 h-4 w-4" /> : <ImagePlus className="mr-2 h-4 w-4" />}
-                {isError ? 'Try Again' : 'Add Media'}
+                {isError ? 'Thử lại' : 'Thêm phương tiện'}
             </Button>
-            <Button variant="outline" size="sm" className="w-full" disabled onClick={onAiClick}>
-                <Sparkles className="mr-2 h-4 w-4" /> Generate AI
-            </Button>
+            {/* <Button variant="outline" size="sm" className="w-full" disabled onClick={onAiClick}>
+                <Sparkles className="mr-2 h-4 w-4" /> Tạo bằng AI
+            </Button> */}
         </div>
     </div>
 );
 
 const MediaDisplayControls: React.FC<{ onDelete?: () => void; onTriggerDialog: () => void; }> = ({ onDelete, onTriggerDialog }) => (
     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 z-10">
-        <Button variant="secondary" size="icon" title="Replace Image" type="button" onClick={onTriggerDialog}>
+        <Button variant="secondary" size="icon" title="Thay thế hình ảnh" type="button" onClick={onTriggerDialog}> {/* Việt hóa title */}
             <Replace className="h-4 w-4" />
         </Button>
         {onDelete && (
-            <Button variant="destructive" size="icon" title="Remove Image" type="button" onClick={onDelete}>
+            <Button variant="destructive" size="icon" title="Xóa hình ảnh" type="button" onClick={onDelete}> {/* Việt hóa title */}
                 <Trash2 className="h-4 w-4" />
             </Button>
         )}
@@ -91,7 +91,7 @@ const MediaManagerComponent = <TFieldValues extends FieldValues>({
     imageUploadKeyFieldName,
     label,
     aspectRatio = 16 / 9,
-    placeholderText = 'Add media',
+    placeholderText = 'Thêm phương tiện', // Việt hóa mặc định
     className,
 }: MediaManagerProps<TFieldValues>) => {
     const { setValue, watch } = useFormContext<TFieldValues>();
@@ -159,10 +159,10 @@ const MediaManagerComponent = <TFieldValues extends FieldValues>({
 
         if (file) {
             if (!file.type.startsWith('image/')) {
-                alert('Please select an image file.'); return;
+                alert('Vui lòng chọn một tệp hình ảnh.'); return; // Việt hóa
             }
             if (file.size > 5 * 1024 * 1024) { // 5MB limit
-                alert('File is too large. Maximum 5MB allowed.'); return;
+                alert('Tệp quá lớn. Kích thước tối đa cho phép là 5MB.'); return; // Việt hóa
             }
             const uniqueKey = generateUniqueImageKey();
             // Order matters: Set file and key first. Effect 1 will create blob and set URL.
@@ -185,8 +185,9 @@ const MediaManagerComponent = <TFieldValues extends FieldValues>({
             // Effect 2 will set isLoading(true) for the new URL.
 
             setIsDialogOpen(false);
+            setTempUrlInput('');
         } else {
-            alert("Please enter a valid HTTP/HTTPS URL.");
+            alert("Vui lòng nhập URL HTTP/HTTPS hợp lệ."); // Việt hóa
         }
     };
 
@@ -210,7 +211,7 @@ const MediaManagerComponent = <TFieldValues extends FieldValues>({
 
     const displayUrl = typeof watchedImageUrl === 'string' ? watchedImageUrl : null;
     const showPlaceholder = (!displayUrl && !isLoading) || hasError;
-    const currentPlaceholderText = hasError ? "Error loading image." : placeholderText;
+    const currentPlaceholderText = hasError ? "Lỗi khi tải hình ảnh." : placeholderText; // Việt hóa
 
     return (
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -230,7 +231,7 @@ const MediaManagerComponent = <TFieldValues extends FieldValues>({
                                 <Image
                                     key={displayUrl} // Re-render if URL changes
                                     src={displayUrl}
-                                    alt={label || 'Media preview'}
+                                    alt={label || 'Xem trước phương tiện'}
                                     fill
                                     className={cn(
                                         'object-contain transition-opacity duration-300',
@@ -260,9 +261,9 @@ const MediaManagerComponent = <TFieldValues extends FieldValues>({
             {/* DialogContent remains the same as your provided code */}
             <DialogContent className="sm:max-w-[480px]">
                 <DialogHeader>
-                    <DialogTitle>{displayUrl && !hasError && !isLoading ? "Replace" : "Add"} Media</DialogTitle>
+                    <DialogTitle>{displayUrl && !hasError && !isLoading ? "Thay thế" : "Thêm"} phương tiện</DialogTitle>
                     <DialogDescription>
-                        Upload an image from your device or provide an image URL. Max 5MB.
+                        Tải lên hình ảnh từ thiết bị của bạn hoặc cung cấp URL hình ảnh. Tối đa 5MB.
                     </DialogDescription>
                 </DialogHeader>
                 <input
@@ -275,8 +276,8 @@ const MediaManagerComponent = <TFieldValues extends FieldValues>({
                 />
                 <Tabs defaultValue="upload" className="w-full">
                     <TabsList className="grid w-full grid-cols-2">
-                        <TabsTrigger value="upload"><UploadCloud className="mr-1 h-4 w-4" /> Upload File</TabsTrigger>
-                        <TabsTrigger value="url"><LinkIcon className="mr-1 h-4 w-4" /> By URL</TabsTrigger>
+                        <TabsTrigger value="upload"><UploadCloud className="mr-1 h-4 w-4" /> Tải lên tệp</TabsTrigger>
+                        <TabsTrigger value="url"><LinkIcon className="mr-1 h-4 w-4" /> Bằng URL</TabsTrigger>
                     </TabsList>
                     <TabsContent value="upload" className="mt-4 space-y-4">
                         <Label
@@ -287,19 +288,19 @@ const MediaManagerComponent = <TFieldValues extends FieldValues>({
                             )}
                         >
                             <UploadCloud className="h-10 w-10 mb-2" />
-                            <span className="text-sm font-medium">Click to browse or drag & drop</span>
-                            <span className="text-xs mt-1">PNG, JPG, GIF, WEBP up to 5MB</span>
+                            <span className="text-sm font-medium">Nhấp để duyệt hoặc kéo & thả</span>
+                            <span className="text-xs mt-1">PNG, JPG, GIF, WEBP tối đa 5MB</span>
                         </Label>
                         {watchedImageFile instanceof File && (
                             <div className="text-sm text-muted-foreground flex items-center gap-2 p-2 border rounded-md bg-muted/30">
                                 <FileText className="h-4 w-4" />
-                                <span>Selected: {watchedImageFile.name} ({(watchedImageFile.size / (1024 * 1024)).toFixed(2)} MB)</span>
+                                <span>Đã chọn: {watchedImageFile.name} ({(watchedImageFile.size / (1024 * 1024)).toFixed(2)} MB)</span>
                             </div>
                         )}
                     </TabsContent>
                     <TabsContent value="url" className="mt-4 space-y-4">
                         <div className="space-y-2">
-                            <Label htmlFor={`${String(imageUrlFieldName).replace(/\./g, '-')}-url-input-dialog`}>Image URL</Label>
+                            <Label htmlFor={`${String(imageUrlFieldName).replace(/\./g, '-')}-url-input-dialog`}>URL hình ảnh</Label>
                             <Input
                                 id={`${String(imageUrlFieldName).replace(/\./g, '-')}-url-input-dialog`}
                                 type="url"
@@ -314,14 +315,14 @@ const MediaManagerComponent = <TFieldValues extends FieldValues>({
                                 onClick={handleUrlConfirm}
                                 disabled={!tempUrlInput.trim() || !(tempUrlInput.startsWith('http://') || tempUrlInput.startsWith('https://'))}
                             >
-                                Use this URL
+                                Sử dụng URL này
                             </Button>
                         </div>
                     </TabsContent>
                 </Tabs>
                 <DialogClose asChild>
                     <Button type="button" variant="outline" className="mt-4 w-full sm:w-auto">
-                        Cancel
+                        Hủy bỏ
                     </Button>
                 </DialogClose>
             </DialogContent>

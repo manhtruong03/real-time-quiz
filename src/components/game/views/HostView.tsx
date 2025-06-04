@@ -86,28 +86,28 @@ const HostViewComponent: React.FC<HostViewProps> = ({
     if (isLoading || assetsLoading) {
       return (
         <HostLoadingView
-          message={assetsLoading ? "Loading Assets..." : "Loading..."}
+          message={assetsLoading ? "Đang tải tài nguyên..." : "Đang tải..."}
         />
       );
     }
     if (assetsError) {
       return (
-        <HostLoadingView message={`Error loading assets: ${assetsError}`} />
+        <HostLoadingView message={`Lỗi khi tải tài nguyên: ${assetsError}`} />
       );
     }
     if (!liveGameState) {
       // If no game state at all, show initial loading/waiting
-      return <HostLoadingView message="Waiting for game session..." />;
+      return <HostLoadingView message="Đang chờ phiên trò chơi..." />;
     }
     // If we have game state, but no currentBlock during an active phase, show loading
     if (!currentBlock && status && status !== "LOBBY" && status !== "PODIUM" && status !== "ENDED" && status !== "SHOWING_SCOREBOARD") {
-      return <HostLoadingView message="Loading question data..." />;
+      return <HostLoadingView message="Đang tải dữ liệu câu hỏi..." />;
     }
 
     switch (status) {
       case "QUESTION_GET_READY":
       case "QUESTION_SHOW":
-        if (!currentBlock) return <HostLoadingView message="Loading question..." />; // Should be caught above, but safe fallback
+        if (!currentBlock) return <HostLoadingView message="Đang tải dữ liệu câu hỏi..." />; // Should be caught above, but safe fallback
         if (isContentBlock(currentBlock)) {
           return <HostContentBlockView block={currentBlock} />;
         } else {
@@ -122,7 +122,7 @@ const HostViewComponent: React.FC<HostViewProps> = ({
           );
         }
       case "SHOWING_STATS":
-        if (!currentBlock) return <HostLoadingView message="Loading stats..." />; // Need block context for stats
+        if (!currentBlock) return <HostLoadingView message="Đang tải thống kê..." />; // Need block context for stats
         return (
           <HostAnswerStatsView
             currentBlock={currentBlock}
@@ -148,17 +148,18 @@ const HostViewComponent: React.FC<HostViewProps> = ({
           />
         );
       case "ENDED":
-        return (
-          <div className="flex items-center justify-center h-full">
-            <p className="text-2xl text-white">Game Ended Screen (TODO)</p>
-          </div>
-        );
+        // return (
+        //   <div className="flex items-center justify-center h-full">
+        //     <p className="text-2xl text-white">Game Ended Screen (TODO)</p>
+        //   </div>
+        // );
+        break;
       case "LOBBY": // Lobby view is handled by HostPage, HostView shouldn't render in LOBBY
         console.warn("HostView rendered during LOBBY state - this should ideally not happen.");
-        return <HostLoadingView message="Returning to lobby..." />;
+        return <HostLoadingView message="Đang quay lại sảnh..." />;
       default:
         console.warn("HostView encountered unexpected state:", status);
-        return <HostLoadingView message="Waiting for game state..." />;
+        return <HostLoadingView message="Đang chờ thiết lập trạng thái..." />;
     }
   }, [
     liveGameState,

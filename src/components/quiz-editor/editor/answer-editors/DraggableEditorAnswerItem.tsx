@@ -71,7 +71,7 @@ const DraggableEditorAnswerItemComponent: React.FC<DraggableEditorAnswerItemProp
                 type="button"
                 {...attributes}
                 {...listeners}
-                aria-label="Drag to reorder answer"
+                aria-label="Kéo để sắp xếp lại đáp án"
                 className={cn(
                     "p-1 cursor-grab active:cursor-grabbing touch-none text-muted-foreground hover:text-foreground flex-shrink-0",
                     isDragging && 'cursor-grabbing'
@@ -90,12 +90,12 @@ const DraggableEditorAnswerItemComponent: React.FC<DraggableEditorAnswerItemProp
                 <RHFTextAreaField<QuestionHostSchemaType>
                     key={answerFieldName}
                     name={answerFieldName}
-                    placeholder={`Option ${index + 1}...`} // Label uses current index
+                    placeholder={`Lựa chọn ${index + 1}...`}
                     className="text-sm border-none focus-visible:ring-0 p-1 bg-transparent min-h-[30px]"
                     rows={1}
                 />
                 {/* Image Button Placeholder */}
-                <Button variant="ghost" size="icon" className="h-6 w-6 self-start text-muted-foreground hover:text-foreground" disabled title="Add image (Not implemented)">
+                <Button variant="ghost" size="icon" className="h-6 w-6 self-start text-muted-foreground hover:text-foreground" disabled title="Thêm hình ảnh (Chưa được triển khai)">
                     <ImageIcon className="h-3 w-3" />
                 </Button>
             </div>

@@ -22,6 +22,10 @@ import { usePlayerGameManager } from './hooks/usePlayerGameManager';
 import { usePlayerPageUI, PageUiState } from './hooks/usePlayerPageUI';
 
 
+// Định nghĩa URL background tĩnh
+const STATIC_BACKGROUND_URL = "https://images-cdn.kahoot.it/01015166-e2b7-4d09-ab1a-244f0958e8a1";
+
+
 function PlayerPageInternal() {
   const { avatars, isLoading: assetsLoading, error: assetsError } = useGameAssets();
 
@@ -42,45 +46,39 @@ function PlayerPageInternal() {
       parsedBody = JSON.parse(message.body);
       const messageData = Array.isArray(parsedBody) ? parsedBody[0] : parsedBody;
       if (!messageData || !messageData.data) {
-        console.warn("[PlayerPage WS Handler] Received message with no data field:", messageData);
+        console.warn("[PlayerPage WS Handler] Đã nhận tin nhắn không có trường dữ liệu:", messageData);
         return;
       }
       const { id: dataTypeId, content: rawContent } = messageData.data;
 
       if (typeof rawContent === 'string') {
         const parsedContent = JSON.parse(rawContent);
-        // --- START MODIFIED CODE ---
         if (dataTypeId === 10) { // Player Kicked
-          console.log(`[PlayerPage WS Handler] Kick message received (ID: ${dataTypeId}). Content:`, parsedContent);
-          // 1. Inform the gameManager to set its internal 'isKicked' state
+          console.log(`[PlayerPage WS Handler] Đã nhận tin nhắn bị kick (ID: ${dataTypeId}). Nội dung:`, parsedContent);
           processGameMessage(dataTypeId, parsedContent);
-          // 2. Trigger the UI update and disconnection via usePlayerPageUI
           if (onKickCallbackRef.current) {
             onKickCallbackRef.current();
           } else {
-            console.warn('[PlayerPage WS Handler] onKickCallbackRef.current is not set, cannot process kick.');
+            console.warn('[PlayerPage WS Handler] onKickCallbackRef.current chưa được thiết lập, không thể xử lý việc kick.');
           }
         } else if ([1, 2, 8, 13, 35].includes(dataTypeId)) { // Other game messages
           processGameMessage(dataTypeId, parsedContent);
         } else {
-          console.log(`[PlayerPage WS Handler] Unhandled data type ID: ${dataTypeId}`, parsedContent);
+          console.log(`[PlayerPage WS Handler] ID loại dữ liệu không được xử lý: ${dataTypeId}`, parsedContent);
         }
       } else if (dataTypeId === 10 && (rawContent === null || typeof rawContent === 'object')) {
-        // Handle cases where kick message content might be null or already an object
-        console.log(`[PlayerPage WS Handler] Kick message received (ID: ${dataTypeId}) with pre-parsed or null content. Content:`, rawContent);
+        console.log(`[PlayerPage WS Handler] Đã nhận tin nhắn bị kick (ID: ${dataTypeId}) với nội dung đã được phân tích cú pháp hoặc rỗng. Nội dung:`, rawContent);
         processGameMessage(dataTypeId, rawContent || {});
-        // --- START MODIFIED CODE ---
         if (onKickCallbackRef.current) {
           onKickCallbackRef.current();
         } else {
-          console.warn('[PlayerPage WS Handler] onKickCallbackRef.current is not set for pre-parsed kick.');
+          console.warn('[PlayerPage WS Handler] onKickCallbackRef.current chưa được thiết lập cho việc kick đã được phân tích cú pháp trước đó.');
         }
-        // --- END MODIFIED CODE ---
       } else {
-        console.warn(`[PlayerPage WS Handler] Received message (ID: ${dataTypeId}) where content is not a string:`, rawContent);
+        console.warn(`[PlayerPage WS Handler] Đã nhận tin nhắn (ID: ${dataTypeId}) mà nội dung không phải là chuỗi:`, rawContent);
       }
     } catch (e) {
-      console.error('[PlayerPage WS Handler] Failed to parse message or handle callback:', e, message.body);
+      console.error('[PlayerPage WS Handler] Không thể phân tích tin nhắn hoặc xử lý callback:', e, message.body);
     }
   }, [processGameMessage]);
 
@@ -105,20 +103,17 @@ function PlayerPageInternal() {
   } = pageUI;
 
   // Assign the kick processing function to the callback placeholder
-  // This ensures handleReceivedMessageCallback can call processPlayerKick
   useEffect(() => {
-    // --- START MODIFIED CODE ---
     onKickCallbackRef.current = () => processPlayerKick(disconnectWebSocket);
     return () => {
       onKickCallbackRef.current = null;
     };
-    // --- END MODIFIED CODE ---
   }, [processPlayerKick, disconnectWebSocket]);
 
   // Effect to handle WS 'INITIAL' state specifically for resetting to PIN input
   useEffect(() => {
     if (wsConnectionStatus === 'INITIAL' && uiState !== 'PIN_INPUT') {
-      console.log("[PlayerPageInternal] WS connection is INITIAL and UI not PIN_INPUT, resetting.");
+      console.log("[PlayerPageInternal] Kết nối WS đang ở trạng thái INITIAL và UI không phải là PIN_INPUT, đang đặt lại.");
       resetToPinInputState(disconnectWebSocket, resetCoreGameState);
     }
   }, [wsConnectionStatus, uiState, resetToPinInputState, disconnectWebSocket, resetCoreGameState]);
@@ -132,9 +127,8 @@ function PlayerPageInternal() {
   }, [gamePin, playerInfo.cid, uiState, sendAvatarUpdate, setPlayerAvatarId]);
 
   const handleActualNicknameSubmit = async () => {
-    const success = await submitNickname(); // From usePlayerPageUI
+    const success = await submitNickname();
     if (success) {
-      // After UI state is set to PLAYING by submitNickname, reset game-specific state
       resetCoreGameState();
     }
     return success;
@@ -157,7 +151,7 @@ function PlayerPageInternal() {
 
   useEffect(() => {
     if (wsConnectionStatus === 'INITIAL' && uiState !== 'PIN_INPUT') {
-      console.log("[PlayerPageInternal] WS connection is INITIAL and UI not PIN_INPUT, resetting.");
+      console.log("[PlayerPageInternal] Kết nối WS đang ở trạng thái INITIAL và UI không phải là PIN_INPUT, đang đặt lại.");
       resetToPinInputState(disconnectWebSocket, resetCoreGameState);
     }
   }, [wsConnectionStatus, uiState, resetToPinInputState, disconnectWebSocket, resetCoreGameState]);
@@ -183,24 +177,42 @@ function PlayerPageInternal() {
   const renderPageContent = () => {
     switch (uiState) {
       case 'PIN_INPUT':
-        return <PlayerPinInputView
-          gamePin={gamePin}
-          onGamePinChange={setGamePinInput}
-          onSubmit={submitPin}
-          errorMessage={pageError}
-          isConnecting={isProcessingPin}
-        />;
+        return (
+          <div className="relative min-h-screen bg-cover bg-center" style={{ backgroundImage: `url(${STATIC_BACKGROUND_URL})` }}>
+            <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+              <PlayerPinInputView
+                gamePin={gamePin}
+                onGamePinChange={setGamePinInput}
+                onSubmit={submitPin}
+                errorMessage={pageError}
+                isConnecting={isProcessingPin}
+              />
+            </div>
+          </div>
+        );
       case 'CONNECTING':
-        return <ConnectingPlayerView message={`Connecting to game ${gamePin}...`} />;
+        return (
+          <div className="relative min-h-screen bg-cover bg-center" style={{ backgroundImage: `url(${STATIC_BACKGROUND_URL})` }}>
+            <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+              <ConnectingPlayerView message={`Đang kết nối đến trò chơi ${gamePin}...`} />
+            </div>
+          </div>
+        );
       case 'NICKNAME_INPUT':
-        return <PlayerNicknameInputView
-          gamePin={gamePin}
-          nickname={nicknameInput}
-          onNicknameChange={setNicknameInputFieldValue}
-          onSubmit={handleActualNicknameSubmit}
-          errorMessage={pageError}
-          onAvatarSelected={handleAvatarSelected}
-        />;
+        return (
+          <div className="relative min-h-screen bg-cover bg-center" style={{ backgroundImage: `url(${STATIC_BACKGROUND_URL})` }}>
+            <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+              <PlayerNicknameInputView
+                gamePin={gamePin}
+                nickname={nicknameInput}
+                onNicknameChange={setNicknameInputFieldValue}
+                onSubmit={handleActualNicknameSubmit}
+                errorMessage={pageError}
+                onAvatarSelected={handleAvatarSelected}
+              />
+            </div>
+          </div>
+        );
       case 'PLAYING':
         const playerInfoForStatusBar = {
           name: playerInfo.name, avatarUrl: selectedAvatarUrl, avatarId: playerInfo.avatarId,
@@ -219,7 +231,7 @@ function PlayerPageInternal() {
       case 'ERROR':
         return <ErrorPlayerView errorMessage={pageError} onRetry={() => resetToPinInputState(disconnectWebSocket, resetCoreGameState)} />;
       default:
-        return <ErrorPlayerView errorMessage="An unexpected error occurred." onRetry={() => resetToPinInputState(disconnectWebSocket, resetCoreGameState)} />;
+        return <ErrorPlayerView errorMessage="Đã xảy ra lỗi không mong muốn." onRetry={() => resetToPinInputState(disconnectWebSocket, resetCoreGameState)} />;
     }
   };
 

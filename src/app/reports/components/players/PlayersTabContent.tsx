@@ -83,9 +83,9 @@ const PlayersTabContent: React.FC<PlayersTabContentProps> = ({ sessionId }) => {
         return (
             <Alert variant="destructive" className="mt-4">
                 <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Error Fetching Player Data</AlertTitle>
+                <AlertTitle>Lỗi khi tải dữ liệu người chơi</AlertTitle>
                 <AlertDescription>
-                    {error.message || 'An unexpected error occurred. Please try again later.'}
+                    {error.message || 'Đã xảy ra lỗi không mong muốn. Vui lòng thử lại sau.'}
                 </AlertDescription>
             </Alert>
         );
@@ -101,7 +101,7 @@ const PlayersTabContent: React.FC<PlayersTabContentProps> = ({ sessionId }) => {
                     searchTerm={searchTerm}
                     onSearchChange={setSearchTerm}
                 />
-                <p className="text-center text-text-secondary mt-8">No player data available for this session.</p>
+                <p className="text-center text-text-secondary mt-8">Không có dữ liệu người chơi nào cho phiên này.</p>
             </div>
         );
     }
@@ -117,7 +117,7 @@ const PlayersTabContent: React.FC<PlayersTabContentProps> = ({ sessionId }) => {
                 searchTerm={searchTerm}
                 onSearchChange={setSearchTerm}
             />
-            {isLoading && <p className="text-center text-text-secondary my-4">Loading more players...</p>}
+            {isLoading && <p className="text-center text-text-secondary my-4">Đang tải thêm người chơi...</p>}
             {!isLoading && playersData && (
                 <>
                     <PlayersTable

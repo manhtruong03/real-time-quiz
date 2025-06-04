@@ -35,8 +35,8 @@ const SortableAnswerList: React.FC<SortableAnswerListProps> = ({ className }) =>
         keyName: "fieldId"
     });
 
-    console.log('[SortableAnswerList Render] RHF fields array:', JSON.stringify(fields, null, 2));
-    console.log(`[SortableAnswerList Render] Number of fields: ${fields.length}`);
+    console.log('[SortableAnswerList Render] Mảng trường RHF:', JSON.stringify(fields, null, 2));
+    console.log(`[SortableAnswerList Render] Số lượng trường: ${fields.length}`);
 
     const sensors = useSensors(
         useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -67,7 +67,7 @@ const SortableAnswerList: React.FC<SortableAnswerListProps> = ({ className }) =>
                 <div className={cn("space-y-2", className)}>
                     {fields.length === 0 && (
                         <p className="text-muted-foreground italic text-center p-4">
-                            Loading choices or no choices defined...
+                            Đang tải các lựa chọn hoặc chưa có lựa chọn nào được định nghĩa...
                         </p>
                     )}
                     {fields.map((field, index) => {
@@ -78,7 +78,7 @@ const SortableAnswerList: React.FC<SortableAnswerListProps> = ({ className }) =>
                             <DraggableEditorAnswerItem
                                 key={field.fieldId}
                                 id={field.fieldId} // This is correct for dnd-kit
-                                index={index}     // This is the current visual index in the list
+                                index={index}    // This is the current visual index in the list
                                 originalIndex={originalIndexForStyling} // <<<< THIS IS CRUCIAL for stable styling
                                 fieldNamePrefix={`choices.${index}`}
                             />

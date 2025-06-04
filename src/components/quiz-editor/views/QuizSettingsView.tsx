@@ -16,9 +16,9 @@ export const QuizSettingsView: React.FC<QuizSettingsViewProps> = () => {
             fileFieldName="coverImageFile" // RHF field for the File object
             // MODIFIED: Add the new prop for the upload key field name
             imageUploadKeyFieldName="coverImageUploadKey"
-            label="Cover Image"
+            label="Ảnh bìa"
             aspectRatio={16 / 9}
-            placeholderText="Add Cover Image (16:9 Recommended)"
+            placeholderText="Thêm ảnh bìa (Nên dùng tỷ lệ 16:9)"
             className="h-full min-h-[200px]"
         />
     );

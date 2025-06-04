@@ -28,7 +28,7 @@ export const PodiumPlatform: React.FC<PodiumPlatformProps> = ({ player, position
             colorClass: 'bg-yellow-500/90 border-yellow-400 shadow-yellow-500/50',
             textColor: 'text-yellow-900', // Darker text for gold
             icon: <Trophy className="h-6 w-6 md:h-7 md:w-7 text-yellow-700" />,
-            rankText: '1st Place',
+            rankText: 'Hạng 1',
             scaleClass: "scale-105 z-20", // Most prominent
             orderClass: "md:order-2 order-1", // Center on md, first on sm
         },
@@ -37,7 +37,7 @@ export const PodiumPlatform: React.FC<PodiumPlatformProps> = ({ player, position
             colorClass: 'bg-slate-400/90 border-slate-300 shadow-slate-400/50',
             textColor: 'text-slate-800', // Darker text for silver
             icon: <Award className="h-5 w-5 md:h-6 md:w-6 text-slate-600" />,
-            rankText: '2nd Place',
+            rankText: 'Hạng 2',
             scaleClass: "z-10",
             orderClass: "md:order-1 order-2",
         },
@@ -46,7 +46,7 @@ export const PodiumPlatform: React.FC<PodiumPlatformProps> = ({ player, position
             colorClass: 'bg-orange-600/90 border-orange-500 shadow-orange-600/50',
             textColor: 'text-orange-100', // Lighter text for bronze
             icon: <Medal className="h-5 w-5 md:h-6 md:w-6 text-orange-300" />,
-            rankText: '3rd Place',
+            rankText: 'Hạng 3',
             scaleClass: "z-0",
             orderClass: "md:order-3 order-3",
         },

@@ -48,10 +48,10 @@ export const PlayerLobbyWaitingView: React.FC<PlayerLobbyWaitingViewProps> = ({
 
             {/* Confirmation Text */}
             <p className="text-lg md:text-xl text-muted-foreground max-w-md">
-                You're in! See your nickname on the host screen yet?
+                Bạn đã tham gia! Thấy biệt danh của bạn trên màn hình người tổ chức chưa?
             </p>
             <p className="text-sm mt-6 text-muted-foreground/80">
-                Waiting for the host to start...
+                Đang chờ người tổ chức bắt đầu...
             </p>
         </div>
     );

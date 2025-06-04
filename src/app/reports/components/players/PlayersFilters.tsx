@@ -13,9 +13,9 @@ interface PlayerFilterSubTabItem {
 }
 
 const subTabs: PlayerFilterSubTabItem[] = [
-    { key: 'all', label: 'All Players' },
-    { key: 'needHelp', label: 'Need Help' },
-    { key: 'didNotFinish', label: 'Did Not Finish' },
+    { key: 'all', label: 'Tất cả người chơi' },
+    { key: 'needHelp', label: 'Cần hỗ trợ' },
+    { key: 'didNotFinish', label: 'Chưa hoàn thành' },
 ];
 
 interface PlayersFiltersProps {
@@ -61,7 +61,7 @@ const PlayersFilters: React.FC<PlayersFiltersProps> = ({
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-placeholder" /> {/* Conceptual: search-icon */}
                 <Input
                     type="text"
-                    placeholder="Search player..." // Conceptual: placeholder from screen-10-report-player.html
+                    placeholder="Tìm kiếm người chơi..."
                     value={searchTerm}
                     onChange={(e) => onSearchChange(e.target.value)}
                     className="pl-10 pr-3 py-2 text-sm bg-background-elevated border-border-neutral focus:border-accent text-text-primary placeholder:text-text-placeholder rounded-md w-full" // Conceptual: search-input

@@ -18,7 +18,7 @@ const AnswerCounter: React.FC<AnswerCounterProps> = ({ count, totalPlayers, clas
           <span className="text-sm text-muted-foreground"> / {totalPlayers}</span>
         )}
       </div>
-      <span className="text-xs text-muted-foreground block">Answers</span> {/* [cite: 606, 613] */}
+      <span className="text-xs text-muted-foreground block">Câu trả lời</span> {/* [cite: 606, 613] */}
     </div>
   );
 };

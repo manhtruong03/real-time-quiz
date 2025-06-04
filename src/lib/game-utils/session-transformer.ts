@@ -1,4 +1,3 @@
-// src/lib/game-utils/session-transformer.ts
 import {
   LiveGameState,
   QuizStructureHost,
@@ -27,7 +26,7 @@ function transformPlayerStateToDto(
     // This case should ideally not be reached if we iterate Object.values()
     // but as a safeguard:
     throw new Error(
-      "transformPlayerStateToDto received null or undefined playerState"
+      "transformPlayerStateToDto nhận được playerState là null hoặc không xác định"
     );
   }
 
@@ -184,7 +183,7 @@ function transformHostQuestionToGameSlideDto(
     default:
       dtoSlideType = "UNKNOWN_SLIDE_TYPE"; // Fallback
       console.warn(
-        `Unknown hostQuestion.type encountered: ${hostQuestion.type}`
+        `Loại hostQuestion.type không xác định đã gặp: ${hostQuestion.type}`
       );
   }
   //   dtoSlideType = hostQuestion.type;
@@ -207,14 +206,14 @@ export function transformLiveStateToFinalizationDto(
   originalQuizData: QuizStructureHost
 ): SessionFinalizationDto {
   if (!liveGameState) {
-    throw new Error("LiveGameState cannot be null for transformation.");
+    throw new Error("LiveGameState không được rỗng để chuyển đổi.");
   }
   if (!originalQuizData) {
-    throw new Error("OriginalQuizData cannot be null for transformation.");
+    throw new Error("OriginalQuizData không được rỗng để chuyển đổi.");
   }
   if (!originalQuizData.questions.every((q) => q.id)) {
     console.error(
-      "[SessionTransformer] Not all questions in originalQuizData have an ID. This is required for originalQuestionId.",
+      "[SessionTransformer] Không phải tất cả câu hỏi trong originalQuizData đều có ID. Điều này là bắt buộc đối với originalQuestionId.",
       originalQuizData.questions
     );
     // Depending on strictness, you might throw an error here or proceed with null originalQuestionId
@@ -233,7 +232,7 @@ export function transformLiveStateToFinalizationDto(
     default:
       finalSessionStatus = "ABORTED";
       console.warn(
-        `[SessionTransformer] LiveGameState status ("${liveGameState.status}") implies session was aborted or not fully completed. Mapping DTO status to "ABORTED".`
+        `[SessionTransformer] Trạng thái LiveGameState ("${liveGameState.status}") ngụ ý phiên đã bị hủy hoặc chưa hoàn tất. Đang ánh xạ trạng thái DTO thành "ABORTED".`
       );
       break;
   }
@@ -255,7 +254,7 @@ export function transformLiveStateToFinalizationDto(
       // Ensure hostQuestion has an ID, otherwise originalQuestionId will be problematic
       if (!hostQuestion.id) {
         console.warn(
-          `[SessionTransformer] Question at index ${index} is missing an ID. OriginalQuestionId will be null for this slide.`
+          `[SessionTransformer] Câu hỏi tại chỉ mục ${index} bị thiếu ID. OriginalQuestionId sẽ là null cho trang chiếu này.`
         );
       }
       return transformHostQuestionToGameSlideDto(
@@ -286,7 +285,7 @@ export function transformLiveStateToFinalizationDto(
 
   if (liveGameState.quizId !== originalQuizData.uuid) {
     console.warn(
-      `[SessionTransformer] Mismatch: liveGameState.quizId (${liveGameState.quizId}) vs originalQuizData.uuid (${originalQuizData.uuid}). Using liveGameState.quizId.`
+      `[SessionTransformer] Không khớp: liveGameState.quizId (${liveGameState.quizId}) so với originalQuizData.uuid (${originalQuizData.uuid}). Đang sử dụng liveGameState.quizId.`
     );
   }
   if (liveGameState.status === "ENDED" || liveGameState.status === "PODIUM") {
@@ -294,7 +293,7 @@ export function transformLiveStateToFinalizationDto(
   }
 
   console.log(
-    `[SessionTransformer] Stage 3: GameSlides mapped. Slide count: ${gameSlidesDto.length}`
+    `[SessionTransformer] Giai đoạn 3: GameSlides đã được ánh xạ. Số lượng trang chiếu: ${gameSlidesDto.length}`
   );
   return dto;
 }

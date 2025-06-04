@@ -14,7 +14,7 @@ const QuestionTypeEnum = z.enum([
 const ChoiceHostObjectSchema = z.object({
   answer: z
     .string()
-    .max(100, "Answer text cannot exceed 100 characters.")
+    .max(100, "Văn bản đáp án không được vượt quá 100 ký tự.")
     .optional(),
   image: z
     .object({
@@ -41,7 +41,7 @@ export const ChoiceHostRefinedSchema = ChoiceHostObjectSchema.refine(
     return false;
   },
   {
-    message: "Choice should have text or an image.",
+    message: "Lựa chọn phải có văn bản hoặc hình ảnh.",
     path: ["answer"],
   }
 );
@@ -77,7 +77,7 @@ const BaseQuestionSchema = z.object({
   type: QuestionTypeEnum,
   image: z
     .string()
-    .url({ message: "Invalid image URL" })
+    .url({ message: "URL hình ảnh không hợp lệ" })
     .nullable()
     .optional()
     .default(null),
@@ -102,15 +102,15 @@ export const QuizQuestionSchema = BaseQuestionSchema.extend({
   type: z.literal("quiz"),
   question: z
     .string()
-    .min(1, "Question text is required.")
-    .max(250, "Question text too long."),
+    .min(1, "Văn bản câu hỏi là bắt buộc.")
+    .max(250, "Văn bản câu hỏi quá dài."),
   choices: z
     .array(ChoiceHostRefinedSchema)
-    .min(2, "Quiz questions need 2-6 choices.")
-    .max(6, "Maximum 6 choices allowed."),
+    .min(2, "Câu hỏi Quiz cần 2-6 lựa chọn.")
+    .max(6, "Tối đa 6 lựa chọn được phép."),
   time: z.coerce
     .number()
-    .positive("Time limit must be positive.")
+    .positive("Giới hạn thời gian phải là số dương.")
     .default(20000),
   pointsMultiplier: z.coerce.number().min(0).max(2).default(1),
   correctChoiceIndex: z.number().int().min(-1).default(-1),
@@ -118,21 +118,17 @@ export const QuizQuestionSchema = BaseQuestionSchema.extend({
 
 export const ContentSchema = BaseQuestionSchema.extend({
   type: z.literal("content"),
-  title: z.string().min(1, "Title is required.").max(120, "Title too long."),
-  description: z
-    .string()
-    .max(1000, "Description too long.")
-    .optional()
-    .default(""),
+  title: z.string().min(1, "Tiêu đề là bắt buộc.").max(120, "Tiêu đề quá dài."),
+  description: z.string().max(1000, "Mô tả quá dài.").optional().default(""),
   image: z
     .string()
-    .url({ message: "Invalid image URL" })
+    .url({ message: "URL hình ảnh không hợp lệ" })
     .nullable()
     .optional()
     .default(null),
   choices: z
     .array(ChoiceHostObjectSchema)
-    .max(0, "Content slides cannot have choices.")
+    .max(0, "Trang chiếu nội dung không thể có lựa chọn.")
     .optional()
     .default([]),
   time: z.coerce.number().optional().default(0),
@@ -143,22 +139,22 @@ export const JumbleQuestionSchema = BaseQuestionSchema.extend({
   type: z.literal("jumble"),
   question: z
     .string()
-    .min(1, "Question text is required.")
-    .max(250, "Question text too long."),
+    .min(1, "Văn bản câu hỏi là bắt buộc.")
+    .max(250, "Văn bản câu hỏi quá dài."),
   choices: z
     .array(
       ChoiceHostObjectSchema.extend({
         correct: z.literal(true).default(true),
       }).refine((data) => !!data.answer, {
-        message: "Jumble items must have text.",
+        message: "Các mục xáo trộn phải có văn bản.",
         path: ["answer"],
       })
     )
-    .min(2, "Jumble questions need 2-6 items.")
-    .max(6, "Maximum 6 items allowed."),
+    .min(2, "Câu hỏi xáo trộn cần 2-6 mục.")
+    .max(6, "Tối đa 6 mục được phép."),
   time: z.coerce
     .number()
-    .positive("Time limit must be positive.")
+    .positive("Giới hạn thời gian phải là số dương.")
     .default(60000),
   pointsMultiplier: z.coerce.number().min(0).max(2).default(1),
 }).omit({ title: true, description: true, correctChoiceIndex: true });
@@ -167,27 +163,27 @@ export const OpenEndedQuestionSchema = BaseQuestionSchema.extend({
   type: z.literal("open_ended"),
   question: z
     .string()
-    .min(1, "Question text is required.")
-    .max(250, "Question text too long."),
+    .min(1, "Văn bản câu hỏi là bắt buộc.")
+    .max(250, "Văn bản câu hỏi quá dài."),
   choices: z
     .array(
       ChoiceHostObjectSchema.extend({
         answer: z
           .string()
-          .min(1, "Acceptable answer text cannot be empty.")
+          .min(1, "Văn bản đáp án chấp nhận được không được để trống.")
           .max(100),
         correct: z.literal(true).default(true),
         image: z.undefined().optional(),
       }).refine((data) => !!data.answer, {
-        message: "Acceptable answer cannot be empty.",
+        message: "Đáp án chấp nhận được không được để trống.",
         path: ["answer"],
       })
     )
-    .min(1, "At least one correct answer required.")
-    .max(10, "Maximum 10 acceptable answers."),
+    .min(1, "Cần ít nhất một đáp án đúng.")
+    .max(10, "Tối đa 10 đáp án chấp nhận được."),
   time: z.coerce
     .number()
-    .positive("Time limit must be positive.")
+    .positive("Giới hạn thời gian phải là số dương.")
     .default(30000),
   pointsMultiplier: z.coerce.number().min(0).max(2).default(1),
 }).omit({ title: true, description: true, correctChoiceIndex: true });
@@ -196,22 +192,22 @@ export const SurveyQuestionSchema = BaseQuestionSchema.extend({
   type: z.literal("survey"),
   question: z
     .string()
-    .min(1, "Question text is required.")
-    .max(250, "Question text too long."),
+    .min(1, "Văn bản câu hỏi là bắt buộc.")
+    .max(250, "Văn bản câu hỏi quá dài."),
   choices: z
     .array(
       ChoiceHostObjectSchema.extend({
         correct: z.literal(true).default(true),
       }).refine((data) => !!data.answer || !!data.image, {
-        message: "Survey options must have text or an image.",
+        message: "Tùy chọn khảo sát phải có văn bản hoặc hình ảnh.",
         path: ["answer"],
       })
     )
-    .min(2, "Polls need 2-6 options.")
-    .max(6, "Maximum 6 options allowed."),
+    .min(2, "Các cuộc thăm dò cần 2-6 tùy chọn.")
+    .max(6, "Tối đa 6 tùy chọn được phép."),
   time: z.coerce
     .number()
-    .positive("Time limit must be positive.")
+    .positive("Giới hạn thời gian phải là số dương.")
     .default(20000),
   pointsMultiplier: z.literal(0).default(0),
 }).omit({ title: true, description: true, correctChoiceIndex: true });
@@ -234,7 +230,7 @@ export const QuestionHostSchema = QuestionHostUnionSchema.superRefine(
       ) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: "Selected correct answer index is out of bounds.",
+          message: "Chỉ mục đáp án đúng được chọn nằm ngoài giới hạn.",
           path: ["correctChoiceIndex"],
         });
       }

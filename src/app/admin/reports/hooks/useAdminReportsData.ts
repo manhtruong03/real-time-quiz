@@ -52,7 +52,7 @@ export const useAdminReportsData = (): UseAdminReportsDataReturn => {
         setPageSize(data.size);
       } catch (err) {
         const errorMessage =
-          err instanceof Error ? err.message : "An unknown error occurred";
+          err instanceof Error ? err.message : "Lỗi không xác định";
         setError(err instanceof Error ? err : new Error(errorMessage));
         toast({
           title: "Lỗi",

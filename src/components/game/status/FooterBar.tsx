@@ -46,7 +46,7 @@ const FooterBar: React.FC<FooterBarProps> = ({
         <div className="flex-grow text-center text-sm text-muted-foreground"> {/* [cite: 606, 613] */}
           {gamePin && <span>Game PIN: <strong className="text-foreground">{gamePin}</strong></span>} {/* [cite: 601, 611] */}
           {accessUrl && gamePin && <span className="mx-2">|</span>}
-          {accessUrl && <span>Join at: <strong className="text-foreground">{accessUrl}</strong></span>} {/* [cite: 601, 611] */}
+          {accessUrl && <span>Tham gia tại: <strong className="text-foreground">{accessUrl}</strong></span>} {/* [cite: 601, 611] */}
         </div>
 
         {/* Right Side: Host Controls (Optional) */}
@@ -56,11 +56,11 @@ const FooterBar: React.FC<FooterBarProps> = ({
             {showMuteButton && (
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon" onClick={onToggleMute} aria-label={isMuted ? "Unmute" : "Mute"} className="h-8 w-8">
+                  <Button variant="ghost" size="icon" onClick={onToggleMute} aria-label={isMuted ? "Bỏ tắt tiếng" : "Tắt tiếng"} className="h-8 w-8">
                     {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent><p>{isMuted ? "Unmute" : "Mute"}</p></TooltipContent>
+                <TooltipContent><p>{isMuted ? "Bỏ tắt tiếng" : "Tắt tiếng"}</p></TooltipContent>
               </Tooltip>
             )}
 
@@ -70,10 +70,10 @@ const FooterBar: React.FC<FooterBarProps> = ({
                 <TooltipTrigger asChild>
                   <Button variant="ghost" size="icon" onClick={onSettingsClick} title="Game Settings" className="h-8 w-8">
                     <Settings className="h-4 w-4" />
-                    <span className="sr-only">Settings</span>
+                    <span className="sr-only">Cài đặt</span>
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent><p>Game Settings</p></TooltipContent>
+                <TooltipContent><p>Cài đặt</p></TooltipContent>
               </Tooltip>
             )}
 
@@ -83,10 +83,10 @@ const FooterBar: React.FC<FooterBarProps> = ({
                 <TooltipTrigger asChild>
                   <Button variant="outline" size="icon" onClick={onSkip} title="Skip Question" className="h-8 w-8">
                     <SkipForward className="h-4 w-4" />
-                    <span className="sr-only">Skip</span>
+                    <span className="sr-only">Bỏ qua</span>
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent><p>Skip Question</p></TooltipContent>
+                <TooltipContent><p>Bỏ qua câu hỏi</p></TooltipContent>
               </Tooltip>
             )}
 
@@ -96,10 +96,10 @@ const FooterBar: React.FC<FooterBarProps> = ({
                 <TooltipTrigger asChild>
                   <Button variant="default" size="icon" onClick={onNext} title="Next" className="h-8 w-8">
                     <Play className="h-4 w-4" />
-                    <span className="sr-only">Next</span>
+                    <span className="sr-only">Tiếp theo</span>
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent><p>Next</p></TooltipContent>
+                <TooltipContent><p>Tiếp theo</p></TooltipContent>
               </Tooltip>
             )}
           </TooltipProvider>

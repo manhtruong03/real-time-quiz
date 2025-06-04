@@ -36,7 +36,7 @@ const formatImageTimestamp = (isoString: string): string => {
         const minutes = String(date.getMinutes()).padStart(2, '0');
         return `${day}/${month}/${year} ${hours}:${minutes}`;
     } catch (e) {
-        return "Invalid date";
+        return "Ngày không hợp lệ";
     }
 };
 

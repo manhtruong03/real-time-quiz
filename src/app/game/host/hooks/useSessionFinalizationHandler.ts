@@ -63,17 +63,17 @@ export function useSessionFinalizationHandler({
           await saveSessionResults(finalPayload);
           // Props here must match ToastFunctionArgs
           toast({
-            title: "Session Results Saved",
-            description: "The game results have been successfully recorded.",
+            title: "Kết quả phiên đã được lưu",
+            description: "Kết quả trò chơi đã được ghi lại thành công.",
           });
         } catch (error: any) {
           // Props here must match ToastFunctionArgs
           toast({
             variant: "destructive",
-            title: "Error Saving Results",
+            title: "Lỗi khi lưu kết quả",
             description:
               error.message ||
-              "An unexpected error occurred while saving session results.",
+              "Đã xảy ra lỗi không mong muốn khi lưu kết quả phiên.",
           });
         }
       };

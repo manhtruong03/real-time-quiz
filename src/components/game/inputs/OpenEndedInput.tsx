@@ -33,13 +33,13 @@ const OpenEndedInput: React.FC<OpenEndedInputProps> = ({
     <form onSubmit={handleSubmit} className={cn("flex flex-col gap-3 items-stretch", className)}>
       <Input
         type="text"
-        placeholder="Type your answer..."
+        placeholder="Nhập câu trả lời của bạn..."
         value={inputValue}
         onChange={(e) => setInputValue(e.target.value)}
         disabled={isDisabled}
         maxLength={maxLength}
         className="text-lg p-4 h-auto" // Larger text for input
-        aria-label="Your Answer"
+        aria-label="Đáp án của bạn"
       />
       <Button
         type="submit"
@@ -47,7 +47,7 @@ const OpenEndedInput: React.FC<OpenEndedInputProps> = ({
         size="lg" // [cite: 537]
         className="gap-2"
       >
-        Submit
+        Gửi
         <Send className="h-4 w-4" />
       </Button>
       {maxLength && (

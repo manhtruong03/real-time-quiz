@@ -77,7 +77,7 @@ const BackgroundItem: React.FC<BackgroundItemProps> = React.memo(({ bg, isSelect
                     ) : null}
                     {/* Placeholder text for error or missing image/color */}
                     <span className="absolute inset-0 flex items-center justify-center text-xs text-muted-foreground" style={{ display: (bg.background_file_path || bg.background_color) ? 'none' : 'flex' }}>
-                        No Preview
+                        Không xem trước
                     </span>
                 </div>
                 {/* Name Area */}
@@ -122,10 +122,10 @@ export const GameSettingsDialog: React.FC<GameSettingsDialogProps> = ({
             <Dialog open={open} onOpenChange={onOpenChange}>
                 <DialogContent className="sm:max-w-[600px]">
                     <DialogHeader>
-                        <DialogTitle>Game Settings</DialogTitle>
-                        <DialogDescription>Loading assets...</DialogDescription>
+                        <DialogTitle>Cài đặt</DialogTitle>
+                        <DialogDescription>Đang tải tài nguyên...</DialogDescription>
                     </DialogHeader>
-                    <p>Loading...</p>
+                    <p>Đang tải...</p>
                 </DialogContent>
             </Dialog>
         );
@@ -137,8 +137,8 @@ export const GameSettingsDialog: React.FC<GameSettingsDialogProps> = ({
             <Dialog open={open} onOpenChange={onOpenChange}>
                 <DialogContent className="sm:max-w-[600px]">
                     <DialogHeader>
-                        <DialogTitle>Error</DialogTitle>
-                        <DialogDescription>Could not load game assets.</DialogDescription>
+                        <DialogTitle>Lỗi</DialogTitle>
+                        <DialogDescription>Không thể tải tài nguyên trò chơi.</DialogDescription>
                     </DialogHeader>
                     <p className="text-destructive">{error}</p>
                 </DialogContent>
@@ -151,9 +151,9 @@ export const GameSettingsDialog: React.FC<GameSettingsDialogProps> = ({
             <DialogContent className="sm:max-w-[600px] max-h-[80vh] flex flex-col">
                 {/* ... DialogHeader ... */}
                 <DialogHeader>
-                    <DialogTitle>Game Settings</DialogTitle>
+                    <DialogTitle>Cài đặt</DialogTitle>
                     <DialogDescription>
-                        Customize the look and sound of your game lobby.
+                        Tùy chỉnh giao diện và âm thanh sảnh trò chơi của bạn.
                     </DialogDescription>
                 </DialogHeader>
 
@@ -162,7 +162,7 @@ export const GameSettingsDialog: React.FC<GameSettingsDialogProps> = ({
                     <div className="grid gap-6 py-4">
                         {/* --- Background Selection --- */}
                         <div>
-                            <h4 className="font-medium mb-3 text-foreground">Lobby Background</h4>
+                            <h4 className="font-medium mb-3 text-foreground">Hình nền</h4>
                             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                                 {backgrounds.filter(bg => bg.is_active).map((bg) => (
                                     // --- Use the memoized component ---
@@ -178,13 +178,13 @@ export const GameSettingsDialog: React.FC<GameSettingsDialogProps> = ({
 
                         {/* --- Sound Selection --- */}
                         <div>
-                            <h4 className="font-medium mb-3 text-foreground">Lobby Music</h4>
+                            <h4 className="font-medium mb-3 text-foreground">Nhạc nền</h4>
                             <Select
                                 value={selectedSoundId ?? ""} // Use selected ID from props
                                 onValueChange={onSoundSelect} // Call prop handler on change
                             >
                                 <SelectTrigger className="w-full">
-                                    <SelectValue placeholder="Select lobby music..." />
+                                    <SelectValue placeholder="Chọn nhạc nền..." />
                                 </SelectTrigger>
                                 <SelectContent>
                                     {lobbySounds.map((sound) => (
@@ -193,7 +193,7 @@ export const GameSettingsDialog: React.FC<GameSettingsDialogProps> = ({
                                         </SelectItem>
                                     ))}
                                     {lobbySounds.length === 0 && (
-                                        <SelectItem value="none" disabled>No lobby music available</SelectItem>
+                                        <SelectItem value="none" disabled>Không có nhạc nền nào khả dụng</SelectItem>
                                     )}
                                 </SelectContent>
                             </Select>

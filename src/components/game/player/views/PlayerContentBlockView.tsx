@@ -20,6 +20,6 @@ export const PlayerContentBlockView: React.FC<PlayerContentBlockViewProps> = ({ 
             <p className="text-md md:text-lg mt-1 max-w-lg text-muted-foreground">{block.description}</p>
         )}
         <MediaDisplay questionData={block} priority className="mt-3 max-w-sm" />
-        <p className="text-sm mt-4 text-muted-foreground">Get ready for the next question!</p>
+        <p className="text-sm mt-4 text-muted-foreground">Hãy sẵn sàng cho câu hỏi tiếp theo!</p>
     </div>
 );

@@ -22,14 +22,13 @@ interface QuizMetadataFormProps {
 
 // Example options for selects
 const visibilityOptions = [
-    { value: QuizVisibilityEnum.enum.PRIVATE, label: 'Private (Only you can see)' },
-    { value: QuizVisibilityEnum.enum.PUBLIC, label: 'Public (Visible to everyone)' },
+    { value: QuizVisibilityEnum.enum.PRIVATE, label: 'Riêng tư (Chỉ bạn có thể xem)' },
+    { value: QuizVisibilityEnum.enum.PUBLIC, label: 'Công khai (Hiển thị cho mọi người)' },
 ];
 
 const languageOptions = [
-    { value: 'en', label: 'English' },
-    { value: 'vi', label: 'Vietnamese' },
-    { value: 'es', label: 'Spanish' },
+    { value: 'en', label: 'Tiếng Anh' },
+    { value: 'vi', label: 'Tiếng Việt' },
     // Add more languages as needed
 ];
 
@@ -43,15 +42,15 @@ const QuizMetadataForm: React.FC<QuizMetadataFormProps> = ({ className }) => {
         <div className={cn('space-y-4 md:space-y-6', className)}>
             <RHFTextField<QuizMetadataSchemaType>
                 name="title"
-                label="Quiz Title"
-                placeholder="Enter your quiz title..."
+                label="Tiêu đề bài Quiz"
+                placeholder="Nhập tiêu đề bài quiz của bạn..."
                 required
             />
 
             <RHFTextAreaField<QuizMetadataSchemaType>
                 name="description"
-                label="Description"
-                placeholder="Add a short description (optional)..."
+                label="Mô tả"
+                placeholder="Thêm mô tả ngắn (tùy chọn)..."
                 rows={4}
             />
 
@@ -59,24 +58,24 @@ const QuizMetadataForm: React.FC<QuizMetadataFormProps> = ({ className }) => {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
                 <RHFSelectField<QuizMetadataSchemaType>
                     name="visibility"
-                    label="Visibility"
+                    label="Chế độ hiển thị"
                     options={visibilityOptions}
-                    placeholder="Select visibility..."
+                    placeholder="Chọn chế độ hiển thị..."
                 />
                 {/* <RHFSelectField<QuizMetadataSchemaType>
                     name="language"
-                    label="Language"
+                    label="Ngôn ngữ"
                     options={languageOptions}
-                    placeholder="Select language (optional)..."
+                    placeholder="Chọn ngôn ngữ (tùy chọn)..."
                 /> */}
             </div>
 
             <RHFTagInputField<QuizMetadataSchemaType>
                 name="tags"
-                label="Tags"
-                placeholder="Add relevant tags (e.g., math, history)..."
+                label="Thẻ (Tags)"
+                placeholder="Thêm các thẻ liên quan (ví dụ: toán, lịch sử)..."
                 maxTags={10} // Example limit from schema
-                description="Press Enter or comma (,) to add a tag. Max 10 tags."
+                description="Nhấn Enter hoặc dấu phẩy (,) để thêm thẻ. Tối đa 10 thẻ."
             />
             {/* --- End PHASE 3 --- */}
 

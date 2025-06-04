@@ -88,12 +88,12 @@ export const ScoreboardView: React.FC<ScoreboardViewProps> = ({
             // "bg-gradient-to-b from-purple-900 via-indigo-900 to-purple-900 text-white",
             className
         )}>
-            <h2 className="text-2xl md:text-3xl font-bold mb-2 text-white drop-shadow-md">Scoreboard</h2>
+            <h2 className="text-2xl md:text-3xl font-bold mb-2 text-white drop-shadow-md">Bảng điểm</h2>
             <div className="w-full max-w-3xl flex-shrink-0"> {/* Ensure banner doesn't grow */}
                 {highlightedPlayer && ( // Conditionally render banner
                     <HighlightBanner
                         highlightedPlayer={highlightedPlayer}
-                        statName="Highest Streak"
+                        statName="Chuỗi cao nhất"
                         statValue={`${highlightedPlayer.currentStreak} 🔥`}
                     />
                 )}

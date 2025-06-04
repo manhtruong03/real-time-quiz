@@ -29,7 +29,7 @@ export function formatSessionDateTime(
   if (epochMs === undefined || epochMs === null) return "N/A";
   // fromUnixTime expects seconds, so convert milliseconds to seconds
   const date = fromUnixTime(epochMs / 1000);
-  if (!isValid(date)) return "Invalid date";
+  if (!isValid(date)) return "Ngày không hợp lệ";
   // Using MM for month number, yyyy for year to match common usage.
   // The example "21 tháng 5, 2025" uses single M if no leading zero. date-fns handles this with 'M'.
   return format(date, "HH:mm dd 'tháng' M, yyyy", { locale: vi });

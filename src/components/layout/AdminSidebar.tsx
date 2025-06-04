@@ -24,12 +24,12 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-    { href: '/admin/dashboard', label: 'Tổng quan', icon: LayoutDashboard },
+    { href: '/admin/accounts', label: 'Tổng quan', icon: LayoutDashboard },
     { href: '/admin/accounts', label: 'Quản lý tài khoản', icon: UserCog },
-    { href: '/admin/tags', label: 'Quản lý Tag', icon: Tags },
+    { href: '/admin/accounts', label: 'Quản lý Tag', icon: Tags },
     { href: '/admin/images', label: 'Quản lý Hình ảnh', icon: ImageIcon },
     { href: '/admin/reports', label: 'Quản lý Báo cáo', icon: FileText },
-    { href: '/admin/change-password', label: 'Đổi mật khẩu', icon: KeyRound },
+    { href: '/admin/accounts', label: 'Đổi mật khẩu', icon: KeyRound },
     // Đăng xuất will likely be handled by a button in the header or user menu,
     // but can be an item here if preferred.
 ];
@@ -61,7 +61,7 @@ const AdminSidebar: React.FC = () => {
                     border-b border-border-color
                 "
             >
-                <Link href="/admin" className="flex items-center gap-2 text-accent-color no-underline">
+                <Link href="/admin/accounts" className="flex items-center gap-2 text-accent-color no-underline">
                     {/* VQ Logo styled like in HTML */}
                     <span
                         className="

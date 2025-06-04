@@ -1,4 +1,3 @@
-// src/components/game/host/lobby/JoinInfoPanel.tsx
 "use client"; // Needed for useState, navigator.clipboard
 
 import React, { useState } from 'react';
@@ -22,7 +21,7 @@ export const JoinInfoPanel: React.FC<JoinInfoPanelProps> = ({
     className,
 }) => {
     const [isQrDialogOpen, setIsQrDialogOpen] = useState(false);
-    const [copyTooltipText, setCopyTooltipText] = useState('Copy PIN');
+    const [copyTooltipText, setCopyTooltipText] = useState('Sao chép mã PIN'); // Việt hóa
     // Optional: const { toast } = useToast();
 
     const joinUrl = `https://${accessUrl}`; // Construct full URL
@@ -33,16 +32,16 @@ export const JoinInfoPanel: React.FC<JoinInfoPanelProps> = ({
         if (!gamePin) return;
         try {
             await navigator.clipboard.writeText(gamePin);
-            setCopyTooltipText('Copied!');
+            setCopyTooltipText('Đã sao chép!'); // Việt hóa
             // Optional: Show toast notification
             // toast({ title: "Success", description: "Game PIN copied to clipboard!" });
-            setTimeout(() => setCopyTooltipText('Copy PIN'), 2000); // Reset tooltip after 2 seconds
+            setTimeout(() => setCopyTooltipText('Sao chép mã PIN'), 2000); // Reset tooltip after 2 seconds // Việt hóa
         } catch (err) {
-            console.error('Failed to copy PIN: ', err);
-            setCopyTooltipText('Failed to copy');
+            console.error('Không thể sao chép mã PIN: ', err); // Việt hóa
+            setCopyTooltipText('Sao chép thất bại'); // Việt hóa
             // Optional: Show error toast
             // toast({ variant: "destructive", title: "Error", description: "Could not copy PIN." });
-            setTimeout(() => setCopyTooltipText('Copy PIN'), 2000);
+            setTimeout(() => setCopyTooltipText('Sao chép mã PIN'), 2000); // Việt hóa
         }
     };
 
@@ -53,9 +52,9 @@ export const JoinInfoPanel: React.FC<JoinInfoPanelProps> = ({
                 {/* Left Side: Text Instructions & PIN */}
                 <div className="flex flex-col items-center text-center md:items-start md:text-left">
                     <p className="text-lg font-medium text-card-foreground">
-                        Join at <a href={joinUrl} target="_blank" rel="noopener noreferrer" className="font-bold text-primary hover:underline">{accessUrl}</a>
+                        Tham gia tại <a href={joinUrl} target="_blank" rel="noopener noreferrer" className="font-bold text-primary hover:underline">{accessUrl}</a>
                     </p>
-                    <p className="text-sm text-muted-foreground mb-2">Enter Game PIN:</p>
+                    <p className="text-sm text-muted-foreground mb-2">Nhập mã PIN trò chơi:</p>
                     <div className="flex items-center gap-2 mb-3">
                         <span className="text-5xl md:text-6xl lg:text-7xl font-bold text-primary tracking-widest break-all">
                             {gamePin || '------'}
@@ -69,7 +68,7 @@ export const JoinInfoPanel: React.FC<JoinInfoPanelProps> = ({
                                         onClick={handleCopyPin}
                                         disabled={!gamePin}
                                         className="h-8 w-8 md:h-9 md:w-9 text-muted-foreground hover:text-foreground"
-                                        aria-label="Copy Game PIN"
+                                        aria-label="Sao chép mã PIN" // Việt hóa
                                     >
                                         <Copy className="h-4 w-4 md:h-5 md:w-5" />
                                     </Button>
@@ -95,7 +94,7 @@ export const JoinInfoPanel: React.FC<JoinInfoPanelProps> = ({
                                                 !gamePin && "opacity-50 cursor-not-allowed" // Dim if no PIN
                                             )}
                                             onClick={(e) => { if (!gamePin) e.preventDefault(); }} // Prevent trigger if no PIN
-                                            aria-label="Show QR Code"
+                                            aria-label="Hiển thị Mã QR" // Việt hóa
                                         >
                                             <QRCodeSVG
                                                 value={qrValue}
@@ -109,13 +108,13 @@ export const JoinInfoPanel: React.FC<JoinInfoPanelProps> = ({
                                     </DialogTrigger>
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                    <p>Show QR Code</p>
+                                    <p>Hiển thị Mã QR</p>
                                 </TooltipContent>
                             </Tooltip>
                         </TooltipProvider>
                         <DialogContent className="sm:max-w-[300px] p-6 flex flex-col items-center">
                             <DialogHeader className="mb-4">
-                                <DialogTitle className="text-center">Scan to Join</DialogTitle>
+                                <DialogTitle className="text-center">Quét mã QR để tham gia</DialogTitle>
                             </DialogHeader>
                             <div className="p-4 bg-white rounded-lg">
                                 <QRCodeSVG

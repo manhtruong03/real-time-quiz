@@ -44,7 +44,7 @@ export const HighlightBanner: React.FC<HighlightBannerProps> = ({
                 "flex items-center justify-center gap-3 p-3 rounded-lg bg-purple-800/50 text-purple-300 border border-purple-700/70 h-[60px]",
                 className
             )}>
-                <p className="text-sm italic">No special highlights this round.</p>
+                <p className="text-sm italic">Không có điểm nổi bật đặc biệt nào trong vòng này.</p>
             </div>
         );
     }

@@ -20,11 +20,11 @@ export const PinInputForm: React.FC<PinInputFormProps> = ({
     errorMessage,
     isConnecting,
 }) => (
-    <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-indigo-900 dark:to-purple-900">
+    <div className="flex flex-col items-center justify-center min-h-screen p-4 from-indigo-100 to-purple-100 dark:from-indigo-900 dark:to-purple-900">
         <Card className="w-full max-w-sm shadow-lg">
             <CardHeader>
-                <CardTitle className="text-2xl font-bold text-center">Join Game</CardTitle>
-                <CardDescription className="text-center text-muted-foreground">Enter the 6 or 7 digit PIN.</CardDescription>
+                <CardTitle className="text-2xl font-bold text-center">Tham gia</CardTitle>
+                <CardDescription className="text-center text-muted-foreground">Nhập mã PIN gồm 6 hoặc 7 chữ số.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
                 <Input
@@ -40,7 +40,7 @@ export const PinInputForm: React.FC<PinInputFormProps> = ({
                 {errorMessage && <p className="text-sm text-red-600 dark:text-red-400 text-center">{errorMessage}</p>}
                 <Button onClick={onSubmit} className="w-full" size="lg" disabled={isConnecting}>
                     {isConnecting ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <LogIn className="mr-2 h-5 w-5" />}
-                    {isConnecting ? 'Connecting...' : 'Enter'}
+                    {isConnecting ? 'Đang kết nối...' : 'Kết nối'}
                 </Button>
             </CardContent>
         </Card>

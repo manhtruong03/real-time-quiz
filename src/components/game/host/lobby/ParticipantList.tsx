@@ -40,7 +40,7 @@ export const ParticipantList: React.FC<ParticipantListProps> = ({
                 <Users className="h-6 w-6 text-muted-foreground" />
                 {/* MODIFIED: Use the length of the filtered list */}
                 <span className="text-xl md:text-2xl font-bold">{displayedParticipants.length}</span>
-                <h3 className="text-lg md:text-xl font-semibold text-muted-foreground">Participants</h3>
+                <h3 className="text-lg md:text-xl font-semibold text-muted-foreground">Danh sách người tham gia</h3>
             </div>
 
             {/* Player Grid Area */}
@@ -48,7 +48,7 @@ export const ParticipantList: React.FC<ParticipantListProps> = ({
                 {displayedParticipants.length === 0 ? (
                     <div className="flex items-center justify-center h-full">
                         <p className="text-base text-center text-muted-foreground italic py-4">
-                            Waiting for active players...
+                            Đang chờ người chơi tham gia...
                         </p>
                     </div>
                 ) : (

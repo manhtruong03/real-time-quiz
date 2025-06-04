@@ -121,11 +121,11 @@ export function useHostPageActions({
         });
       } else {
         throw new Error(
-          data.error || `Failed to create session (Status: ${response.status})`
+          data.error || `Tạo phiên thất bại (Trạng thái: ${response.status})`
         );
       }
     } catch (error: any) {
-      setPageApiError(error.message || "Failed to start game session.");
+      setPageApiError(error.message || "Không thể bắt đầu phiên trò chơi.");
       setUiState("ERROR");
     }
   }, [
@@ -190,8 +190,8 @@ export function useHostPageActions({
     if (!document.fullscreenEnabled) {
       toast({
         variant: "destructive",
-        title: "Error",
-        description: "Fullscreen not supported.",
+        title: "Lỗi",
+        description: "Chế độ toàn màn hình không được hỗ trợ.",
       });
       return;
     }
@@ -199,8 +199,8 @@ export function useHostPageActions({
       document.documentElement.requestFullscreen().catch((err) =>
         toast({
           variant: "destructive",
-          title: "Error",
-          description: `Could not enter fullscreen: ${err.message}`,
+          title: "Lỗi",
+          description: `Không thể vào chế độ toàn màn hình: ${err.message}`,
         })
       );
     } else {
@@ -214,18 +214,18 @@ export function useHostPageActions({
     (playerId: string) => {
       if (!liveGameState || !liveGameState.players[playerId]) {
         console.warn(
-          `[HostPageActions] Player ${playerId} not found for kicking.`
+          `[HostPageActions] Người chơi ${playerId} không tìm thấy để mời ra.`
         );
         toast({
-          title: "Error",
-          description: "Could not kick player: Player not found.",
+          title: "Lỗi",
+          description: "Không thể mời người chơi: Người chơi không tìm thấy.",
           variant: "destructive",
         });
         return;
       }
 
       console.log(
-        `[HostPageActions] handleKickPlayer called for player: ${playerId}`
+        `[HostPageActions] handleKickPlayer được gọi cho người chơi: ${playerId}`
       );
       // Call the function passed from the coordinator
       executeKickPlayerFromCoordinator(playerId);
@@ -233,10 +233,10 @@ export function useHostPageActions({
       // Optionally, provide feedback to the host via toast
       // This toast confirms the action was initiated; actual state update happens in coordinator
       toast({
-        title: "Player Kicked",
-        description: `Player ${
+        title: "Đã đuổi người chơi",
+        description: `Người chơi ${
           liveGameState.players[playerId]?.nickname || playerId
-        } has been marked for kicking.`,
+        } đã bị mời ra khỏi phòng.`,
       });
     },
     [executeKickPlayerFromCoordinator, liveGameState, toast]

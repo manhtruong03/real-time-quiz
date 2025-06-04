@@ -12,7 +12,7 @@ const ProgressTracker: React.FC<ProgressTrackerProps> = ({ current, total, class
   if (total <= 0) return null;
   return (
     <Badge variant="secondary" className={cn("text-xs md:text-sm", className)}> {/* [cite: 544] */}
-      Question {Math.min(current, total)} / {total}
+      Câu hỏi {Math.min(current, total)} / {total}
     </Badge>
   );
 };

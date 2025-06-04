@@ -108,9 +108,9 @@ export const AvatarSelectionPopup: React.FC<AvatarSelectionPopupProps> = ({
 
                 <DialogHeader>
 
-                    <DialogTitle>Choose Your Avatar</DialogTitle>
+                    <DialogTitle>Chọn hình đại diện của bạn</DialogTitle>
                     <DialogDescription>
-                        Select an avatar to represent you in the game.
+                        Chọn một hình đại diện để đại diện cho bạn trong trò chơi.
                     </DialogDescription>
 
                 </DialogHeader>
@@ -128,7 +128,7 @@ export const AvatarSelectionPopup: React.FC<AvatarSelectionPopupProps> = ({
                                 />
                             ))
                         ) : (
-                            <p className="col-span-4 text-center text-muted-foreground">No avatars available.</p>
+                            <p className="col-span-4 text-center text-muted-foreground">Không có hình đại diện nào khả dụng.</p>
                         )}
                     </div>
                 </ScrollArea>

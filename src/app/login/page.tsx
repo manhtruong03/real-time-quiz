@@ -61,18 +61,18 @@ export default function LoginPage() {
       // --- End context call ---
 
       toast({
-        title: 'Login Successful',
-        description: `Welcome back, ${response.username}!`,
+        title: 'Đăng nhập thành công',
+        description: `Chào mừng trở lại, ${response.username}!`,
       });
 
       router.push('/profile');
     } catch (err: any) {
       console.error('Login failed:', err);
-      const errorMessage = err.message || 'Invalid username or password. Please try again.';
+      const errorMessage = err.message || 'Tên người dùng hoặc mật khẩu không hợp lệ. Vui lòng thử lại.';
       setError(errorMessage);
       toast({
         variant: 'destructive',
-        title: 'Login Failed',
+        title: 'Đăng nhập thất bại',
         description: errorMessage,
       });
     } finally {
@@ -84,7 +84,7 @@ export default function LoginPage() {
   if (isAuthLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        Loading authentication...
+        Đang tải xác thực...
       </div>
     ); // Or a spinner component
   }
@@ -105,9 +105,9 @@ export default function LoginPage() {
         <div className="w-full max-w-md px-4">
           <Card>
             <CardHeader className="space-y-1">
-              <CardTitle className="text-2xl font-bold text-center">Login</CardTitle>
+              <CardTitle className="text-2xl font-bold text-center">Đăng nhập</CardTitle>
               <CardDescription className="text-center">
-                Enter your credentials to access your account
+                Nhập thông tin đăng nhập để truy cập tài khoản của bạn
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -123,9 +123,9 @@ export default function LoginPage() {
                   )}
                   <RHFTextField<LoginSchemaType>
                     name="username"
-                    label="Username"
+                    label="Tên tài khoản"
                     type="text"
-                    placeholder="Your username"
+                    placeholder="Tên tài khoản của bạn"
                     required
                     disabled={isLoading} // Disable during API call
                   />
@@ -135,23 +135,23 @@ export default function LoginPage() {
                     </div>
                     <RHFTextField<LoginSchemaType>
                       name="password"
-                      label="Password"
+                      label="Mật khẩu"
                       type="password"
                       required
                       disabled={isLoading} // Disable during API call
                     />
                   </div>
                   <Button type="submit" className="w-full" disabled={isLoading}>
-                    {isLoading ? 'Logging in...' : 'Login'}
+                    {isLoading ? 'Đang đăng nhập...' : 'Đăng nhập'}
                   </Button>
                 </form>
               </Form>
             </CardContent>
             <CardFooter className="flex flex-col space-y-4">
               <div className="text-center text-sm">
-                Don't have an account?{' '}
+                Chưa có tài khoản?{' '}
                 <Link href="/signup" className="text-primary hover:underline">
-                  Sign up
+                  Đăng ký
                 </Link>
               </div>
             </CardFooter>

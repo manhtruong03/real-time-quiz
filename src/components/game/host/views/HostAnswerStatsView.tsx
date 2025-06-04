@@ -52,7 +52,7 @@ export const HostAnswerStatsView: React.FC<HostAnswerStatsViewProps> = ({
 
     if (!currentBlock) {
         // TODO: Consider a more specific loading/error state passed via props if needed
-        return <div className={cn("flex items-center justify-center h-full", className)}>Loading question data...</div>;
+        return <div className={cn("flex items-center justify-center h-full", className)}>Đang tải dữ liệu câu hỏi...</div>;
     }
 
     const isJumble = isJumbleQuestion(currentBlock);
@@ -222,7 +222,7 @@ export const HostAnswerStatsView: React.FC<HostAnswerStatsViewProps> = ({
                             <DialogTrigger asChild>
                                 <Button variant="outline" size="sm" className="flex-shrink-0 mt-2">
                                     <ImageIcon className="mr-2 h-4 w-4" />
-                                    Show Media
+                                    Xem hình minh họa
                                 </Button>
                             </DialogTrigger>
                         )}
@@ -283,7 +283,7 @@ export const HostAnswerStatsView: React.FC<HostAnswerStatsViewProps> = ({
                             <Card className="mt-4 bg-background/80 backdrop-blur-sm border-primary/50 shadow-md max-w-md w-full mx-auto">
                                 <CardHeader className="pb-2 pt-3">
                                     <CardTitle className="text-center text-base font-semibold text-primary">
-                                        Correct Answer(s)
+                                        Câu trả lời đúng
                                     </CardTitle>
                                 </CardHeader>
                                 <CardContent className="pt-0 pb-4">
@@ -297,7 +297,7 @@ export const HostAnswerStatsView: React.FC<HostAnswerStatsViewProps> = ({
                                             ))}
                                     </ul>
                                     {hostQuestion.choices.filter(choice => choice.answer && choice.correct).length === 0 && (
-                                        <p className="text-center text-sm text-muted-foreground italic">(No correct answers defined)</p>
+                                        <p className="text-center text-sm text-muted-foreground italic">(Chưa có câu trả lời đúng được định nghĩa)</p>
                                     )}
                                 </CardContent>
                             </Card>
@@ -305,7 +305,7 @@ export const HostAnswerStatsView: React.FC<HostAnswerStatsViewProps> = ({
                         {/* --- END Open-Ended Display --- */}
                         {/* Fallback */}
                         {!(currentBlock.type === 'quiz' || currentBlock.type === 'survey' || currentBlock.type === 'jumble' || currentBlock.type === 'open_ended') && (
-                            <p>Unsupported answer display for type: {currentBlock.type}</p>
+                            <p>Hiển thị câu trả lời không được hỗ trợ cho loại: {currentBlock.type}</p>
                         )}
                     </div>
                 </div>

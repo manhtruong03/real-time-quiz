@@ -74,7 +74,7 @@ export const QuizEditorContentArea: React.FC<QuizEditorContentAreaProps> = ({
             // Fallback or loading state if necessary
             return (
                 <div className={cn("flex-grow flex items-center justify-center", mainContentAreaClasses)}>
-                    Error: Invalid View State or loading...
+                    Lỗi: Trạng thái xem không hợp lệ hoặc đang tải...
                 </div>
             );
     }

@@ -63,7 +63,7 @@ const AnswerInput: React.FC<AnswerInputProps> = ({
                 placeholder={`Đáp án ${index + 1}`}
                 className="flex-grow bg-transparent border-none text-editor-text-primary p-2 focus-visible:ring-0 resize-none text-sm placeholder:text-editor-text-placeholder"
                 rows={1} // Start with 1 row, auto-grows
-                aria-label={`Answer option ${index + 1}`}
+                aria-label={`Tùy chọn đáp án ${index + 1}`}
             />
 
             {/* Controls */}
@@ -72,8 +72,8 @@ const AnswerInput: React.FC<AnswerInputProps> = ({
                     variant="ghost"
                     size="icon"
                     className="text-editor-text-secondary hover:text-white hover:bg-editor-secondary-bg h-8 w-8"
-                    aria-label={`Add image to answer ${index + 1}`}
-                    onClick={() => console.log('Add image clicked - TBD')} // Placeholder
+                    aria-label={`Thêm hình ảnh cho đáp án ${index + 1}`}
+                    onClick={() => console.log('Thêm hình ảnh đã được nhấp - TBD')}
                 >
                     <ImageIcon className="h-4 w-4" />
                 </Button>
@@ -82,7 +82,7 @@ const AnswerInput: React.FC<AnswerInputProps> = ({
                     size="icon"
                     className="text-editor-text-secondary hover:text-editor-danger-color hover:bg-editor-secondary-bg h-8 w-8"
                     onClick={onRemove}
-                    aria-label={`Remove answer ${index + 1}`}
+                    aria-label={`Xóa đáp án ${index + 1}`}
                 >
                     <Trash2 className="h-4 w-4" />
                 </Button>
@@ -99,7 +99,7 @@ const AnswerInput: React.FC<AnswerInputProps> = ({
                             ? 'bg-editor-correct-answer-highlight border-editor-correct-answer-highlight'
                             : 'bg-transparent border-editor-border-color hover:bg-editor-secondary-bg'
                     )}
-                    aria-label={`Mark answer ${index + 1} as correct`}
+                    aria-label={isCorrect ? `Đánh dấu đáp án ${index + 1} là sai` : `Đánh dấu đáp án ${index + 1} là đúng`}
                 >
                     {isCorrect && <Check className="h-4 w-4 text-white" />}
                 </button>

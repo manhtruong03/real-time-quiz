@@ -77,7 +77,7 @@ export const GameAssetsProvider: React.FC<GameAssetsProviderProps> = ({
                         isLoading: false,
                         error:
                             err.message ||
-                            "An unknown error occurred while fetching assets.",
+                            "Lỗi không xác định.",
                     }));
                 }
             }

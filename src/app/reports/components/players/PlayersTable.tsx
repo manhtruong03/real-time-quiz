@@ -30,11 +30,11 @@ type SortableHeader = {
 };
 
 const headers: SortableHeader[] = [
-    { label: 'Nickname', key: 'nickname', sortable: true, textAlignment: 'text-left', className: "w-[30%]" },
-    { label: 'Rank', key: 'rank', sortable: true, textAlignment: 'text-center', className: "w-[15%]" },
-    { label: 'Correct answers', key: 'averageAccuracy', sortable: true, textAlignment: 'text-center', className: "w-[25%]" },
-    { label: 'Unanswered', key: 'unansweredCount', sortable: false, textAlignment: 'text-center', className: "w-[15%]" },
-    { label: 'Final Score', key: 'totalPoints', sortable: true, textAlignment: 'text-right', className: "w-[15%]" },
+    { label: 'Biệt danh', key: 'nickname', sortable: true, textAlignment: 'text-left', className: "w-[30%]" },
+    { label: 'Xếp hạng', key: 'rank', sortable: true, textAlignment: 'text-center', className: "w-[15%]" },
+    { label: 'Trả lời đúng', key: 'averageAccuracy', sortable: true, textAlignment: 'text-center', className: "w-[25%]" },
+    { label: 'Chưa trả lời', key: 'unansweredCount', sortable: false, textAlignment: 'text-center', className: "w-[15%]" },
+    { label: 'Điểm cuối cùng', key: 'totalPoints', sortable: true, textAlignment: 'text-right', className: "w-[15%]" },
 ];
 
 const PlayersTable: React.FC<PlayersTableProps> = ({
@@ -94,7 +94,7 @@ const PlayersTable: React.FC<PlayersTableProps> = ({
                                 colSpan={headers.length}
                                 className="py-8 px-4 text-center text-sm text-text-secondary"
                             >
-                                No players found.
+                                Không tìm thấy người chơi nào.
                             </TableCell>
                         </TableRow>
                     )}

@@ -59,7 +59,7 @@ export function useAdminUsersData(
         setError(
           err instanceof Error
             ? err
-            : new Error("Failed to load user accounts.")
+            : new Error("Không thể tải thông tin người dùng.")
         );
         toast({
           title: "Lỗi",

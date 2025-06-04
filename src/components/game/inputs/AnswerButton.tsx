@@ -65,11 +65,11 @@ const AnswerButtonComponent: React.FC<AnswerButtonProps> = ({
 
   // --- Determine Image URL (Unchanged) ---
   let imageUrl: string | undefined = undefined;
-  let imageAlt: string | undefined = "Answer option image";
+  let imageAlt: string | undefined = "Lựa chọn với hình ảnh";
   if (isImageChoice(choice)) {
     if (choice.image?.url) imageUrl = choice.image.url;
     else if (choice.image?.id) imageUrl = `${KHOOT_MEDIA_BASE_URL}${choice.image.id}`;
-    imageAlt = choice.image?.altText || `Answer option ${index + 1}`;
+    imageAlt = choice.image?.altText || `Lựa chọn ${index + 1}`;
   }
 
   // --- Determine Component State ---
@@ -178,7 +178,7 @@ const AnswerButtonComponent: React.FC<AnswerButtonProps> = ({
                 "h-5 w-5 md:h-6 md:w-6 flex-shrink-0",
                 isCorrectOption ? "text-green-300" : "text-red-400"
               )}
-              aria-label={isCorrectOption ? "Correct" : "Incorrect"}
+              aria-label={isCorrectOption ? "Đúng" : "Sai"}
             />
           )}
           {stats && (

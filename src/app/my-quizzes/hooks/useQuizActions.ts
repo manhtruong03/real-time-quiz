@@ -35,20 +35,18 @@ export const useQuizActions = ({ setQuizzes, toast }: UseQuizActionsProps) => {
       );
       toast({
         // Ensure these properties match ToastProps
-        title: "Quiz Deleted",
-        description: `"${
-          quizTitle || "The quiz"
-        }" has been successfully deleted.`,
+        title: "Đã xóa Quiz",
+        description: `"${quizTitle || "Bài quiz"}" đã được xóa thành công.`,
       });
     } catch (err: any) {
       console.error(`Failed to delete quiz ${quizId}:`, err);
       toast({
         // Ensure these properties match ToastProps
         variant: "destructive",
-        title: "Delete Failed",
+        title: "Xóa thất bại",
         description:
           err.message ||
-          `Could not delete "${quizTitle || "the quiz"}". Please try again.`,
+          `Không thể xóa "${quizTitle || "bài quiz"}". Vui lòng thử lại.`,
       });
     } finally {
       setIsDeleting(null);

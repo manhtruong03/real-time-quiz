@@ -59,7 +59,7 @@ export const LobbyHeader: React.FC<LobbyHeaderProps> = ({
         )}>
             {/* Left Side */}
             <div className="flex-shrink-0">
-                <h1 className="text-lg md:text-xl font-bold truncate">{quizTitle || "Quiz Lobby"}</h1>
+                <h1 className="text-lg md:text-xl font-bold truncate">{quizTitle || "Sảnh câu đố"}</h1>
             </div>
 
             {/* Center: Start Controls */}
@@ -71,11 +71,11 @@ export const LobbyHeader: React.FC<LobbyHeaderProps> = ({
                         checked={isAutoStartEnabled}
                         onCheckedChange={onAutoStartToggle}
                         disabled={participantCount === 0} // Disable switch if no players
-                        aria-label="Auto Start"
-                        title={participantCount === 0 ? "Waiting for players to enable auto-start" : (isAutoStartEnabled ? "Disable auto-start" : "Enable auto-start")}
+                        aria-label="Tự động bắt đầu"
+                        title={participantCount === 0 ? "Đang chờ người chơi bật tự động bắt đầu" : (isAutoStartEnabled ? "Tắt tự động bắt đầu" : "Bật tự động bắt đầu")}
                     />
                     <Label htmlFor="auto-start-switch" className={cn("text-sm font-medium cursor-pointer hidden sm:inline", participantCount === 0 && "cursor-not-allowed opacity-50")}>
-                        Auto Start
+                        Tự động bắt đầu
                     </Label>
                     {/* Timer Selection (only if enabled) */}
                     {isAutoStartEnabled && (
@@ -85,12 +85,12 @@ export const LobbyHeader: React.FC<LobbyHeaderProps> = ({
                             disabled={participantCount === 0} // Also disable select if no players
                         >
                             <SelectTrigger className="h-8 w-[120px] text-xs ml-2">
-                                <SelectValue placeholder="Select time..." />
+                                <SelectValue placeholder="Chọn thời gian..." />
                             </SelectTrigger>
                             <SelectContent>
                                 {AUTO_START_OPTIONS.map((seconds) => (
                                     <SelectItem key={seconds} value={String(seconds)} className="text-xs">
-                                        {seconds} second{seconds !== 1 ? 's' : ''}
+                                        {seconds} giây{seconds !== 1 ? 's' : ''}
                                     </SelectItem>
                                 ))}
                             </SelectContent>
@@ -104,17 +104,17 @@ export const LobbyHeader: React.FC<LobbyHeaderProps> = ({
                     onClick={onStartGame}
                     disabled={!canStartGameManually && !isCountingDown} // Disabled if no players OR if auto-start is on (unless counting down)
                     className="min-w-[150px] transition-all" // Wider to accommodate countdown text
-                    title={!canStartGameManually && !isCountingDown ? (participantCount > 0 ? "Auto-start enabled" : "Waiting for players") : "Start the quiz!"}
+                    title={!canStartGameManually && !isCountingDown ? (participantCount > 0 ? "Tự động bắt đầu đã bật" : "Đang chờ người chơi") : "Bắt đầu câu đố!"}
                 >
                     {isCountingDown ? (
                         <>
                             <Timer className="mr-2 h-5 w-5 animate-spin duration-[2000ms]" />
-                            Starting in {autoStartCountdown}...
+                            Bắt đầu sau {autoStartCountdown}...
                         </>
                     ) : (
                         <>
                             <Play className="mr-2 h-5 w-5" />
-                            Start
+                            Bắt đầu
                         </>
                     )}
                 </Button>
@@ -127,31 +127,31 @@ export const LobbyHeader: React.FC<LobbyHeaderProps> = ({
                     {/* Mute/Unmute Button (RE-ADDED) */}
                     <Tooltip>
                         <TooltipTrigger asChild>
-                            <Button variant="ghost" size="icon" onClick={onToggleMute} aria-label={isMuted ? "Unmute" : "Mute"} className="h-8 w-8 md:h-9 md:w-9">
+                            <Button variant="ghost" size="icon" onClick={onToggleMute} aria-label={isMuted ? "Bỏ tắt tiếng" : "Tắt tiếng"} className="h-8 w-8 md:h-9 md:w-9">
                                 {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
                             </Button>
                         </TooltipTrigger>
-                        <TooltipContent><p>{isMuted ? "Unmute" : "Mute"}</p></TooltipContent>
+                        <TooltipContent><p>{isMuted ? "Bỏ tắt tiếng" : "Tắt tiếng"}</p></TooltipContent>
                     </Tooltip>
 
                     {/* Settings Button */}
                     <Tooltip>
                         <TooltipTrigger asChild>
-                            <Button variant="ghost" size="icon" onClick={() => { console.log("[LobbyHeader] Settings button clicked!"); onSettingsClick(); }} aria-label="Game Settings" className="h-8 w-8 md:h-9 md:w-9">
+                            <Button variant="ghost" size="icon" onClick={() => { console.log("[LobbyHeader] Settings button clicked!"); onSettingsClick(); }} aria-label="Cài đặt trò chơi" className="h-8 w-8 md:h-9 md:w-9">
                                 <Settings2 className="h-4 w-4" />
                             </Button>
                         </TooltipTrigger>
-                        <TooltipContent><p>Game Settings</p></TooltipContent>
+                        <TooltipContent><p>Cài đặt trò chơi</p></TooltipContent>
                     </Tooltip>
 
                     {/* Fullscreen Toggle */}
                     <Tooltip>
                         <TooltipTrigger asChild>
-                            <Button variant="ghost" size="icon" onClick={onToggleFullScreen} aria-label={isFullScreen ? "Exit Fullscreen" : "Enter Fullscreen"} className="h-8 w-8 md:h-9 md:w-9">
+                            <Button variant="ghost" size="icon" onClick={onToggleFullScreen} aria-label={isFullScreen ? "Thoát toàn màn hình" : "Mở toàn màn hình"} className="h-8 w-8 md:h-9 md:w-9">
                                 {isFullScreen ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
                             </Button>
                         </TooltipTrigger>
-                        <TooltipContent><p>{isFullScreen ? "Exit Fullscreen" : "Enter Fullscreen"}</p></TooltipContent>
+                        <TooltipContent><p>{isFullScreen ? "Thoát toàn màn hình" : "Mở toàn màn hình"}</p></TooltipContent>
                     </Tooltip>
 
                     {/* End Game Button */}
@@ -164,17 +164,17 @@ export const LobbyHeader: React.FC<LobbyHeaderProps> = ({
                                     </Button>
                                 </AlertDialogTrigger>
                             </TooltipTrigger>
-                            <TooltipContent><p>End Game</p></TooltipContent>
+                            <TooltipContent><p>Kết thúc trò chơi</p></TooltipContent>
                         </Tooltip>
                         <AlertDialogContent>
                             <AlertDialogHeader>
-                                <AlertDialogTitle>End Game?</AlertDialogTitle>
+                                <AlertDialogTitle>Kết thúc trò chơi?</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                    Are you sure you want to end this quiz session? All players will be disconnected.
+                                    Bạn có chắc muốn kết thúc phiên đố này không? Tất cả người chơi sẽ bị ngắt kết nối.
                                 </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogCancel>Hủy</AlertDialogCancel>
                                 <AlertDialogAction onClick={onEndGame} className={cn(buttonVariants({ variant: "destructive" }))}>
                                     End Game
                                 </AlertDialogAction>

@@ -20,19 +20,19 @@ export const PlayerKickedView: React.FC = () => {
                 <CardHeader>
                     <CardTitle className="flex flex-col items-center justify-center text-2xl font-bold">
                         <AlertTriangle className="h-12 w-12 text-destructive mb-3" />
-                        You Have Been Kicked
+                        Bạn đã bị đuổi khỏi phòng
                     </CardTitle>
                 </CardHeader>
                 <CardContent>
                     <p className="text-muted-foreground mb-6">
-                        The host has removed you from the game session.
+                        Người tổ chức đã đuổi bạn khỏi phiên.
                     </p>
                     <Button
                         onClick={handleReturnHome}
                         variant="destructive"
                         className="w-full"
                     >
-                        Return to Home
+                        Về trang chủ
                     </Button>
                 </CardContent>
             </Card>

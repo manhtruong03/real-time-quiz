@@ -34,8 +34,8 @@ export const MediaEditOptions: React.FC<MediaEditOptionsProps> = ({
     };
 
     const handleUploadClick = () => {
-        console.log('Upload button clicked (Not Implemented)');
-        alert('File upload is not implemented yet.');
+        console.log('Nút Tải lên đã được nhấp (Chưa được triển khai)'); // Việt hóa
+        alert('Chức năng tải tệp chưa được triển khai.'); // Việt hóa
     };
 
     const isUrlValid = imageUrl.startsWith('http://') || imageUrl.startsWith('https://');
@@ -45,14 +45,14 @@ export const MediaEditOptions: React.FC<MediaEditOptionsProps> = ({
         <div className={cn("pt-4", className)}>
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                 <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="url"><LinkIcon className="mr-1 h-4 w-4" /> Enter URL</TabsTrigger>
-                    <TabsTrigger value="upload"><UploadCloud className="mr-1 h-4 w-4" /> Upload</TabsTrigger>
+                    <TabsTrigger value="url"><LinkIcon className="mr-1 h-4 w-4" /> Nhập URL</TabsTrigger>
+                    <TabsTrigger value="upload"><UploadCloud className="mr-1 h-4 w-4" /> Tải lên</TabsTrigger>
                 </TabsList>
 
                 {/* URL Input Tab */}
                 <TabsContent value="url" className="mt-4 space-y-4">
                     <div className="space-y-2">
-                        <Label htmlFor="imageUrl">Image URL</Label>
+                        <Label htmlFor="imageUrl">URL hình ảnh</Label>
                         <Input
                             id="imageUrl"
                             type="url"
@@ -61,7 +61,7 @@ export const MediaEditOptions: React.FC<MediaEditOptionsProps> = ({
                             onChange={(e) => setImageUrl(e.target.value)}
                         />
                         {!isUrlValid && imageUrl.length > 0 && (
-                            <p className="text-xs text-destructive">Please enter a valid URL (starting with http:// or https://)</p>
+                            <p className="text-xs text-destructive">Vui lòng nhập một URL hợp lệ (bắt đầu bằng http:// hoặc https://)</p>
                         )}
                     </div>
                     {/* No DialogFooter here, submit is handled via props */}
@@ -71,7 +71,7 @@ export const MediaEditOptions: React.FC<MediaEditOptionsProps> = ({
                             onClick={handleUrlConfirm}
                             disabled={!imageUrl.trim() || !isUrlValid}
                         >
-                            Confirm URL
+                            Xác nhận URL
                         </Button>
                     </div>
                 </TabsContent>
@@ -81,13 +81,13 @@ export const MediaEditOptions: React.FC<MediaEditOptionsProps> = ({
                     <div className="border-2 border-dashed border-muted-foreground/50 rounded-lg flex flex-col items-center justify-center gap-2 p-8 h-40 text-muted-foreground">
                         <UploadCloud className="h-10 w-10" strokeWidth={1} />
                         <span className="text-sm font-medium text-center">
-                            Drag & drop file here or click upload
+                            Kéo & thả tệp vào đây hoặc nhấp để tải lên
                         </span>
                     </div>
                     {/* No DialogFooter here */}
                     <div className="flex justify-end">
                         <Button type="button" onClick={handleUploadClick} disabled>
-                            Upload Image (Disabled)
+                            Tải lên hình ảnh (Đã vô hiệu hóa)
                         </Button>
                     </div>
                 </TabsContent>

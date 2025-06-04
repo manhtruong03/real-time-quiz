@@ -71,19 +71,19 @@ export default function SignupPage() {
 
             // Show success toast
             toast({
-                title: 'Registration Successful',
-                description: response.message || 'You can now log in.',
+                title: 'Đăng ký thành công',
+                description: response.message || 'Bây giờ bạn có thể đăng nhập.',
             });
 
             router.push('/login'); // Redirect to login page after successful signup
         } catch (err: any) {
             console.error('Signup failed:', err);
-            const errorMessage = err.message || 'Registration failed. Please try again.';
+            const errorMessage = err.message || 'Đăng ký thất bại. Vui lòng thử lại.';
             setError(errorMessage); // Set general error for display
             // Show error toast
             toast({
                 variant: 'destructive',
-                title: 'Registration Failed',
+                title: 'Đăng ký thất bại',
                 description: errorMessage,
             });
         } finally {
@@ -102,8 +102,8 @@ export default function SignupPage() {
                 <div className="w-full max-w-md px-4">
                     <Card>
                         <CardHeader className="space-y-1">
-                            <CardTitle className="text-2xl font-bold text-center">Create Account</CardTitle>
-                            <CardDescription className="text-center">Enter your details to sign up.</CardDescription>
+                            <CardTitle className="text-2xl font-bold text-center">Tạo tài khoản</CardTitle>
+                            <CardDescription className="text-center">Nhập thông tin của bạn để đăng ký.</CardDescription>
                         </CardHeader>
                         <CardContent>
                             {/* --- Wrap form with RHF Form Provider --- */}
@@ -121,15 +121,15 @@ export default function SignupPage() {
                                     {/* --- Use RHFTextField --- */}
                                     <RHFTextField<SignupSchemaType>
                                         name="username"
-                                        label="Username"
+                                        label="Tên tài khoản"
                                         type="text"
-                                        placeholder="Choose a username"
+                                        placeholder="Nhập tên tài khoản"
                                         required
                                     />
 
                                     <RHFTextField<SignupSchemaType>
                                         name="email"
-                                        label="Email (Optional)"
+                                        label="Email (Tùy chọn)"
                                         type="email"
                                         placeholder="your.email@example.com"
                                     // Not required based on schema
@@ -137,9 +137,9 @@ export default function SignupPage() {
 
                                     <RHFTextField<SignupSchemaType>
                                         name="password"
-                                        label="Password"
+                                        label="Mật khẩu"
                                         type="password"
-                                        placeholder="Create a password"
+                                        placeholder="Nhập mật khẩu"
                                         required
                                     />
                                     {/* Add RHFTextField for confirmPassword if needed */}
@@ -155,7 +155,7 @@ export default function SignupPage() {
                                     {/* --- End RHFTextField --- */}
 
                                     <Button type="submit" className="w-full" disabled={isLoading}>
-                                        {isLoading ? 'Signing up...' : 'Sign Up'}
+                                        {isLoading ? 'Đang đăng ký...' : 'Đăng ký'}
                                     </Button>
                                 </form>
                             </Form>
@@ -163,9 +163,9 @@ export default function SignupPage() {
                         </CardContent>
                         <CardFooter className="flex flex-col space-y-4">
                             <div className="text-center text-sm">
-                                Already have an account?{' '}
+                                Đã có tài khoản?{' '}
                                 <Link href="/login" className="text-primary hover:underline">
-                                    Login
+                                    Đăng nhập
                                 </Link>
                             </div>
                         </CardFooter>

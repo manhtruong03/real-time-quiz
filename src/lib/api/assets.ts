@@ -6,171 +6,60 @@ import type {
   PowerUp,
 } from "@/src/lib/types/assets";
 
-// Define expected API response types (adjust if backend sends different structure)
-type ApiResponse<T> = T[];
+// Không cần ApiResponse nữa khi chỉ dùng mock data
 
-// --- Fetch Backgrounds ---
+// --- Fetch Backgrounds (Sử dụng Mock Data) ---
 export async function fetchBackgrounds(): Promise<Background[]> {
-  const endpoint = "/api/backgrounds"; // Relative endpoint
-  console.log(`[API Fetch] Attempting to fetch backgrounds from ${endpoint}`);
+  console.log("[Mock Data] Đang tải mock data cho hình nền.");
   try {
-    const response = await fetch(endpoint);
-
-    if (!response.ok) {
-      console.warn(
-        `[API Fetch] Backgrounds fetch failed with status: ${response.status}`
-      );
-      throw new Error(`Failed to fetch backgrounds: ${response.statusText}`);
-    }
-
-    const data: ApiResponse<Background> = await response.json();
-
-    // Check if data is a non-empty array
-    if (!Array.isArray(data) || data.length === 0) {
-      console.warn(
-        `[API Fetch] Backgrounds response was empty or invalid. Falling back to mock.`
-      );
-      throw new Error("Empty or invalid response");
-    }
-
-    console.log(`[API Fetch] Successfully fetched ${data.length} backgrounds.`);
-    return data;
+    // Trực tiếp import và trả về mock data
+    const mockModule = await import("@/src/__mocks__/api/backgrounds");
+    return mockModule.default as Background[];
   } catch (error) {
-    console.error(
-      "[API Fetch] Error fetching backgrounds, using mock data:",
-      error
-    );
-    try {
-      const mockModule = await import("@/src/__mocks__/api/backgrounds");
-      // Ensure mock data structure matches the Type
-      return mockModule.default as Background[];
-    } catch (mockError) {
-      console.error("[API Fetch] Failed to load mock backgrounds:", mockError);
-      return []; // Return empty array if mock fails too
-    }
+    console.error("[Mock Data] Lỗi khi tải mock backgrounds:", error);
+    return []; // Trả về mảng rỗng nếu mock data thất bại
   }
 }
 
-// --- Fetch Sounds ---
+// --- Fetch Sounds (Sử dụng Mock Data) ---
 export async function fetchSounds(): Promise<Sound[]> {
-  const endpoint = "/api/sounds";
-  console.log(`[API Fetch] Attempting to fetch sounds from ${endpoint}`);
+  console.log("[Mock Data] Đang tải mock data cho âm thanh.");
   try {
-    const response = await fetch(endpoint);
-
-    if (!response.ok) {
-      console.warn(
-        `[API Fetch] Sounds fetch failed with status: ${response.status}`
-      );
-      throw new Error(`Failed to fetch sounds: ${response.statusText}`);
-    }
-
-    const data: ApiResponse<Sound> = await response.json();
-
-    if (!Array.isArray(data) || data.length === 0) {
-      console.warn(
-        `[API Fetch] Sounds response was empty or invalid. Falling back to mock.`
-      );
-      throw new Error("Empty or invalid response");
-    }
-
-    console.log(`[API Fetch] Successfully fetched ${data.length} sounds.`);
-    return data;
+    const mockModule = await import("@/src/__mocks__/api/sounds");
+    return mockModule.default as Sound[];
   } catch (error) {
-    console.error("[API Fetch] Error fetching sounds, using mock data:", error);
-    try {
-      const mockModule = await import("@/src/__mocks__/api/sounds");
-      return mockModule.default as Sound[];
-    } catch (mockError) {
-      console.error("[API Fetch] Failed to load mock sounds:", mockError);
-      return [];
-    }
+    console.error("[Mock Data] Lỗi khi tải mock sounds:", error);
+    return [];
   }
 }
 
-// --- Fetch Avatars ---
+// --- Fetch Avatars (Sử dụng Mock Data) ---
 export async function fetchAvatars(): Promise<Avatar[]> {
-  const endpoint = "/api/avatars";
-  console.log(`[API Fetch] Attempting to fetch avatars from ${endpoint}`);
+  console.log("[Mock Data] Đang tải mock data cho hình đại diện.");
   try {
-    const response = await fetch(endpoint);
-
-    if (!response.ok) {
-      console.warn(
-        `[API Fetch] Avatars fetch failed with status: ${response.status}`
-      );
-      throw new Error(`Failed to fetch avatars: ${response.statusText}`);
-    }
-
-    const data: ApiResponse<Avatar> = await response.json();
-
-    if (!Array.isArray(data) || data.length === 0) {
-      console.warn(
-        `[API Fetch] Avatars response was empty or invalid. Falling back to mock.`
-      );
-      throw new Error("Empty or invalid response");
-    }
-
-    console.log(`[API Fetch] Successfully fetched ${data.length} avatars.`);
-    return data;
+    const mockModule = await import("@/src/__mocks__/api/avatars");
+    return mockModule.default as Avatar[];
   } catch (error) {
-    console.error(
-      "[API Fetch] Error fetching avatars, using mock data:",
-      error
-    );
-    try {
-      const mockModule = await import("@/src/__mocks__/api/avatars");
-      return mockModule.default as Avatar[];
-    } catch (mockError) {
-      console.error("[API Fetch] Failed to load mock avatars:", mockError);
-      return [];
-    }
+    console.error("[Mock Data] Lỗi khi tải mock avatars:", error);
+    return [];
   }
 }
 
-// --- Fetch Power-ups ---
+// --- Fetch Power-ups (Sử dụng Mock Data) ---
 export async function fetchPowerUps(): Promise<PowerUp[]> {
-  const endpoint = "/api/power-ups";
-  console.log(`[API Fetch] Attempting to fetch power-ups from ${endpoint}`);
+  console.log("[Mock Data] Đang tải mock data cho tăng sức mạnh.");
   try {
-    const response = await fetch(endpoint);
-
-    if (!response.ok) {
-      console.warn(
-        `[API Fetch] Power-ups fetch failed with status: ${response.status}`
-      );
-      throw new Error(`Failed to fetch power-ups: ${response.statusText}`);
-    }
-
-    const data: ApiResponse<PowerUp> = await response.json();
-
-    if (!Array.isArray(data) || data.length === 0) {
-      console.warn(
-        `[API Fetch] Power-ups response was empty or invalid. Falling back to mock.`
-      );
-      throw new Error("Empty or invalid response");
-    }
-
-    console.log(`[API Fetch] Successfully fetched ${data.length} power-ups.`);
-    return data;
+    const mockModule = await import("@/src/__mocks__/api/powerups");
+    return mockModule.default as PowerUp[];
   } catch (error) {
-    console.error(
-      "[API Fetch] Error fetching power-ups, using mock data:",
-      error
-    );
-    try {
-      const mockModule = await import("@/src/__mocks__/api/powerups");
-      return mockModule.default as PowerUp[];
-    } catch (mockError) {
-      console.error("[API Fetch] Failed to load mock power-ups:", mockError);
-      return [];
-    }
+    console.error("[Mock Data] Lỗi khi tải mock power-ups:", error);
+    return [];
   }
 }
 
-// --- Function to fetch all assets in parallel ---
+// --- Function to fetch all assets in parallel (Sử dụng Mock Data) ---
 export async function fetchAllGameAssets() {
-  console.log("[API Fetch] Fetching all game assets in parallel...");
+  console.log("[Mock Data] Đang tải tất cả mock data cho tài sản trò chơi.");
   const results = await Promise.allSettled([
     fetchBackgrounds(),
     fetchSounds(),
@@ -181,11 +70,13 @@ export async function fetchAllGameAssets() {
   const [backgroundsResult, soundsResult, avatarsResult, powerUpsResult] =
     results;
 
-  // Log status for debugging
-  console.log(`[API Fetch] Backgrounds Status: ${backgroundsResult.status}`);
-  console.log(`[API Fetch] Sounds Status: ${soundsResult.status}`);
-  console.log(`[API Fetch] Avatars Status: ${avatarsResult.status}`);
-  console.log(`[API Fetch] Power-ups Status: ${powerUpsResult.status}`);
+  // Log trạng thái để gỡ lỗi
+  console.log(
+    `[Mock Data] Trạng thái Backgrounds: ${backgroundsResult.status}`
+  );
+  console.log(`[Mock Data] Trạng thái Sounds: ${soundsResult.status}`);
+  console.log(`[Mock Data] Trạng thái Avatars: ${avatarsResult.status}`);
+  console.log(`[Mock Data] Trạng thái Power-ups: ${powerUpsResult.status}`);
 
   return {
     backgrounds:

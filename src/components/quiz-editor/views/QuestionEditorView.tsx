@@ -52,7 +52,7 @@ export const QuestionEditorView: React.FC<QuestionEditorViewProps> = ({
     ) {
         return (
             <div className="flex-grow flex items-center justify-center p-4 italic text-muted-foreground bg-editor-content-bg"> {/* Added bg-editor-content-bg for consistency */}
-                Select a slide to edit or add a new one.
+                Chọn một trang chiếu để chỉnh sửa hoặc thêm một trang chiếu mới.
             </div>
         );
     }

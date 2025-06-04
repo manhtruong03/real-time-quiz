@@ -34,7 +34,7 @@ const PlayerStatusBar: React.FC<PlayerStatusBarProps> = ({
             <AvatarImage src={playerAvatarUrl} alt={`${playerName}'s avatar`} />
             <AvatarFallback>{playerName?.charAt(0).toUpperCase() || 'P'}</AvatarFallback> {/* [cite: 546] */}
           </Avatar>
-          <span className="font-medium text-sm truncate">{playerName || 'Player'}</span>
+          <span className="font-medium text-sm truncate">{playerName || 'Người chơi'}</span>
         </div>
 
         {/* Score and Rank */}
@@ -42,11 +42,11 @@ const PlayerStatusBar: React.FC<PlayerStatusBarProps> = ({
 
 
           {rank !== undefined && (
-            <Badge variant="outline" className="text-xs">Rank #{rank}</Badge>
+            <Badge variant="outline" className="text-xs">Hạng #{rank}</Badge>
           )}
           <Badge variant="default" className="text-xs md:text-sm gap-1"> {/* [cite: 544] */}
             <Trophy className="h-3 w-3" />
-            {currentScore.toLocaleString('en-US')} pts
+            {currentScore.toLocaleString('en-US')} điểm
           </Badge>
         </div>
       </div>

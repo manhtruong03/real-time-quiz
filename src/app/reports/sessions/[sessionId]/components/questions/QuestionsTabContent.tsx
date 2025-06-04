@@ -102,14 +102,14 @@ const QuestionsTabContent: React.FC = () => {
             {hasMore && !isLoading && !isLoadingMore && !displayError && (
                 <div className="mt-8 flex justify-center">
                     <Button onClick={loadMore} variant="outline" size="lg">
-                        See more questions
+                        Xem thêm câu hỏi
                     </Button>
                 </div>
             )}
             {isLoadingMore && (
                 <div className="mt-8 flex justify-center items-center text-sm text-text-secondary">
                     <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    Loading more questions...
+                    Đang tải thêm câu hỏi...
                 </div>
             )}
         </div>

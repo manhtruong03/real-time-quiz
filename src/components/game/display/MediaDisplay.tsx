@@ -1,4 +1,3 @@
-// src/components/game/display/MediaDisplay.tsx
 import React, { memo } from 'react'; // Import memo
 import Image from 'next/image';
 import { GameBlock } from '@/src/lib/types';
@@ -22,7 +21,7 @@ const MediaDisplayComponent: React.FC<MediaDisplayProps> = ({ questionData: curr
   }
 
   let mediaUrl: string | null = null;
-  let altText = 'Question related media';
+  let altText = 'Phương tiện liên quan đến câu hỏi'; // Việt hóa
   let mediaType: 'image' | 'video' | 'gif' | null = null;
   let imageWidth: number | undefined = undefined;
   let imageHeight: number | undefined = undefined;
@@ -31,7 +30,7 @@ const MediaDisplayComponent: React.FC<MediaDisplayProps> = ({ questionData: curr
   if (currentBlock.image) {
     mediaUrl = currentBlock.image;
     mediaType = 'image';
-    altText = currentBlock.imageMetadata?.altText || 'Question image';
+    altText = currentBlock.imageMetadata?.altText || 'Hình ảnh câu hỏi'; // Việt hóa
     imageWidth = currentBlock.imageMetadata?.width;
     imageHeight = currentBlock.imageMetadata?.height;
   } else if (currentBlock.media && currentBlock.media.length > 0) {
@@ -49,7 +48,7 @@ const MediaDisplayComponent: React.FC<MediaDisplayProps> = ({ questionData: curr
         if (imageUrl) {
           mediaUrl = imageUrl;
           mediaType = 'image';
-          altText = backgroundMedia.altText || 'Background image';
+          altText = backgroundMedia.altText || 'Hình ảnh nền'; // Việt hóa
           imageWidth = backgroundMedia.width;
           imageHeight = backgroundMedia.height;
         }
@@ -58,7 +57,7 @@ const MediaDisplayComponent: React.FC<MediaDisplayProps> = ({ questionData: curr
   } else if (currentBlock.video?.fullUrl) {
     mediaUrl = currentBlock.video.fullUrl;
     mediaType = 'video';
-    altText = 'Question video';
+    altText = 'Video câu hỏi'; // Việt hóa
   }
 
   if (!mediaUrl) {
@@ -69,9 +68,9 @@ const MediaDisplayComponent: React.FC<MediaDisplayProps> = ({ questionData: curr
     return (
       <Card className={cn("overflow-hidden", className)}>
         <CardContent className="p-4 text-center">
-          <p>Video Placeholder:</p>
+          <p>Video minh họa:</p>
           <a href={mediaUrl} target="_blank" rel="noopener noreferrer" className="text-blue-500 break-all">{mediaUrl}</a>
-          <p className="text-sm text-muted-foreground mt-2">(Video player integration needed)</p>
+          {/* <p className="text-sm text-muted-foreground mt-2">(Tính năng nhúng video đang được phát triển)</p> */}
         </CardContent>
       </Card>
     );
@@ -100,7 +99,7 @@ const MediaDisplayComponent: React.FC<MediaDisplayProps> = ({ questionData: curr
               objectFit="contain" // Note: 'objectFit' is deprecated in favor of CSS styling
               priority={priority}
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 600px"
-              onError={(e) => { console.error("Next/Image failed to load:", mediaUrl, e); (e.target as HTMLImageElement).style.display = 'none'; }}
+              onError={(e) => { console.error("Next/Image không thể tải:", mediaUrl, e); (e.target as HTMLImageElement).style.display = 'none'; }}
             />
           ) : (
             // Consider adjusting this fallback if needed, using CSS aspect-ratio is often better
@@ -111,7 +110,7 @@ const MediaDisplayComponent: React.FC<MediaDisplayProps> = ({ questionData: curr
                 layout="fill" // Deprecated
                 objectFit="contain" // Deprecated
                 priority={priority}
-                onError={(e) => { console.error("Next/Image (fill) failed to load:", mediaUrl, e); (e.target as HTMLImageElement).style.display = 'none'; }}
+                onError={(e) => { console.error("Next/Image (fill) không thể tải:", mediaUrl, e); (e.target as HTMLImageElement).style.display = 'none'; }}
               />
             </div>
           )

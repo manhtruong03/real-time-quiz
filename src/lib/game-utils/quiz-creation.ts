@@ -53,13 +53,13 @@ export const createDefaultQuestion = (
   switch (type) {
     case "quiz":
       if (isTrueFalse) {
-        baseQuestion.question = "True or False: ...";
+        baseQuestion.question = "Đúng hoặc Sai: ...";
         baseQuestion.choices = [
-          createDefaultChoice(true, "True"),
-          createDefaultChoice(false, "False"),
+          createDefaultChoice(true, "Đúng"),
+          createDefaultChoice(false, "Sai"),
         ];
       } else {
-        baseQuestion.question = "Enter your question...";
+        baseQuestion.question = "Nhập câu hỏi của bạn...";
         baseQuestion.choices = [
           createDefaultChoice(true),
           createDefaultChoice(false),
@@ -70,33 +70,33 @@ export const createDefaultQuestion = (
       break;
 
     case "jumble":
-      baseQuestion.question = "Place these items in the correct order...";
+      baseQuestion.question = "Sắp xếp các mục sau theo đúng thứ tự...";
       baseQuestion.choices = [
-        createDefaultChoice(true, "Option 1"),
-        createDefaultChoice(true, "Option 2"),
-        createDefaultChoice(true, "Option 3"),
-        createDefaultChoice(true, "Option 4"),
+        createDefaultChoice(true, "Lựa chọn 1"),
+        createDefaultChoice(true, "Lựa chọn 2"),
+        createDefaultChoice(true, "Lựa chọn 3"),
+        createDefaultChoice(true, "Lựa chọn 4"),
       ];
       baseQuestion.time = 60000;
       break;
 
     case "survey":
-      baseQuestion.question = "Ask an opinion question...";
+      baseQuestion.question = "Đặt câu hỏi khảo sát ý kiến...";
       baseQuestion.pointsMultiplier = 0;
       baseQuestion.choices = [
-        createDefaultChoice(true, "Option A"),
-        createDefaultChoice(true, "Option B"),
+        createDefaultChoice(true, "Lựa chọn A"),
+        createDefaultChoice(true, "Lựa chọn B"),
       ];
       break;
 
     case "open_ended":
-      baseQuestion.question = "Ask an open-ended question...";
-      baseQuestion.choices = [createDefaultChoice(true, "Correct Answer")];
+      baseQuestion.question = "Đặt câu hỏi mở...";
+      baseQuestion.choices = [createDefaultChoice(true, "Đáp án đúng")];
       break;
 
     case "content":
-      baseQuestion.title = "Informational Slide Title";
-      baseQuestion.description = "Add your content here...";
+      baseQuestion.title = "Tiêu đề trang thông tin";
+      baseQuestion.description = "Thêm nội dung của bạn vào đây...";
       baseQuestion.time = 0;
       baseQuestion.pointsMultiplier = 0;
       baseQuestion.choices = [];
@@ -105,10 +105,10 @@ export const createDefaultQuestion = (
 
     default:
       console.warn(
-        `Unknown question type requested: ${type}. Creating generic quiz.`
+        `Đã yêu cầu loại câu hỏi không xác định: ${type}. Tạo quiz chung.`
       );
       baseQuestion.type = "quiz";
-      baseQuestion.question = "Enter your question...";
+      baseQuestion.question = "Nhập câu hỏi của bạn...";
       baseQuestion.choices = [createDefaultChoice(true)];
       break;
   }

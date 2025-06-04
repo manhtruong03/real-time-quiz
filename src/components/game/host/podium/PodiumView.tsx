@@ -80,7 +80,7 @@ export const PodiumView: React.FC<PodiumViewProps> = ({
                     <img src={quizData.cover} alt={`${quizData.title} cover`} className="w-24 h-14 md:w-32 md:h-[72px] object-cover rounded-md mx-auto mb-2 shadow-lg border border-white/20" />
                 )} */}
                 <h1 className="text-xl md:text-2xl lg:text-3xl font-extrabold tracking-tight drop-shadow-[0_1px_1px_rgba(0,0,0,0.4)]">
-                    {quizData?.title || "Quiz Champions!"}
+                    {quizData?.title || "Nhà vô địch!"}
                 </h1>
             </div>
 
@@ -101,12 +101,12 @@ export const PodiumView: React.FC<PodiumViewProps> = ({
             {/* Empty States for Podium - Will not shrink or grow excessively */}
             {podiumPlayersList.length === 0 && sortedPlayers.length > 0 && (
                 <div className="text-center text-md text-white/70 p-4 bg-black/10 rounded-md min-h-[100px] my-2 flex items-center justify-center flex-shrink-0">
-                    No players achieved a podium rank.
+                    Không có người chơi nào đạt xếp hạng.
                 </div>
             )}
             {podiumPlayersList.length === 0 && sortedPlayers.length === 0 && (
                 <div className="text-center text-lg text-white/80 p-8 bg-black/20 rounded-lg min-h-[150px] my-2 flex items-center justify-center flex-shrink-0">
-                    No eligible players finished the game.
+                    Không có người chơi đủ điều kiện hoàn thành trò chơi.
                 </div>
             )}
 
@@ -115,7 +115,7 @@ export const PodiumView: React.FC<PodiumViewProps> = ({
                 <div className="w-full max-w-sm md:max-w-md my-2 md:my-3 flex-shrink-0">
                     <HighlightBanner
                         highlightedPlayer={playerWithLongestStreak}
-                        statName="Longest Streak"
+                        statName="Chuỗi dài nhất"
                         statValue={`${playerWithLongestStreak.maxStreak || 0} 🔥`}
                         iconType="streak"
                     />
@@ -128,7 +128,7 @@ export const PodiumView: React.FC<PodiumViewProps> = ({
                 // min-h-0 is key for flex children that need to scroll.
                 <div className="w-full max-w-sm md:max-w-md mt-2 md:mt-3 flex flex-col flex-grow min-h-0 pb-1 flex-shrink"> {/* Added flex-shrink here too */}
                     <h3 className="text-md font-semibold text-center mb-1.5 text-white/80 flex-shrink-0">
-                        {podiumPlayersList.length > 0 ? "Runners-Up" : "Leaderboard"}
+                        {podiumPlayersList.length > 0 ? "Á quân" : "Bảng xếp hạng"}
                     </h3>
                     <ScrollArea className="flex-grow p-0.5 bg-black/10 rounded-md"> {/* ScrollArea takes the grown space */}
                         <div className="space-y-1.5 pr-2">
@@ -142,7 +142,7 @@ export const PodiumView: React.FC<PodiumViewProps> = ({
 
             {podiumPlayersList.length === 0 && runnersUpList.length === 0 && sortedPlayers.length > 0 && (
                 <div className="text-center text-md text-white/70 p-4 bg-black/10 rounded-md min-h-[100px] my-2 flex items-center justify-center flex-shrink-0">
-                    No players achieved a rank for the podium or runners-up.
+                    Không có người chơi nào đạt xếp hạng cho bục vinh danh hoặc á quân.
                 </div>
             )}
         </div>

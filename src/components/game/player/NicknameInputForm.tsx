@@ -89,10 +89,10 @@ export const NicknameInputForm: React.FC<NicknameInputFormProps> = ({
 
     return (
         <>
-            <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-gradient-to-br from-green-100 to-teal-100 dark:from-green-900 dark:to-teal-900">
+            <div className="flex flex-col items-center justify-center min-h-screen p-4 from-green-100 to-teal-100 dark:from-green-900 dark:to-teal-900">
                 <Card className="w-full max-w-sm shadow-lg">
                     <CardHeader>
-                        <CardTitle className="text-2xl font-bold text-center">Enter Nickname</CardTitle>
+                        <CardTitle className="text-2xl font-bold text-center">Nhập biệt danh</CardTitle>
                         <CardDescription className="text-center text-muted-foreground">Game PIN: {gamePin}</CardDescription>
 
                     </CardHeader>
@@ -155,7 +155,7 @@ export const NicknameInputForm: React.FC<NicknameInputFormProps> = ({
                                 <Skeleton className="h-4 w-20 mt-1" />
                             ) : (
                                 <p className="text-sm text-muted-foreground h-4 mt-1">
-                                    {selectedAvatar ? selectedAvatar.name : (assetsError ? "Error loading avatars" : "No avatar")}
+                                    {selectedAvatar ? selectedAvatar.name : (assetsError ? "Lỗi khi tải hình đại diện" : "Không có hình đại diện")}
                                 </p>
                             )}
                         </div>
@@ -163,13 +163,13 @@ export const NicknameInputForm: React.FC<NicknameInputFormProps> = ({
                         <Input
                             type="text"
 
-                            placeholder="Your Nickname"
+                            placeholder="Biệt danh của bạn"
                             value={nickname}
                             onChange={(e) => onNicknameChange(e.target.value)}
                             maxLength={25}
                             className="text-center text-lg h-12"
 
-                            aria-label="Nickname"
+                            aria-label="Biệt danh"
                             disabled={isJoining}
                         />
                         {errorMessage && <p className="text-sm text-red-600 dark:text-red-400 text-center">{errorMessage}</p>}
@@ -178,7 +178,7 @@ export const NicknameInputForm: React.FC<NicknameInputFormProps> = ({
 
                             {isJoining ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <UserPlus className="mr-2 h-5 w-5" />}
 
-                            {isJoining ? 'Joining...' : 'Join Game'}
+                            {isJoining ? 'Đang tham gia...' : 'Tham gia'}
 
                         </Button>
                     </CardContent>

@@ -68,7 +68,7 @@ const AnswerInputArea: React.FC<AnswerInputAreaProps> = ({
     return (
       <div className={cn("flex items-center justify-center p-8", className)}>
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        <span className="ml-2 text-muted-foreground">Waiting for question...</span>
+        <span className="ml-2 text-muted-foreground">Đang chờ câu hỏi...</span>
       </div>
     );
   }
@@ -116,7 +116,7 @@ const AnswerInputArea: React.FC<AnswerInputAreaProps> = ({
 
   // Fallback for unknown types
   console.warn("Unknown or unexpected question block type encountered in AnswerInputArea.", currentBlock); // Log the whole block if possible
-  return <div className={cn("text-center text-red-500", className)}>Unsupported question type.</div>;
+  return <div className={cn("text-center text-red-500", className)}>Loại câu hỏi không được hỗ trợ.</div>;
 };
 
 // Memoize the component

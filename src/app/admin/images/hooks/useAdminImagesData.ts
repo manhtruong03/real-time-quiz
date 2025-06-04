@@ -64,9 +64,7 @@ export const useAdminImagesData = (
         setTotalElements(data.totalElements);
       } catch (err: any) {
         console.error("Failed to fetch images:", err);
-        setError(
-          err instanceof Error ? err : new Error("An unknown error occurred")
-        );
+        setError(err instanceof Error ? err : new Error("Lỗi không xác định"));
         setImages([]); // Clear images on error
         setTotalPages(0);
         setTotalElements(0);

@@ -62,8 +62,8 @@ export default function CreateQuizPage() {
                 const success = await triggerQuestionSaveRef.current();
                 if (!success) {
                     toast({
-                        title: "Unsaved Changes",
-                        description: `Could not save Slide ${currentSlideIndex + 1} due to errors. Please fix them.`,
+                        title: "Thay đổi chưa lưu",
+                        description: `Không thể lưu Trang chiếu ${currentSlideIndex + 1} do có lỗi. Vui lòng sửa lỗi.`,
                         variant: "destructive",
                     });
                 }
@@ -89,7 +89,7 @@ export default function CreateQuizPage() {
                     await handleMetadataSubmit();
                     await new Promise(resolve => setTimeout(resolve, 50));
                 } else {
-                    toast({ title: "Validation Error", description: "Please fix errors in Quiz Settings before saving.", variant: "destructive" });
+                    toast({ title: "Lỗi xác thực", description: "Vui lòng sửa lỗi trong Cài đặt Quiz trước khi lưu.", variant: "destructive" });
                     setIsSaving(false);
                     if (currentViewMode !== 'settings') setViewMode('settings');
                     return;
@@ -99,7 +99,7 @@ export default function CreateQuizPage() {
             if (currentViewMode === 'editor') {
                 const questionSaveSuccess = await triggerQuestionSaveRef.current?.();
                 if (!questionSaveSuccess) {
-                    toast({ title: "Unsaved Changes", description: "Could not save the current slide. Please fix errors.", variant: "destructive" });
+                    toast({ title: "Thay đổi chưa lưu", description: "Không thể lưu trang chiếu hiện tại. Vui lòng sửa lỗi.", variant: "destructive" });
                     setIsSaving(false);
                     return;
                 }
@@ -107,31 +107,31 @@ export default function CreateQuizPage() {
 
             const currentQuizState = latestQuizDataRef.current;
             if (!currentQuizState) {
-                throw new Error("Quiz data is missing.");
+                throw new Error("Dữ liệu Quiz bị thiếu.");
             }
 
             if (!currentQuizState.title || currentQuizState.title.trim().length < 3) {
-                toast({ title: "Validation Error", description: "Quiz title must be at least 3 characters.", variant: "destructive" });
+                toast({ title: "Lỗi xác thực", description: "Tên Quiz phải có ít nhất 3 ký tự.", variant: "destructive" });
                 setIsSaving(false);
                 if (currentViewMode !== 'settings') setViewMode('settings');
-                formMethods.setError("title", { type: "manual", message: "Quiz title must be at least 3 characters." });
+                formMethods.setError("title", { type: "manual", message: "Tên Quiz phải có ít nhất 3 ký tự." });
                 return;
             }
             if (!currentQuizState.questions || currentQuizState.questions.length === 0) {
-                toast({ title: "Empty Quiz", description: "Your quiz has no slides. Please add at least one slide.", variant: "default" });
+                toast({ title: "Quiz rỗng", description: "Quiz của bạn không có trang chiếu nào. Vui lòng thêm ít nhất một trang chiếu.", variant: "default" });
             }
 
             const savedQuiz = await createQuiz(currentQuizState); //
             toast({
-                title: "Quiz Saved!",
-                description: `Quiz "${savedQuiz.title}" has been saved successfully.`,
+                title: "Đã lưu Quiz!",
+                description: `Quiz "${savedQuiz.title}" đã được lưu thành công.`,
             });
             router.push(`/my-quizzes`);
         } catch (error: unknown) {
-            let errorMessage = "An unexpected error occurred. Please try again.";
-            let errorTitle = "Save Failed";
+            let errorMessage = "Đã xảy ra lỗi không mong muốn. Vui lòng thử lại.";
+            let errorTitle = "Lưu thất bại";
             if (error instanceof AuthApiError) { //
-                errorTitle = `API Error (${error.status})`;
+                errorTitle = `Lỗi API (${error.status})`;
                 errorMessage = error.message || errorMessage;
             } else if (error instanceof Error) {
                 errorMessage = error.message;
@@ -156,7 +156,7 @@ export default function CreateQuizPage() {
                 await handleMetadataSubmit();
                 await new Promise(resolve => setTimeout(resolve, 50));
             } else {
-                toast({ title: "Unsaved Settings", description: "Please fix errors in quiz settings before adding a slide.", variant: "destructive" });
+                toast({ title: "Cài đặt chưa lưu", description: "Vui lòng sửa lỗi trong cài đặt quiz trước khi thêm trang chiếu.", variant: "destructive" });
                 return;
             }
         }
@@ -175,7 +175,7 @@ export default function CreateQuizPage() {
 
     const handleQuestionChange = useCallback((index: number, updatedQuestion: QuestionHost | null) => { //
         if (updatedQuestion === null) {
-            toast({ title: "Save Error", description: `Failed to save changes for Slide ${index + 1}.`, variant: "destructive" });
+            toast({ title: "Lỗi lưu", description: `Không thể lưu các thay đổi cho Trang chiếu ${index + 1}.`, variant: "destructive" });
             return;
         }
         updateQuestion(index, updatedQuestion);
@@ -185,12 +185,12 @@ export default function CreateQuizPage() {
         if (currentSlideIndex < 0) return;
         const deletedIndex = currentSlideIndex;
         deleteQuestion(currentSlideIndex);
-        toast({ title: "Slide Deleted", description: `Slide ${deletedIndex + 1} has been removed.` });
+        toast({ title: "Đã xóa Trang chiếu", description: `Trang chiếu ${deletedIndex + 1} đã được xóa.` });
     }, [currentSlideIndex, deleteQuestion, toast]);
 
     const handleDuplicateCurrentSlideConfirmed = useCallback(async () => { //
         if (currentSlideIndex < 0) {
-            toast({ title: "Action Failed", description: "No slide selected to duplicate.", variant: "destructive" });
+            toast({ title: "Thao tác thất bại", description: "Không có trang chiếu nào được chọn để sao chép.", variant: "destructive" });
             return;
         }
         const canProceed = await triggerQuestionSaveRef.current?.();
@@ -200,17 +200,17 @@ export default function CreateQuizPage() {
         const newSlideIndex = duplicateQuestion(currentSlideIndex);
         setCurrentSlideIndex(newSlideIndex);
         setViewMode('editor');
-        toast({ title: "Slide Duplicated", description: `Slide ${originalSlideIndexForToast} duplicated as new Slide ${newSlideIndex + 1}.` });
+        toast({ title: "Đã sao chép Trang chiếu", description: `Trang chiếu ${originalSlideIndexForToast} đã được sao chép thành Trang chiếu mới ${newSlideIndex + 1}.` });
     }, [currentSlideIndex, duplicateQuestion, triggerQuestionSaveRef, toast, setViewMode, setCurrentSlideIndex]);
 
 
     if (!quizData && viewMode !== 'settings') { //
         return (
             <QuizEditorLayout>
-                <QuizEditorHeader quizTitle="Loading Quiz..." isSaving={isSaving} />
+                <QuizEditorHeader quizTitle="Đang tải Quiz..." isSaving={isSaving} />
                 <div className="flex-grow flex items-center justify-center">
                     <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                    <span className="ml-2">Loading Quiz Editor...</span>
+                    <span className="ml-2">Đang tải Trình chỉnh sửa...</span>
                 </div>
             </QuizEditorLayout>
         );

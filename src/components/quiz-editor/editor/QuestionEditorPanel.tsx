@@ -35,8 +35,8 @@ const QuestionEditorPanel: React.FC<QuestionEditorPanelProps> = ({
 
     const primaryInputName = getPrimaryTextInputName(watchedType);
     const secondaryInputName = getSecondaryTextInputName(watchedType);
-    const primaryPlaceholder = isContent ? "Enter slide title..." : "Enter your question here...";
-    const secondaryPlaceholder = isContent ? "Enter slide description..." : "";
+    const primaryPlaceholder = isContent ? "Nhập tiêu đề trang chiếu..." : "Nhập câu hỏi của bạn tại đây...";
+    const secondaryPlaceholder = isContent ? "Nhập mô tả trang chiếu..." : "";
 
     return (
         <div className={cn("flex-grow flex flex-col gap-4", className)}>
@@ -66,7 +66,7 @@ const QuestionEditorPanel: React.FC<QuestionEditorPanelProps> = ({
                     // MODIFIED: Add the new prop for the upload key field name
                     imageUploadKeyFieldName="questionImageUploadKey"
                     aspectRatio={16 / 9}
-                    placeholderText="Add Question Media"
+                    placeholderText="Thêm Phương Tiện cho Câu Hỏi"
                     className="w-full max-w-md"
                 />
             </div>
@@ -79,15 +79,15 @@ const QuestionEditorPanel: React.FC<QuestionEditorPanelProps> = ({
                     <SortableAnswerList className="w-full max-w-lg mx-auto" />
                 ) : isContent ? (
                     <p className="text-muted-foreground italic text-center self-center my-auto">
-                        (Content slide - no answers needed)
+                        (Trang chiếu nội dung - không cần đáp án)
                     </p>
                 ) : isOpenEnded ? (
                     <p className="text-muted-foreground italic text-center self-center my-auto">
-                        (Open-Ended Answer Editor - Stage 3)
+                        (Trình chỉnh sửa câu trả lời mở)
                     </p>
                 ) : (
                     <p className="text-muted-foreground italic text-center self-center my-auto">
-                        {watchedType ? `(${watchedType} Answer Editor - Coming Soon)` : "Select question type..."}
+                        {watchedType ? `(Trình chỉnh sửa đáp án ${watchedType})` : "Chọn loại câu hỏi..."}
                     </p>
                 )}
             </div>

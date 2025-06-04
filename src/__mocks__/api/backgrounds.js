@@ -3,6 +3,18 @@
 
 const mockBackgrounds = [
     {
+        background_id: 'bg-spring-uuid-3cd4',
+        name: 'Spring',
+        description: 'Spring',
+        background_file_path: 'https://images-cdn.kahoot.it/a5e3658b-748d-43b9-8555-0f1d5f983372',
+        background_color: '#e2223f',
+        text_color: '#FFFFFF',
+        is_active: true,
+        created_at: new Date('2024-01-02T11:00:00Z').toISOString(),
+        updated_at: new Date('2024-01-02T11:00:00Z').toISOString(),
+        deleted_at: null,
+    },
+    {
         // Corresponds to 'theme_id' UUID, ensure it's a unique string
         background_id: 'bg-surfer-santa-uuid-1ab2',
         // Corresponds to 'name' VARCHAR(100) NOT NULL
@@ -22,18 +34,6 @@ const mockBackgrounds = [
         // Corresponds to 'updated_at' TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
         updated_at: new Date('2024-01-01T10:00:00Z').toISOString(),
         // Corresponds to 'deleted_at' TIMESTAMP WITH TIME ZONE
-        deleted_at: null,
-    },
-    {
-        background_id: 'bg-spring-uuid-3cd4',
-        name: 'Spring',
-        description: 'Spring',
-        background_file_path: 'https://images-cdn.kahoot.it/a5e3658b-748d-43b9-8555-0f1d5f983372',
-        background_color: '#e2223f',
-        text_color: '#FFFFFF',
-        is_active: true,
-        created_at: new Date('2024-01-02T11:00:00Z').toISOString(),
-        updated_at: new Date('2024-01-02T11:00:00Z').toISOString(),
         deleted_at: null,
     },
     {

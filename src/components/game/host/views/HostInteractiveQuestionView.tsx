@@ -68,7 +68,7 @@ export const HostInteractiveQuestionView: React.FC<HostInteractiveQuestionViewPr
                 {/* Placeholder for Open Ended on Host */}
                 {block.type === "open_ended" && (
                     <div className="text-center p-4 mt-4 text-white/70 bg-black/20 rounded-lg w-full max-w-md shadow">
-                        (Players are typing answers)
+                        (Người chơi đang nhập câu trả lời)
                     </div>
                 )}
             </div>

@@ -97,9 +97,9 @@ export const createHandleTypeChange =
 
     if (!isValidAfterReset) {
       toast({
-        title: "Type Change Error",
+        title: "Lỗi thay đổi loại",
         description:
-          "Could not apply new question type due to validation issues.",
+          "Không thể áp dụng loại câu hỏi mới do các vấn đề xác thực.",
         variant: "destructive",
       });
       isHandlingTypeChangeRef.current = false;
@@ -168,8 +168,8 @@ export const createHandleTypeChange =
         parseResult.error.flatten()
       );
       toast({
-        title: "Internal Error",
-        description: "Could not prepare data after type change.",
+        title: "Lỗi nội bộ",
+        description: "Không thể chuẩn bị dữ liệu sau khi thay đổi loại.",
         variant: "destructive",
       });
     }

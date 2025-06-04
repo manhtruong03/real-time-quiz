@@ -131,13 +131,13 @@ export const AnswerStatsChart: React.FC<AnswerStatsChartProps> = ({
                         content={({ active, payload }) => {
                             if (active && payload && payload.length) {
                                 const data: ChartBarData = payload[0].payload;
-                                const label = data.tooltipLabel || `Answer ${payload[0].payload.index + 1}`;
+                                const label = data.tooltipLabel || `Đáp án ${payload[0].payload.index + 1}`;
                                 return (
                                     <div className="rounded-md border bg-popover px-3 py-1.5 text-sm text-popover-foreground shadow-md">
                                         <p className="font-medium">{label} ({data.percentage.toFixed(0)}%)</p>
                                         <p className="text-muted-foreground">{`${data.value} vote(s)`}</p>
-                                        {data.isCorrect === true && <p className="text-green-600">Correct</p>}
-                                        {data.isCorrect === false && <p className="text-red-600">Incorrect</p>}
+                                        {data.isCorrect === true && <p className="text-green-600">Đúng</p>}
+                                        {data.isCorrect === false && <p className="text-red-600">Sai</p>}
                                     </div>
                                 );
                             }

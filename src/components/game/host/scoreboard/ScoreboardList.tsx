@@ -39,7 +39,7 @@ export const ScoreboardList: React.FC<ScoreboardListProps> = ({
                     })
                 ) : (
                     <li className="text-center text-purple-300 italic p-4">
-                        Waiting for players to score...
+                        Đang chờ người chơi ghi điểm...
                     </li>
                 )}
             </motion.ul>

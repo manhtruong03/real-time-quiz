@@ -1,4 +1,3 @@
-// src/app/game/player/hooks/usePlayerPageUI.ts
 import { useState, useCallback, useEffect } from "react";
 import { PlayerConnectionStatus } from "@/src/hooks/game/usePlayerWebSocket";
 
@@ -127,9 +126,7 @@ export function usePlayerPageUI({
           // If no pageError is set, provide a generic disconnection message.
           if (!pageError) {
             // Only set if not already set by a more specific error (like kick)
-            setPageErrorInternal(
-              (prev) => prev || "You have been disconnected."
-            );
+            setPageErrorInternal((prev) => prev || "Bạn đã bị ngắt kết nối.");
           }
           setUiState("DISCONNECTED");
           setJoinAttempted(false);
@@ -154,7 +151,7 @@ export function usePlayerPageUI({
       default:
         // const _exhaustiveCheck: never = wsConnectionStatus;
         console.warn(
-          "Unhandled WebSocket connection status in usePlayerPageUI:",
+          "Trạng thái kết nối WebSocket không được xử lý trong usePlayerPageUI:",
           wsConnectionStatus
         );
         break;
@@ -164,7 +161,9 @@ export function usePlayerPageUI({
   const submitPin = useCallback(() => {
     const pinRegex = /^\d{6,7}$/;
     if (!pinRegex.test(gamePin)) {
-      setPageErrorInternal("Please enter a valid 6 or 7 digit Game PIN.");
+      setPageErrorInternal(
+        "Vui lòng nhập mã PIN trò chơi gồm 6 hoặc 7 chữ số hợp lệ."
+      );
       // setUiState('PIN_INPUT'); // No need, already there or will remain
       return;
     }
@@ -175,7 +174,7 @@ export function usePlayerPageUI({
 
   const submitNickname = useCallback(async () => {
     if (!nicknameInput.trim()) {
-      setPageErrorInternal("Nickname cannot be empty.");
+      setPageErrorInternal("Biệt danh không được để trống.");
       return false;
     }
     setPageErrorInternal(null);
@@ -198,7 +197,7 @@ export function usePlayerPageUI({
       if (!wsError) {
         // If joinGameFn fails but wsError is not set, provide a generic error.
         setPageErrorInternal(
-          (prev) => prev || "Failed to join the game. Please try again."
+          (prev) => prev || "Không thể tham gia trò chơi. Vui lòng thử lại."
         );
       }
     }
@@ -213,7 +212,7 @@ export function usePlayerPageUI({
   ]);
 
   const processPlayerKick = useCallback((disconnectFn: () => void) => {
-    setPageErrorInternal("You have been kicked from the game by the host.");
+    setPageErrorInternal("Bạn đã bị chủ phòng đá ra khỏi trò chơi.");
     // --- START MODIFIED CODE ---
     setUiState("KICKED"); // Use the new KICKED state
     // --- END MODIFIED CODE ---

@@ -94,9 +94,9 @@ export function useQuizViewManager({
         await new Promise((resolve) => setTimeout(resolve, 50)); // Allow state to propagate
       } else {
         toast({
-          title: "Unsaved Settings",
+          title: "Cài đặt chưa lưu",
           description:
-            "Please fix errors in quiz settings before adding a slide.",
+            "Vui lòng sửa lỗi trong cài đặt quiz trước khi thêm trang chiếu.",
           variant: "destructive",
         });
         return;
@@ -131,9 +131,9 @@ export function useQuizViewManager({
           await new Promise((resolve) => setTimeout(resolve, 50));
         } else {
           toast({
-            title: "Unsaved Settings",
+            title: "Cài đặt chưa lưu",
             description:
-              "Please fix errors in quiz settings before selecting a slide.",
+              "Vui lòng sửa lỗi trong cài đặt quiz trước khi chọn một trang chiếu.",
             variant: "destructive",
           });
           return;

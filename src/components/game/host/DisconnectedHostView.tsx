@@ -16,12 +16,12 @@ export const DisconnectedHostView: React.FC<DisconnectedHostViewProps> = ({
 }) => (
     <div className="flex flex-col items-center justify-center min-h-screen p-4 text-center">
         <WifiOff className="h-12 w-12 text-muted-foreground mb-4" />
-        <h2 className="text-xl font-semibold mb-2">Disconnected</h2>
-        <p className="text-muted-foreground mb-4">The WebSocket connection was closed.</p>
-        <Button onClick={onStartNewGame}>Start New Game</Button>
+        <h2 className="text-xl font-semibold mb-2">Đã ngắt kết nối</h2>
+        <p className="text-muted-foreground mb-4">Kết nối WebSocket đã bị đóng.</p>
+        <Button onClick={onStartNewGame}>Bắt đầu trò chơi mới</Button>
         {onReconnect && gamePin && (
             <Button variant="outline" className="mt-2" onClick={onReconnect}>
-                Reconnect (Pin: {gamePin})
+                Kết nối lại (Pin: {gamePin})
             </Button>
         )}
     </div>

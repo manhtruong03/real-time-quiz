@@ -376,6 +376,22 @@
   scrollbar-color: var(--editor-border-color, #404048) var(--editor-secondary-bg, #2D2D34);
 }
 
+.player-background {
+  background-image: url('https://images-cdn.kahoot.it/01015166-e2b7-4d09-ab1a-244f0958e8a1');
+  background-size: cover;
+  /* Đảm bảo ảnh nền phủ kín toàn bộ phần tử */
+  background-position: center;
+  /* Căn giữa ảnh nền */
+  background-repeat: no-repeat;
+  /* Không lặp lại ảnh nền */
+}
+
+/* Thêm một lớp phủ mờ để nội dung dễ đọc hơn */
+.player-background-overlay {
+  background-color: rgba(0, 0, 0, 0.5);
+  /* Màu đen với độ mờ 50% */
+}
+
 .stars-layer {
   position: absolute;
   top: 0;

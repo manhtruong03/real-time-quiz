@@ -94,7 +94,7 @@ export const createOnValidSubmit =
       !finalQuestionData.questionImageUploadKey
     ) {
       console.error(
-        `[questionFormSubmission onValidSubmit] Inconsistency: imageFile present but questionImageUploadKey missing.`
+        `[questionFormSubmission onValidSubmit] Lỗi không nhất quán: imageFile hiện có nhưng questionImageUploadKey bị thiếu.`
       );
     } else if (
       !finalQuestionData.imageFile &&
@@ -125,14 +125,14 @@ export const createOnInvalidSubmit =
   >): SubmitErrorHandler<QuestionFormContextType> =>
   (errors) => {
     console.error(
-      `[questionFormSubmission onInvalidSubmit] RHF validation FAILED (index ${currentSlideIndex}):`,
+      `[questionFormSubmission onInvalidSubmit] Xác thực RHF THẤT BẠI (chỉ mục ${currentSlideIndex}):`,
       JSON.stringify(errors, null, 2)
     );
     toast({
-      title: "Validation Error",
-      description: `Please fix the errors in Slide ${
+      title: "Lỗi xác thực",
+      description: `Vui lòng sửa các lỗi trong Trang chiếu ${
         currentSlideIndex + 1
-      }. Changes could not be saved.`,
+      }. Thay đổi không thể lưu.`,
       variant: "destructive",
     });
   };

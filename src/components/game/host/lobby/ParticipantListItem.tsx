@@ -69,7 +69,7 @@ export const ParticipantListItem: React.FC<ParticipantListItemProps> = ({
                         variant="ghost"
                         size="icon"
                         className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 text-destructive hover:text-destructive hover:bg-destructive/10 flex-shrink-0 transition-opacity duration-150" // Adjusted positioning slightly if needed
-                        aria-label={`Kick ${participant.nickname}`}
+                        aria-label={`Đuổi ${participant.nickname}`}
                         onClick={(e) => e.stopPropagation()}
                     >
                         <UserX className="h-4 w-4" />
@@ -77,15 +77,15 @@ export const ParticipantListItem: React.FC<ParticipantListItemProps> = ({
                 </AlertDialogTrigger>
                 <AlertDialogContent onClick={(e) => e.stopPropagation()}>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>Kick Player?</AlertDialogTitle>
+                        <AlertDialogTitle>Đuổi người chơi?</AlertDialogTitle>
                         <AlertDialogDescription>
-                            Are you sure you want to kick <strong className="text-foreground">{participant.nickname}</strong> from the game? They won't be able to rejoin.
+                            Bạn có chắc muốn đuổi <strong className="text-foreground">{participant.nickname}</strong> ra khỏi trò chơi không?
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogCancel>Hủy</AlertDialogCancel>
                         <AlertDialogAction onClick={handleKickConfirm} className={cn(buttonVariants({ variant: "destructive" }))}>
-                            Kick Player
+                            Đuổi người chơi
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>

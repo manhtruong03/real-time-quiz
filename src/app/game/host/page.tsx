@@ -43,6 +43,7 @@ import { useSessionFinalizationHandler } from "./hooks/useSessionFinalizationHan
 import { useHostPageActions } from "./hooks/useHostPageActions";
 import { useHostMessageSender } from "./hooks/useHostMessageSender"; // Import new hook
 
+const STATIC_BACKGROUND_URL = "https://images-cdn.kahoot.it/01015166-e2b7-4d09-ab1a-244f0958e8a1";
 const TOPIC_PREFIX = "/topic";
 const APP_PREFIX = "/app";
 
@@ -294,32 +295,74 @@ const HostPageContent = () => {
     switch (uiState) {
       case "INITIAL":
         return (
-          <InitialHostView
-            onStartGameClick={handleStartGameClick}
-            isQuizLoading={isQuizDataLoading || assetsLoading}
-            isDisabled={
-              isQuizDataLoading ||
-              assetsLoading ||
-              (!quizData && !isQuizDataLoading) ||
-              !!quizApiError
-            }
-          />
+          <div className="relative min-h-screen bg-cover bg-center" style={{ backgroundImage: `url(${STATIC_BACKGROUND_URL})` }}>
+            <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+              <InitialHostView
+                onStartGameClick={handleStartGameClick}
+                isQuizLoading={isQuizDataLoading || assetsLoading}
+                isDisabled={
+                  isQuizDataLoading ||
+                  assetsLoading ||
+                  (!quizData && !isQuizDataLoading) ||
+                  !!quizApiError
+                }
+              />
+            </div>
+          </div>
         );
+      // return (
+      //   <InitialHostView
+      //     onStartGameClick={handleStartGameClick}
+      //     isQuizLoading={isQuizDataLoading || assetsLoading}
+      //     isDisabled={
+      //       isQuizDataLoading ||
+      //       assetsLoading ||
+      //       (!quizData && !isQuizDataLoading) ||
+      //       !!quizApiError
+      //     }
+      //   />
+      // );
       case "ERROR":
         return (
-          <ErrorHostView
-            errorMessage={pageApiError || "An unknown error occurred."}
-            onRetry={handleResetAndGoToInitial}
-          />
+          <div className="relative min-h-screen bg-cover bg-center" style={{ backgroundImage: `url(${STATIC_BACKGROUND_URL})` }}>
+            <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+              <ErrorHostView
+                errorMessage={pageApiError || "Lỗi không xác định"}
+                onRetry={handleResetAndGoToInitial}
+              />
+            </div>
+          </div>
         );
+      // return (
+      //   <ErrorHostView
+      //     errorMessage={pageApiError || "Lỗi không xác định"}
+      //     onRetry={handleResetAndGoToInitial}
+      //   />
+      // );
       case "FETCHING_PIN":
-        return <ConnectingHostView message="Creating Game Session..." />;
+        return (
+          <div className="relative min-h-screen bg-cover bg-center" style={{ backgroundImage: `url(${STATIC_BACKGROUND_URL})` }}>
+            <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+              <ConnectingHostView message="Tạo phiên trò chơi..." />;
+            </div>
+          </div>
+        );
+      // return <ConnectingHostView message="Tạo phiên trò chơi..." />;
       case "CONNECTING":
         return (
-          <ConnectingHostView
-            message={`Connecting WebSocket (Pin: ${fetchedGamePin})...`}
-          />
+          <div className="relative min-h-screen bg-cover bg-center" style={{ backgroundImage: `url(${STATIC_BACKGROUND_URL})` }}>
+            <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+              <ConnectingHostView
+                message={`Kết nối WebSocket (Pin: ${fetchedGamePin})...`}
+              />
+            </div>
+          </div>
         );
+      // return (
+      //   <ConnectingHostView
+      //     message={`Kết nối WebSocket (Pin: ${fetchedGamePin})...`}
+      //   />
+      // );
       case "DISCONNECTED":
         return (
           <DisconnectedHostView
@@ -330,17 +373,17 @@ const HostPageContent = () => {
         );
       case "CONNECTED":
         if (assetsLoading && !quizData && !isQuizDataLoading)
-          return <ConnectingHostView message="Loading assets and quiz..." />;
+          return <ConnectingHostView message="Đang tải tài nguyên..." />;
         if (assetsLoading)
-          return <ConnectingHostView message="Loading assets..." />;
+          return <ConnectingHostView message="Đang tải tài nguyên..." />;
         if (isQuizDataLoading)
-          return <ConnectingHostView message="Loading quiz data..." />;
+          return <ConnectingHostView message="Đang tải dữ liệu câu hỏi..." />;
         if (!liveGameState)
-          return <ConnectingHostView message="Initializing game state..." />;
+          return <ConnectingHostView message="Khởi tạo trạng thái..." />;
         if (!quizData) {
-          setPageApiError("Quiz data is unexpectedly missing after loading.");
+          setPageApiError("Dữ liệu đố bị thiếu bất ngờ sau khi tải.");
           setUiState("ERROR");
-          return <ConnectingHostView message="Error: Quiz data missing..." />;
+          return <ConnectingHostView message="Lỗi: Thiếu dữ liệu đố..." />;
         }
 
         return (
@@ -423,7 +466,7 @@ const HostPageContent = () => {
         const _exhaustiveCheck: never = uiState;
         return (
           <ErrorHostView
-            errorMessage={`Invalid UI state: ${_exhaustiveCheck}`}
+            errorMessage={`Trạng thái UI không hợp lệ: ${_exhaustiveCheck}`}
             onRetry={handleResetAndGoToInitial}
           />
         );
@@ -434,7 +477,7 @@ const HostPageContent = () => {
 
 export default function HostPage() {
   return (
-    <Suspense fallback={<ConnectingHostView message="Loading Host Page..." />}>
+    <Suspense fallback={<ConnectingHostView message="Đang tải..." />}>
       <GameAssetsProvider>
         <HostPageContent />
       </GameAssetsProvider>
