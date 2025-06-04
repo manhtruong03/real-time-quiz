@@ -148,3 +148,45 @@ export interface UserSessionHistoryItemDto {
   sessionHostUsername: string; // Username of the host.
   quizId: string; // UUID of the quiz used.
 }
+
+/**
+ * Data Transfer Object for viewing user account details by an administrator.
+ * Based on components.schemas.UserAccountAdminViewDTO in api-docs.json
+ */
+export interface UserAccountAdminViewDTO {
+  userId: string; // UUID
+  username: string;
+  email?: string | null; // Email can be optional or null
+  role: string; // e.g., "ROLE_ADMIN", "ROLE_USER", "ROLE_TEACHER"
+  storageUsed: number; // long
+  storageLimit: number; // long
+  createdAt: string; // date-time
+  updatedAt: string; // date-time
+  deletedAt?: string | null; // date-time, null if not deleted
+}
+
+/**
+ * Request DTO for an administrator to create a new user account.
+ * Based on components.schemas.UserAccountCreationRequestDTO in api-docs.json
+ */
+export interface UserAccountCreationRequestDTO {
+  username: string;
+  email?: string | null;
+  password?: string; // While the API docs show it as required, making it optional here allows
+  // the Zod schema to be the single source of truth for validation including presence.
+  // The actual API call will require it.
+  role: string;
+}
+
+/**
+ * Request DTO for an administrator to update an existing user account.
+ * All fields are optional; only provided non-null fields will be considered for update.
+ * If a field is null, it will not be changed.
+ * Based on components.schemas.UserAccountUpdateRequestDTO in api-docs.json
+ */
+export interface UserAccountUpdateRequestDTO {
+  username?: string | null;
+  email?: string | null;
+  role?: string | null;
+  storageLimit?: number | null; // int64
+}

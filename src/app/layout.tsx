@@ -5,14 +5,14 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import { ThemeProvider } from '@/src/components/theme-provider';
 import { Toaster } from '@/src/components/ui/toaster';
-import { AuthProvider } from '@/src/context/AuthContext'; // Import AuthProvider
+import { AuthProvider } from '@/src/context/AuthContext';
 
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'VUI QUIZ - AI-Powered Quiz App',
-  description: 'Challenge yourself with AI-generated quizzes across various categories',
-  generator: 'v0.dev',
+  title: 'VUI QUIZ',
+  description: 'Đồ án tốt nghiệp',
+  generator: 'manhtruong03',
 };
 
 export default function RootLayout({

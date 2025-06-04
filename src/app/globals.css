@@ -89,6 +89,24 @@
 
     --constructive: 142.1 76.2% 36.3%;
     --constructive-foreground: 0 0% 98%;
+
+    --primary-bg: #1E1E24;
+    --secondary-bg: #2D2D34;
+    --content-bg: #25252B;
+    --text-primary: #EAEAEA;
+    --text-secondary: #B0B0B0;
+    --text-placeholder: #707075;
+    --accent-color: #8A3FFC;
+    --accent-hover: #7A2ECC;
+    --border-color: #404048;
+    --input-bg: #2D2D34;
+    --danger-color: #DA1E28;
+    --danger-hover: #b91c25;
+    --success-color: #2ECC71;
+    --disabled-color: #555a61;
+    --table-header-bg: #25252B;
+    --table-row-hover-bg: #31313a;
+    --card-shadow: rgba(0, 0, 0, 0.2);
   }
 
   .dark {

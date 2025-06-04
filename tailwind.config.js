@@ -91,6 +91,17 @@ module.exports = {
         "answer-icon-diamond": "var(--answer-icon-diamond)",
         "answer-icon-circle": "var(--answer-icon-circle)",
         "answer-icon-square": "var(--answer-icon-square)",
+
+        'primary-bg': 'var(--primary-bg)',
+        'secondary-bg': 'var(--secondary-bg)',
+        'content-bg': 'var(--content-bg)',
+        'text-primary': 'var(--text-primary)',
+        'text-secondary': 'var(--text-secondary)',
+        'accent-color': 'var(--accent-color)',
+        'accent-hover': 'var(--accent-hover)',
+        'border-color': 'var(--border-color)',
+        'input-bg': 'var(--input-bg)',
+        'danger-color': 'var(--danger-color)',
       },
       borderRadius: {
         lg: "var(--radius)",

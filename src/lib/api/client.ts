@@ -37,6 +37,23 @@ export const API_ENDPOINTS = {
     SOUNDS: `${API_BASE_URL}/api/assets/sounds`,
     POWERUPS: `${API_BASE_URL}/api/assets/powerups`,
   },
+  ADMIN: {
+    USERS: {
+      GET_ALL: `${API_BASE_URL}/api/admin/users`,
+      CREATE: `${API_BASE_URL}/api/admin/users`,
+      UPDATE_BY_ID: (userId: string) =>
+        `${API_BASE_URL}/api/admin/users/${userId}`, // PUT to this endpoint for update
+      GET_BY_ID: (userId: string) =>
+        `${API_BASE_URL}/api/admin/users/${userId}`, // GET (will be used later if needed)
+      DELETE_BY_ID: (userId: string) =>
+        `${API_BASE_URL}/api/admin/users/${userId}`, // DELETE (for Phase 4)
+      SET_PASSWORD: (userId: string) =>
+        `${API_BASE_URL}/api/admin/users/${userId}/set-password`, // (for future password changes)
+    },
+    // TAGS: { ... },
+    // IMAGES: { ... },
+    // REPORTS: { ... },
+  },
 };
 
 // Custom Error class for HTTP errors
