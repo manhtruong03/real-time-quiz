@@ -233,3 +233,7 @@ export interface ParticipantLeftPayload {
   type: "PARTICIPANT_LEFT"; // Message type identifier
   hostId: string; // The host's WebSocket client ID (for context/verification)
 }
+
+export interface KickPlayerMessageContent {
+  kickCode: number; // e.g., 1 for generic kick by host
+}

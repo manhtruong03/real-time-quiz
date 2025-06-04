@@ -1,6 +1,6 @@
 // src/app/game/player/hooks/usePlayerPageUI.ts
 import { useState, useCallback, useEffect } from "react";
-import { PlayerConnectionStatus } from "@/src/hooks/game/usePlayerWebSocket"; //
+import { PlayerConnectionStatus } from "@/src/hooks/game/usePlayerWebSocket";
 
 export type PageUiState =
   | "PIN_INPUT"
@@ -8,7 +8,10 @@ export type PageUiState =
   | "NICKNAME_INPUT"
   | "PLAYING"
   | "DISCONNECTED"
-  | "ERROR";
+  | "ERROR"
+  // --- START ADDED CODE ---
+  | "KICKED";
+// --- END ADDED CODE ---
 
 interface UsePlayerPageUIProps {
   // WebSocket related functions and states
@@ -88,6 +91,18 @@ export function usePlayerPageUI({
     // Don't override specific errors set by submitPin or processPlayerKick immediately
     // if (wsError) setPageErrorInternal(wsError); // Moved above to be more general
 
+    // --- START MODIFIED CODE ---
+    // If already in KICKED state, or ERROR, or DISCONNECTED, prioritize that state.
+    // This prevents wsConnectionStatus changes from overriding a terminal state like KICKED or ERROR.
+    if (
+      uiState === "KICKED" ||
+      uiState === "ERROR" ||
+      uiState === "DISCONNECTED"
+    ) {
+      return;
+    }
+    // --- END MODIFIED CODE ---
+
     switch (wsConnectionStatus) {
       case "CONNECTING":
         if (uiState !== "CONNECTING") setUiState("CONNECTING");
@@ -104,26 +119,29 @@ export function usePlayerPageUI({
         break;
       // 'CONNECTED' status is more about STOMP layer. Actual game join confirmed by joinGameFn success.
       case "DISCONNECTED":
-        if (
-          uiState !== "PIN_INPUT" &&
-          uiState !== "ERROR" &&
-          uiState !== "DISCONNECTED"
-        ) {
-          // Avoid setting pageError if already set by kick
-          if (!pageError)
+        // At this point, uiState cannot be "KICKED", "ERROR", or "DISCONNECTED" due to the early return.
+        // It also cannot be "CONNECTING" if wsConnectionStatus is "DISCONNECTED".
+        // So, we only need to ensure we're not already in "PIN_INPUT" (e.g. if disconnected before any game interaction).
+        if (uiState !== "PIN_INPUT") {
+          // pageError might have been set by a previous non-terminal error.
+          // If no pageError is set, provide a generic disconnection message.
+          if (!pageError) {
+            // Only set if not already set by a more specific error (like kick)
             setPageErrorInternal(
               (prev) => prev || "You have been disconnected."
             );
+          }
           setUiState("DISCONNECTED");
           setJoinAttempted(false);
         }
+        // If uiState is "PIN_INPUT" and ws disconnects, it probably means the initial connect attempt for PIN failed or never happened.
+        // Staying in "PIN_INPUT" or moving to "ERROR" (if wsError is set) would be handled by other logic or wsError effect.
         break;
       case "ERROR": // WebSocket layer error
-        if (uiState !== "ERROR") {
-          // wsError would have already setPageErrorInternal via the other useEffect
-          setUiState("ERROR");
-          setJoinAttempted(false);
-        }
+        // At this point, uiState cannot be "KICKED", "ERROR", or "DISCONNECTED".
+        // wsError would have already setPageErrorInternal via the other useEffect.
+        setUiState("ERROR");
+        setJoinAttempted(false);
         break;
       case "INITIAL":
         // If reset externally or on load and not in PIN_INPUT, go to PIN_INPUT.
@@ -196,9 +214,11 @@ export function usePlayerPageUI({
 
   const processPlayerKick = useCallback((disconnectFn: () => void) => {
     setPageErrorInternal("You have been kicked from the game by the host.");
-    setUiState("ERROR");
+    // --- START MODIFIED CODE ---
+    setUiState("KICKED"); // Use the new KICKED state
+    // --- END MODIFIED CODE ---
     disconnectFn(); // Call the disconnect function passed from props
-  }, []);
+  }, []); // Dependencies setPageErrorInternal, setUiState are stable from useState
 
   return {
     uiState,

@@ -164,10 +164,52 @@ export function usePlayerManagement(
     [setLiveGameState]
   );
 
+  const kickPlayer = useCallback(
+    (playerId: string, timestamp: number) => {
+      setLiveGameState((prev) => {
+        if (!prev) return null;
+
+        const playerToUpdate = prev.players[playerId];
+        if (!playerToUpdate) {
+          console.warn(
+            `[PlayerManagement] kickPlayer: Player with CID ${playerId} not found.`
+          );
+          return prev;
+        }
+
+        // Check if player is already kicked to avoid redundant updates
+        if (playerToUpdate.playerStatus === "KICKED") {
+          console.log(
+            `[PlayerManagement] kickPlayer: Player ${playerId} is already marked as KICKED.`
+          );
+          return prev;
+        }
+
+        console.log(
+          `[PlayerManagement] Kicking player ${playerId}. Current status: ${playerToUpdate.playerStatus}, isConnected: ${playerToUpdate.isConnected}`
+        );
+
+        const updatedPlayer: LivePlayerState = {
+          ...playerToUpdate,
+          isConnected: false,
+          playerStatus: "KICKED",
+          lastActivityAt: timestamp,
+        };
+
+        return {
+          ...prev,
+          players: { ...prev.players, [playerId]: updatedPlayer },
+        };
+      });
+    },
+    [setLiveGameState]
+  );
+
   return {
     addOrUpdatePlayer,
     updatePlayerAvatar,
     updatePlayerConnectionStatus,
     markPlayerAsLeft,
+    kickPlayer,
   };
 }

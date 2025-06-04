@@ -3,8 +3,9 @@ import { useState, useCallback } from "react";
 import {
   GameBlock,
   QuestionResultPayload,
-  Avatar as AvatarType,
-} from "@/src/lib/types"; //
+  // Avatar as AvatarType, // This import seems unused in the provided file
+  KickPlayerMessageContent, // Assuming KickPlayerMessageContent is exported from websocket-protocol.ts
+} from "@/src/lib/types";
 
 export interface MinimalPlayerInfo {
   cid: string | null;
@@ -21,6 +22,7 @@ export interface UsePlayerGameManagerReturn {
   isSubmitting: boolean;
   playerInfo: MinimalPlayerInfo;
   currentBackgroundId: string | null;
+  isKicked: boolean;
 
   // Actions / Setters
   processGameMessage: (dataTypeId: number, content: any) => void;
@@ -52,6 +54,7 @@ export function usePlayerGameManager(
   const [currentBackgroundId, setCurrentBackgroundId] = useState<string | null>(
     null
   );
+  const [isKicked, setIsKicked] = useState(false);
 
   const setIsPlayerSubmitting = useCallback((submitting: boolean) => {
     setIsSubmitting(submitting);
@@ -90,7 +93,25 @@ export function usePlayerGameManager(
   const processGameMessage = useCallback(
     (dataTypeId: number, content: any) => {
       // Content is already parsed by the caller
-      if (dataTypeId === 1 || dataTypeId === 2) {
+      if (isKicked) {
+        // If player is already marked as kicked, ignore further game messages
+        console.log(
+          "[usePlayerGameManager] Player is kicked, ignoring message ID:",
+          dataTypeId
+        );
+        return;
+      }
+
+      if (dataTypeId === 10) {
+        // Kick Player Message ID
+        const kickContent = content as KickPlayerMessageContent;
+        console.log(
+          `[usePlayerGameManager] Processing Kick Message (ID: ${dataTypeId}): Kick Code: ${kickContent?.kickCode}`
+        );
+        _setCurrentBlockState(null); // Clear any current question
+        _setCurrentResultState(null); // Clear any current result
+        setIsKicked(true);
+      } else if (dataTypeId === 1 || dataTypeId === 2) {
         // Question data
         console.log(
           `[usePlayerGameManager] Processing Question Block (ID: ${dataTypeId}):`,
@@ -125,7 +146,7 @@ export function usePlayerGameManager(
         // console.log(`[usePlayerGameManager] Received unhandled data type ID: ${dataTypeId}`, content);
       }
     },
-    [_setCurrentBlockState, _setCurrentResultState]
+    [_setCurrentBlockState, _setCurrentResultState, isKicked] // Added isKicked to dependency array
   );
 
   const resetCoreGameState = useCallback(() => {
@@ -133,6 +154,7 @@ export function usePlayerGameManager(
     setCurrentResultInternal(null);
     setIsSubmitting(false);
     setCurrentBackgroundId(null);
+    setIsKicked(false);
     // Keep cid and name, reset game-specific parts of playerInfo
     setPlayerInfo((prev) => ({
       ...prev, // Keep cid and name
@@ -160,6 +182,7 @@ export function usePlayerGameManager(
     isSubmitting,
     playerInfo,
     currentBackgroundId,
+    isKicked,
     processGameMessage,
     resetCoreGameState,
     setPlayerClientId,

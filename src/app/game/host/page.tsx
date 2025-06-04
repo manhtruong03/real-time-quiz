@@ -153,6 +153,7 @@ const HostPageContent = () => {
     prepareResultMessage,
     resetGameState,
     kickPlayerCid,
+    executeKickPlayer,
   } = coordinator;
 
   const gameSettings = useGameSettingsManager({
@@ -217,6 +218,7 @@ const HostPageContent = () => {
     initializeSession,
     resetGameState,
     kickPlayerCidFromCoordinator: kickPlayerCid,
+    executeKickPlayerFromCoordinator: executeKickPlayer,
     liveGameState,
     handleAutoStartToggleForActions: handleAutoStartToggle,
     handleAutoStartTimeChangeForActions: handleAutoStartTimeChange,

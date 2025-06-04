@@ -56,6 +56,7 @@ interface UseHostPageActionsProps {
   initializeSession: (gamePin: string, hostClientId: string) => void;
   resetGameState: () => void;
   kickPlayerCidFromCoordinator: (playerId: string) => void;
+  executeKickPlayerFromCoordinator: (playerId: string) => void;
   liveGameState: LiveGameState | null; // Crucial for actions like kickPlayer
 
   // From useAutoStartManager
@@ -87,6 +88,8 @@ export function useHostPageActions({
   initializeSession,
   resetGameState,
   kickPlayerCidFromCoordinator,
+
+  executeKickPlayerFromCoordinator,
   liveGameState,
   handleAutoStartToggleForActions,
   handleAutoStartTimeChangeForActions,
@@ -208,49 +211,35 @@ export function useHostPageActions({
   }, [toast]);
 
   const handleKickPlayer = useCallback(
-    (playerIdToKick: string) => {
-      // Ensure all dependencies for this action are up-to-date
-      const currentPin = liveGameState?.gamePin ?? fetchedGamePin;
-      if (currentPin && wsConnectionStatus === "CONNECTED") {
-        const kickPayload = { kickCode: 1 };
-        const contentString = JSON.stringify(kickPayload);
-        const wsMessageEnvelope = {
-          channel: `${APP_PREFIX}/controller/${currentPin}`,
-          data: {
-            gameid: currentPin,
-            id: 10,
-            type: "message",
-            host: "VuiQuiz.com",
-            content: contentString,
-            cid: playerIdToKick,
-          },
-          ext: { timetrack: Date.now() },
-        };
-        sendMessage(
-          wsMessageEnvelope.channel,
-          JSON.stringify([wsMessageEnvelope])
+    (playerId: string) => {
+      if (!liveGameState || !liveGameState.players[playerId]) {
+        console.warn(
+          `[HostPageActions] Player ${playerId} not found for kicking.`
         );
         toast({
-          title: "Player Kicked",
-          description: `Attempted to kick player ${playerIdToKick}.`,
-        });
-        kickPlayerCidFromCoordinator(playerIdToKick);
-      } else {
-        toast({
-          variant: "destructive",
           title: "Error",
-          description: "Cannot kick player, not connected.",
+          description: "Could not kick player: Player not found.",
+          variant: "destructive",
         });
+        return;
       }
+
+      console.log(
+        `[HostPageActions] handleKickPlayer called for player: ${playerId}`
+      );
+      // Call the function passed from the coordinator
+      executeKickPlayerFromCoordinator(playerId);
+
+      // Optionally, provide feedback to the host via toast
+      // This toast confirms the action was initiated; actual state update happens in coordinator
+      toast({
+        title: "Player Kicked",
+        description: `Player ${
+          liveGameState.players[playerId]?.nickname || playerId
+        } has been marked for kicking.`,
+      });
     },
-    [
-      liveGameState, // current liveGameState
-      fetchedGamePin, // current fetchedGamePin
-      wsConnectionStatus, // current wsConnectionStatus
-      sendMessage, // stable sendMessage from useHostWebSocket
-      toast, // stable toast from useToast
-      kickPlayerCidFromCoordinator, // stable kickPlayerCid from useHostGameCoordinator
-    ]
+    [executeKickPlayerFromCoordinator, liveGameState, toast]
   );
 
   return {

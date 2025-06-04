@@ -39,8 +39,12 @@ export function useHostGameCoordinator({
   } = useGameStateManagement(initialQuizData);
 
   // --- Player Management ---
-  const { addOrUpdatePlayer, updatePlayerAvatar, markPlayerAsLeft } =
-    usePlayerManagement(setLiveGameState);
+  const {
+    addOrUpdatePlayer,
+    updatePlayerAvatar,
+    markPlayerAsLeft,
+    kickPlayer,
+  } = usePlayerManagement(setLiveGameState);
 
   // --- Answer Processing ---
   const { processPlayerAnswer, calculateAnswerStats } = useAnswerProcessing(
@@ -129,6 +133,14 @@ export function useHostGameCoordinator({
   // This now receives handleTimeUp from useGameFlowController
   useAllPlayersAnsweredEffect({ liveGameState, handleTimeUp });
 
+  const executeKickPlayer = useCallback(
+    (playerId: string) => {
+      console.log(`[HostCoordinator] Attempting to kick player: ${playerId}`);
+      kickPlayer(playerId, Date.now());
+    },
+    [kickPlayer]
+  );
+
   return {
     liveGameState,
     currentBlock,
@@ -145,5 +157,6 @@ export function useHostGameCoordinator({
     prepareResultMessage,
     resetGameState,
     kickPlayerCid,
+    executeKickPlayer,
   };
 }
