@@ -1,5 +1,5 @@
 // src/hooks/game/usePlayerManagement.ts
-import { useState, useCallback } from "react";
+import { useCallback } from "react";
 import { LiveGameState, LivePlayerState } from "@/src/lib/types";
 
 export function usePlayerManagement(
@@ -24,10 +24,7 @@ export function usePlayerManagement(
             ...existingPlayer,
             nickname: nickname,
             isConnected: true,
-            // --- MODIFIED: Update avatarId if provided ---
-            avatarId: avatarId ?? existingPlayer.avatarId, // Use new one, fallback to existing
-            // --- END MODIFIED ---
-
+            avatarId: avatarId ?? existingPlayer.avatarId,
             playerStatus: "PLAYING",
             lastActivityAt: joinTimestamp,
           };
@@ -87,9 +84,7 @@ export function usePlayerManagement(
 
         const updatedPlayer: LivePlayerState = {
           ...playerToUpdate,
-          // --- MODIFIED: Directly set avatarId ---
           avatarId: newAvatarId,
-          // --- END MODIFIED ---
           lastActivityAt: timestamp,
         };
 
@@ -124,9 +119,55 @@ export function usePlayerManagement(
     [setLiveGameState]
   );
 
+  const markPlayerAsLeft = useCallback(
+    (playerId: string, timestamp: number) => {
+      setLiveGameState((prev) => {
+        if (!prev) return null;
+
+        const playerToUpdate = prev.players[playerId];
+        if (!playerToUpdate) {
+          console.warn(
+            `[PlayerManagement] markPlayerAsLeft: Player with CID ${playerId} not found.`
+          );
+          return prev;
+        }
+
+        // Optional: Check if already in the desired state to prevent unnecessary updates
+        // and potential re-renders, though React should handle the latter if data doesn't change.
+        if (
+          playerToUpdate.playerStatus === "LEFT" &&
+          !playerToUpdate.isConnected
+        ) {
+          console.log(
+            `[PlayerManagement] markPlayerAsLeft: Player ${playerId} is already marked as LEFT.`
+          );
+          return prev;
+        }
+
+        console.log(
+          `[PlayerManagement] Marking player ${playerId} as LEFT. Current status: ${playerToUpdate.playerStatus}, isConnected: ${playerToUpdate.isConnected}`
+        );
+
+        const updatedPlayer: LivePlayerState = {
+          ...playerToUpdate,
+          isConnected: false, // Player is no longer connected
+          playerStatus: "LEFT", // Set the specific "LEFT" status
+          lastActivityAt: timestamp, // Update last activity timestamp
+        };
+
+        return {
+          ...prev,
+          players: { ...prev.players, [playerId]: updatedPlayer },
+        };
+      });
+    },
+    [setLiveGameState]
+  );
+
   return {
     addOrUpdatePlayer,
     updatePlayerAvatar,
     updatePlayerConnectionStatus,
+    markPlayerAsLeft,
   };
 }

@@ -251,4 +251,22 @@ _Comment: The example provided for this message shows the top-level `id` as "10"
 ]
 ```
 
+#### 3.8. Server Notifies Host of Participant Departure (`PARTICIPANT_LEFT`)
+
+This message is sent by the **Server to the Host** when a player has definitively left the quiz session (e.g., closed their browser, lost connection and timed out, or actively chose to leave and this event is relayed via the server). It informs the host to update its state regarding the participant count and status.
+
+- **Direction:** Server -> Host Client
+- **Transmission:** Typically received as the direct JSON body of a STOMP message on a topic the host is subscribed to (e.g., a game-specific or host-specific topic).
+- **Structure:** Direct JSON object.
+
+```json
+// Example PARTICIPANT_LEFT Message (Received by Host from Server)
+{
+  "playerCount": 5, // Example: New number of active players
+  "affectedId": "player-cid-who-left-example", // CID of the player who departed
+  "type": "PARTICIPANT_LEFT", // Message type identifier
+  "hostId": "host-websocket-client-id-example" // Host's WebSocket client ID
+}
+```
+
 _(Rest of the document, potentially including other standard messages like Answer Submission_...

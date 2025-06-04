@@ -26,7 +26,8 @@ export const ScoreboardView: React.FC<ScoreboardViewProps> = ({
 
     // Memoize sorted lists
     const { initialOrderPlayers, finalOrderPlayers } = useMemo(() => {
-        const allPlayersArray = Object.values(players).filter(p => p.isConnected && p.playerStatus !== 'KICKED');
+        const allPlayersArray = Object.values(players).filter(
+            (p) => p.playerStatus !== 'KICKED');
 
         const sortedByOldRank = [...allPlayersArray].sort((a, b) => {
             const prevRankA = previousPlayerStates?.[a.cid]?.rank ?? (allPlayersArray.length + 100 + a.rank); // Push new players way down

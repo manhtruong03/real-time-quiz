@@ -27,7 +27,13 @@ export interface LivePlayerState {
   joinedAt: number;
   userId?: string | null;
   lastActivityAt: number;
-  playerStatus: "JOINING" | "PLAYING" | "FINISHED" | "DISCONNECTED" | "KICKED";
+  playerStatus:
+    | "JOINING"
+    | "PLAYING"
+    | "FINISHED"
+    | "DISCONNECTED"
+    | "KICKED"
+    | "LEFT";
 
   joinSlideIndex?: number | null;
   waitingSince?: number | null;

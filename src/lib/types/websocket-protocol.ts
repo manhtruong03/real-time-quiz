@@ -225,3 +225,11 @@ export type QuestionResultPayload =
   | ResultPayloadJumble
   | ResultPayloadSurvey
   | ResultPayloadOpenEnded;
+
+// --- Payload for Participant Left Event (Server -> Host) ---
+export interface ParticipantLeftPayload {
+  playerCount: number; // Updated count of active players after this participant left
+  affectedId: string; // The Client ID (CID) of the player who left
+  type: "PARTICIPANT_LEFT"; // Message type identifier
+  hostId: string; // The host's WebSocket client ID (for context/verification)
+}

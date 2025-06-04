@@ -1,6 +1,10 @@
 // src/hooks/useHostGameCoordinator.ts
-import { useEffect, useRef } from "react";
-import { QuizStructureHost, LiveGameState } from "@/src/lib/types";
+import { useEffect, useRef, useCallback } from "react";
+import {
+  QuizStructureHost,
+  LiveGameState,
+  ParticipantLeftPayload,
+} from "@/src/lib/types";
 import { useGameStateManagement } from "./game/useGameStateManagement";
 import { usePlayerManagement } from "./game/usePlayerManagement";
 import { useAnswerProcessing } from "./game/useAnswerProcessing"; // Import the hook
@@ -35,7 +39,7 @@ export function useHostGameCoordinator({
   } = useGameStateManagement(initialQuizData);
 
   // --- Player Management ---
-  const { addOrUpdatePlayer, updatePlayerAvatar } =
+  const { addOrUpdatePlayer, updatePlayerAvatar, markPlayerAsLeft } =
     usePlayerManagement(setLiveGameState);
 
   // --- Answer Processing ---
@@ -50,6 +54,17 @@ export function useHostGameCoordinator({
     liveGameStateRef.current = liveGameState;
   }, [liveGameState]);
 
+  const handleParticipantLeftEvent = useCallback(
+    (payload: ParticipantLeftPayload) => {
+      console.log(
+        `[HostCoordinator] Received PARTICIPANT_LEFT: Player ${payload.affectedId} left. Server reports new count: ${payload.playerCount}. Host ID: ${payload.hostId}`
+      );
+      // Call the function from usePlayerManagement to update the player's state
+      markPlayerAsLeft(payload.affectedId, Date.now());
+    },
+    [markPlayerAsLeft]
+  );
+
   const callbacksRef = useRef({
     addOrUpdatePlayer,
     updatePlayerAvatar,
@@ -57,7 +72,9 @@ export function useHostGameCoordinator({
     notifyPlayerJoined: (cid: string) => {
       if (onPlayerJoined) onPlayerJoined(cid);
     },
+    handleParticipantLeft: handleParticipantLeftEvent,
   });
+
   useEffect(() => {
     callbacksRef.current = {
       addOrUpdatePlayer,
@@ -66,12 +83,14 @@ export function useHostGameCoordinator({
       notifyPlayerJoined: (cid: string) => {
         if (onPlayerJoined) onPlayerJoined(cid);
       },
+      handleParticipantLeft: handleParticipantLeftEvent,
     };
   }, [
     addOrUpdatePlayer,
     updatePlayerAvatar,
     processPlayerAnswer,
     onPlayerJoined,
+    handleParticipantLeftEvent,
   ]);
 
   const currentBlock = useCurrentBlockManager({

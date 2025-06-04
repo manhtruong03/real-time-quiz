@@ -20,7 +20,7 @@ export const PodiumView: React.FC<PodiumViewProps> = ({
 }) => {
     // ... (sorting and player selection logic remains the same)
     const sortedPlayers = Object.values(players)
-        .filter(p => p.isConnected && p.playerStatus !== 'KICKED' && p.rank > 0)
+        .filter(p => p.playerStatus !== 'KICKED' && p.rank > 0)
         .sort((a, b) => {
             if (a.rank === b.rank) return b.totalScore - a.totalScore;
             return a.rank - b.rank;
@@ -106,7 +106,7 @@ export const PodiumView: React.FC<PodiumViewProps> = ({
             )}
             {podiumPlayersList.length === 0 && sortedPlayers.length === 0 && (
                 <div className="text-center text-lg text-white/80 p-8 bg-black/20 rounded-lg min-h-[150px] my-2 flex items-center justify-center flex-shrink-0">
-                    No players finished the game.
+                    No eligible players finished the game.
                 </div>
             )}
 

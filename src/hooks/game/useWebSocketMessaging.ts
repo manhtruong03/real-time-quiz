@@ -11,6 +11,7 @@ import {
   ResultPayloadOpenEnded,
   ResultPayloadSurvey,
   isContentBlock,
+  ParticipantLeftPayload,
 } from "@/src/lib/types";
 import { getCurrentHostQuestion } from "@/src/lib/game-utils/question-formatter";
 import { MockWebSocketMessage } from "@/src/components/game/DevMockControls";
@@ -36,6 +37,7 @@ interface MessagingCallbacks {
     timestamp: number | undefined
   ) => void;
   notifyPlayerJoined: (cid: string) => void;
+  handleParticipantLeft: (payload: ParticipantLeftPayload) => void; 
 }
 
 // Define the return type for prepareResultMessage
@@ -220,53 +222,116 @@ export function useWebSocketMessaging(
   );
 
   const handleIncomingMessage = useCallback(
+    // Assuming rawMessage is the STOMP message body (string) or a mock object.
+    // For actual STOMP integration, this might be `stompMessage: IMessage`
+    // and you'd use `stompMessage.body`.
     (rawMessage: MockWebSocketMessage | string) => {
-      // ... (rest of the function remains the same)
-      let parsedMessage: any = null;
-      let messageList: any[] = [];
+      let outerParsedPayload: any = null;
 
       try {
-        if (typeof rawMessage === "string")
-          messageList = JSON.parse(rawMessage);
-        else if (typeof rawMessage === "object" && rawMessage !== null)
-          messageList = [rawMessage];
-        else {
+        if (typeof rawMessage === "string") {
+          outerParsedPayload = JSON.parse(rawMessage);
+        } else if (typeof rawMessage === "object" && rawMessage !== null) {
+          // This branch handles MockWebSocketMessage for dev/testing
+          outerParsedPayload = rawMessage;
+        } else {
           console.warn(
-            "[MessagingHook] Invalid message type:",
+            "[WebSocketMessaging] Invalid raw message type:",
             typeof rawMessage
           );
           return;
         }
-        parsedMessage =
-          Array.isArray(messageList) && messageList.length > 0
-            ? messageList[0]
-            : messageList;
       } catch (e) {
-        console.error("[MessagingHook] Error parsing message:", e, rawMessage);
+        console.error(
+          "[WebSocketMessaging] Error parsing outer message body:",
+          e,
+          rawMessage
+        );
         return;
       }
 
-      const data = parsedMessage?.data;
-      const type = data?.type;
-      const id = data?.id;
-      const cid = data?.cid;
+      // 1. Check for PARTICIPANT_LEFT (direct message type)
+      // This message is expected to have "type": "PARTICIPANT_LEFT" at its root.
+      if (
+        outerParsedPayload &&
+        outerParsedPayload.type === "PARTICIPANT_LEFT"
+      ) {
+        const participantLeftData =
+          outerParsedPayload as ParticipantLeftPayload;
+        // Basic validation for required fields
+        if (
+          participantLeftData.affectedId &&
+          participantLeftData.hostId !== undefined && // hostId can be an empty string, but should exist
+          typeof participantLeftData.playerCount === "number"
+        ) {
+          // console.log("[WebSocketMessaging] Detected PARTICIPANT_LEFT message:", participantLeftData); // Logging for debug
+          callbacks.handleParticipantLeft(participantLeftData);
+        } else {
+          console.warn(
+            "[WebSocketMessaging] Received PARTICIPANT_LEFT message with missing or invalid fields:",
+            participantLeftData
+          );
+        }
+        return; // Message handled
+      }
+
+      // 2. If not PARTICIPANT_LEFT, proceed with existing Bayeux-style message handling
+      // The existing logic expects messages to be potentially wrapped in an array (Bayeux style)
+      // and then have a 'data' field.
+      let messageList: any[] = [];
+      if (Array.isArray(outerParsedPayload)) {
+        messageList = outerParsedPayload;
+      } else {
+        // If it wasn't an array and not PARTICIPANT_LEFT, it might be a single Bayeux message object
+        messageList = [outerParsedPayload];
+      }
+
+      const parsedMessage = // This is the first element of the Bayeux message array, or the message itself
+        Array.isArray(messageList) && messageList.length > 0
+          ? messageList[0]
+          : messageList;
+
+      // Existing logic for Bayeux-style messages (within a 'data' object)
+      const data = parsedMessage?.data; // The 'data' object within the Bayeux envelope
+      const type = data?.type; // This is `data.type` (e.g., "joined", "message")
+      const id = data?.id; // This is `data.id` (e.g., 6, 45 for answers, type of content)
+      const cid = data?.cid; // This is `data.cid` (player CID)
 
       if (!data) {
-        console.warn("[MessagingHook] Message has no data field");
+        // Avoid logging if it was already handled as PARTICIPANT_LEFT or if it's an unrecognized direct message
+        // We only log here if we expected a 'data' field and didn't find it.
+        if (
+          !(
+            outerParsedPayload && outerParsedPayload.type === "PARTICIPANT_LEFT"
+          )
+        ) {
+          console.warn(
+            "[WebSocketMessaging] Message has no 'data' field (Bayeux style). Original payload:",
+            outerParsedPayload
+          );
+        }
         return;
       }
 
+      // --- Existing message handling logic ---
       if (type === "login" || type === "joined" || type === "IDENTIFY") {
         if (cid && data.name) {
           let avatarId: string | null = null;
+          // Attempt to parse avatar from content, robustly
           if (data.content && typeof data.content === "string") {
             try {
               const parsedContent = JSON.parse(data.content);
               avatarId = parsedContent?.avatar?.id ?? null;
               if (avatarId && typeof avatarId !== "string") {
-                avatarId = null;
+                console.warn(
+                  "[WebSocketMessaging] Parsed avatarId is not a string, treating as null.",
+                  parsedContent?.avatar
+                );
+                avatarId = null; // Ensure it's null if not a valid string
               }
-            } catch (e) {}
+            } catch (e) {
+              // console.debug("[WebSocketMessaging] Content for join/login not valid JSON or no avatar:", data.content, e);
+            }
           }
           callbacks.addOrUpdatePlayer(
             cid,
@@ -275,21 +340,45 @@ export function useWebSocketMessaging(
             avatarId
           );
           callbacks.notifyPlayerJoined(cid);
+        } else {
+          console.warn(
+            "[WebSocketMessaging] 'login'/'joined'/'IDENTIFY' message missing cid or name:",
+            data
+          );
         }
       } else if (id === 6 || id === 45) {
+        // Player Answer Message
         if (cid && data.content) {
           try {
             const payload = JSON.parse(data.content) as PlayerAnswerPayload;
+            // Basic validation of the answer payload
             if (payload.type && payload.questionIndex !== undefined) {
               callbacks.processPlayerAnswer(
                 cid,
                 payload,
                 parsedMessage.ext?.timetrack
               );
+            } else {
+              console.warn(
+                "[WebSocketMessaging] Invalid answer payload structure:",
+                payload
+              );
             }
-          } catch (e) {}
+          } catch (e) {
+            console.error(
+              "[WebSocketMessaging] Error parsing answer content:",
+              e,
+              data.content
+            );
+          }
+        } else {
+          console.warn(
+            "[WebSocketMessaging] Answer message (id 6/45) missing cid or content:",
+            data
+          );
         }
       } else if (id === 46) {
+        // Player Avatar Change Message
         if (cid && data.content) {
           try {
             const parsedContent = JSON.parse(data.content);
@@ -300,9 +389,27 @@ export function useWebSocketMessaging(
                 avatarIdStr,
                 parsedMessage.ext?.timetrack ?? Date.now()
               );
+            } else {
+              console.warn(
+                "[WebSocketMessaging] Avatar change message has invalid or missing avatar.id:",
+                parsedContent
+              );
             }
-          } catch (e) {}
+          } catch (e) {
+            console.error(
+              "[WebSocketMessaging] Error parsing avatar change content:",
+              e,
+              data.content
+            );
+          }
+        } else {
+          console.warn(
+            "[WebSocketMessaging] Avatar change message (id 46) missing cid or content:",
+            data
+          );
         }
+      } else {
+        // console.log("[WebSocketMessaging] Received unhandled Bayeux message type/id:", { type, id, data });
       }
     },
     [callbacks]
