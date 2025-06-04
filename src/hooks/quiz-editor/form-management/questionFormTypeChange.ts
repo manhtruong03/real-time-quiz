@@ -11,7 +11,7 @@ import {
   type ChoiceHostSchemaType,
 } from "@/src/lib/schemas/quiz-question.schema";
 import { transformQuestionDataForType } from "@/src/lib/game-utils/question-type-transformer";
-import { useToast } from "@/src/components/ui/use-toast";
+import { useToast } from "@/src/hooks/use-toast";
 
 interface TypeChangeHandlerProps {
   quizData: QuizStructureHost | null; // Added quizData for ID preservation

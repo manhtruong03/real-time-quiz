@@ -23,7 +23,7 @@ import { RHFTextField } from '@/src/components/rhf/RHFTextField'; // Assuming yo
 import { Brain } from 'lucide-react';
 import { registerUser } from '@/src/lib/api/auth';
 import { SignupSchema, SignupSchemaType } from '@/src/lib/schemas/auth.schema'; // Import Zod schema
-import { useToast } from '@/src/components/ui/use-toast'; // Import useToast
+import { useToast } from '@/src/hooks/use-toast'; // Import useToast
 import { AppHeader } from '@/src/components/layout/AppHeader';
 
 export default function SignupPage() {

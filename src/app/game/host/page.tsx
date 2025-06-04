@@ -28,7 +28,7 @@ import { ConnectingHostView } from "@/src/components/game/host/ConnectingHostVie
 import { ErrorHostView } from "@/src/components/game/host/ErrorHostView";
 import { DisconnectedHostView } from "@/src/components/game/host/DisconnectedHostView";
 import { HostLobbyView } from "@/src/components/game/host/lobby/HostLobbyView";
-import { useToast } from "@/src/components/ui/use-toast";
+import { useToast } from "@/src/hooks/use-toast";
 import { useHostAudioManager } from "@/src/hooks/game/useHostAudioManager";
 import { useAuth } from "@/src/context/AuthContext";
 

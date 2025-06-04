@@ -6,7 +6,7 @@ import type {
   QuizStructureHost,
 } from "@/src/lib/types/quiz-structure";
 import type { QuestionFormContextType } from "@/src/lib/schemas/quiz-question.schema";
-import { useToast } from "@/src/components/ui/use-toast"; // Keep this
+import { useToast } from "@/src/hooks/use-toast"; // Keep this
 import { getDefaultValuesForEditor } from "./questionFormDefaultValues";
 
 interface SubmissionHandlerProps {

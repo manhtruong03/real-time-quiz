@@ -9,7 +9,7 @@ import { useRouter } from 'next/navigation';
 import QuizEditorLayout from '@/src/components/quiz-editor/layout/QuizEditorLayout';
 import QuizEditorHeader from '@/src/components/quiz-editor/layout/QuizEditorHeader';
 import SlideNavigationSidebar from '@/src/components/quiz-editor/sidebar/SlideNavigationSidebar';
-import { useToast } from '@/src/components/ui/use-toast';
+import { useToast } from '@/src/hooks/use-toast';
 import { QuizEditorContentArea } from '@/src/components/quiz-editor/QuizEditorContentArea'; // Import the new component
 
 // Types & Hooks

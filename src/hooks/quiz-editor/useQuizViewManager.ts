@@ -11,7 +11,7 @@ import {
 import { UseFormReturn } from "react-hook-form";
 import { QuizStructureHost } from "@/src/lib/types/quiz-structure";
 import { QuizMetadataSchemaType } from "@/src/lib/schemas/quiz-settings.schema";
-import { useToast } from "@/src/components/ui/use-toast";
+import { useToast } from "@/src/hooks/use-toast";
 
 export type QuizEditorViewMode = "settings" | "add-slide" | "editor";
 

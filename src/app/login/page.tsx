@@ -21,7 +21,7 @@ import { RHFTextField } from '@/src/components/rhf/RHFTextField';
 import { Brain } from 'lucide-react';
 import { loginUser } from '@/src/lib/api/auth';
 import { LoginSchema, LoginSchemaType } from '@/src/lib/schemas/auth.schema';
-import { useToast } from '@/src/components/ui/use-toast';
+import { useToast } from '@/src/hooks/use-toast';
 import { useAuth } from '@/src/context/AuthContext'; // Import useAuth
 import { AppHeader } from '@/src/components/layout/AppHeader';
 

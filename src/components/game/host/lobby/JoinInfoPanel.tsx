@@ -9,8 +9,6 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/src/
 import { Card, CardContent } from '@/src/components/ui/card'; // Use Card for consistent styling
 import { Copy, QrCode } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
-// Optional: Import useToast for copy feedback
-// import { useToast } from '@/src/components/ui/use-toast';
 
 interface JoinInfoPanelProps {
     gamePin: string | null;

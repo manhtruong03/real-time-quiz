@@ -7,7 +7,7 @@ import { AppHeader } from '@/src/components/layout/AppHeader';
 import ProtectedRoute from '@/src/components/auth/ProtectedRoute';
 import { useAuth } from '@/src/context/AuthContext';
 import { Brain } from 'lucide-react';
-import { useToast } from '@/src/components/ui/use-toast';
+import { useToast } from '@/src/hooks/use-toast';
 
 import QuizList from './components/QuizList';
 import MyQuizzesLoadingSkeleton from './components/MyQuizzesLoadingSkeleton';

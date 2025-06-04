@@ -1,6 +1,6 @@
 // src/app/reports/hooks/useUserReportsData.ts
 import { useState, useCallback, useEffect } from "react";
-import { useToast } from "@/src/components/ui/use-toast";
+import { useToast } from "@/src/hooks/use-toast";
 import { fetchUserSessionHistory } from "@/src/lib/api/reports";
 import type { Page, UserSessionHistoryItemDto } from "@/src/lib/types/api";
 
