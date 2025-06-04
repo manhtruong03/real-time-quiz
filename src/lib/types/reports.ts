@@ -12,6 +12,7 @@ export interface QuizInfoFromSummary {
 }
 
 export interface SessionSummaryDto {
+  sessionId?: string;
   type?: string; // e.g., "LIVE" - can be used to determine session characteristics
   name: string; // Session name, potentially different from quiz title, might include date/time context
   controllersCount: number; // Participant count
@@ -27,7 +28,6 @@ export interface SessionSummaryDto {
   scoredBlocksWithAnswersCount?: number;
   averageTime?: number; // Not directly used in Overview card yet
   averageScore?: number; // Not directly used in Overview card yet (API doesn't have this directly, maybe needs calculation from player scores later)
-  // sessionId is implicitly known by the page, but can be added if needed globally
 }
 
 /**

@@ -52,7 +52,9 @@ export const API_ENDPOINTS = {
     },
     // TAGS: { ... },
     // IMAGES: { ... },
-    // REPORTS: { ... },
+    REPORTS: {
+      GET_ALL: `${API_BASE_URL}/api/admin/reports/sessions`,
+    },
   },
 };
 
